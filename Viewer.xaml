@@ -10,6 +10,7 @@
         <Grid.RowDefinitions>
             <RowDefinition></RowDefinition>
             <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition></ColumnDefinition>
@@ -27,11 +28,11 @@
             <TextBlock>Category Choose</TextBlock>
             <TextBlock x:Name="CategorySelectedLabel" FontSize="18" />
             <ComboBox x:Name="CategorySelectedLabelComboBox" SelectionChanged="CategorySelectedLabelComboBox_SelectionChanged" />
-            <ListView Margin="10,10,0,13" Name="ListView1" HorizontalAlignment="Left" VerticalAlignment="Top" SelectedValue="Name"/>
         </StackPanel>
-
-
-        <StackPanel Grid.Column="0"  Grid.Row="1" Grid.ColumnSpan="3">
+        <ListView Margin="10,10,0,13" Name="ListView1" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="1" Grid.Row="1"/>
+        <ListView Margin="10,10,0,13" Name="ListViewParametr" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="0" Grid.Row="1"/>
+        <TextBlock x:Name="ViewParametrSelectedLabel" FontSize="18" Grid.Column="1" Grid.Row="1"/>
+        <StackPanel Grid.Column="0"  Grid.Row="2" Grid.ColumnSpan="3">
             <GroupBox Header="List of Views">
                 <GroupBox.HeaderTemplate>
                     <DataTemplate>

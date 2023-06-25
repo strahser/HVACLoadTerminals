@@ -52,7 +52,6 @@ namespace HVACLoadTerminals
             {
                 element.GetParameters(element.Name);
                 param_name.Add(p.Definition.Name);
-
             }
             return param_name.Distinct().ToList();
         }

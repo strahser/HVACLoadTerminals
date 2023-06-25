@@ -54,13 +54,27 @@ namespace HVACLoadTerminals
                 .WherePasses(new ElementCategoryFilter(BIC))
                 .WhereElementIsElementType()
                 .ToList();
-            ListView1.ItemsSource = category.Select(cat=>cat.Name).ToList();
             
             Dictionary<string, List<FamilySymbol>> winFamilyTypes = CollectorQuery.FindFamilyTypes(document, selectedCategory);
             Dictionary<string, List<string>> winFamilyNames = new Dictionary<string, List<string>>();
             
             familyTypeComboBox.ItemsSource = winFamilyTypes.Keys;
             familyTypeComboBox.SelectedIndex = 0;
+            var familyType = winFamilyTypes[familyTypeComboBox.SelectedItem?.ToString()].FirstOrDefault();
+            List<string> parametrList = CollectorQuery.GetParameters(familyType)
+                .Where(p => familyType.LookupParameter(p).StorageType== StorageType.Double).ToList();
+            foreach (string p in parametrList)
+            {             
+                var storeType = familyType.LookupParameter(p).StorageType;
+                if (storeType == StorageType.Double)
+                {
+                    familyType.LookupParameter(p).AsDouble();
+                }
+            }
+            ListView1.ItemsSource = winFamilyTypes[familyTypeComboBox.SelectedItem?.ToString()].Select(cat=>cat.Name).ToList();
+            ListViewParametr.ItemsSource = parametrList;
+            ListViewParametr.SelectedIndex = 1;
+            ViewParametrSelectedLabel.Text = ListViewParametr.SelectedItems[0].ToString();
             foreach (KeyValuePair<string, List<FamilySymbol>> items in winFamilyTypes)
             {
                 winFamilyNames[items.Key] = items.Value.Select(el => el.Name).ToList();
