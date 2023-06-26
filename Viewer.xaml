@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:view="clr-namespace:HVACLoadTerminals"
-             xmlns:viewModel="clr-namespace:HVACLoadTerminals.ViewModel" 
+             xmlns:viewModel="clr-namespace:HVACLoadTerminals.ViewModel" d:DataContext="{d:DesignInstance Type=viewModel:ViewerMVMV}"
         d:DesignHeight="450" d:DesignWidth="800">
 
 
@@ -21,7 +21,7 @@
         
         <StackPanel Grid.Column="0" Grid.Row="0">
             <TextBlock>Category Choose</TextBlock>
-            <ComboBox x:Name="CategorySelectedLabelComboBox" ItemsSource="{Binding Categoryes.Keys}" SelectedItem="{Binding SelectedCategory}" SelectedIndex="{Binding Categoryes.Keys}" />
+            <ComboBox x:Name="CategorySelectedLabelComboBox" ItemsSource="{Binding  Categoryes.Keys}" SelectedItem="{Binding SelectedCategory}" SelectedIndex="{Binding Categoryes.Keys}" />
             <TextBlock Text="{Binding SelectedCategory}"></TextBlock>
         </StackPanel>
     </Grid>

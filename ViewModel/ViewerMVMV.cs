@@ -11,13 +11,14 @@ namespace HVACLoadTerminals.ViewModel
     public class ViewerMVMV : ViewModelBase
     {
         public Document document;
+        public ViewerMVMV() { }
 
-
-        private Dictionary<string, BuiltInCategory> categoryes = new Dictionary<string, BuiltInCategory>()
+        private readonly Dictionary<string, BuiltInCategory> categoryes = new Dictionary<string, BuiltInCategory>()
                 {
                     { "OST_DuctTerminal", BuiltInCategory.OST_DuctTerminal},
                     { "OST_MechanicalEquipment", BuiltInCategory.OST_MechanicalEquipment},
                 };
+
         private Dictionary<string, BuiltInCategory> _categoryes;
         private string _selectedCategory;
         public string SelectedCategory { get { return _selectedCategory; } set {
