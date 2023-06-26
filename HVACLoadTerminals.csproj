@@ -62,6 +62,9 @@
     <Compile Include="Viewer.xaml.cs">
       <DependentUpon>Viewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ViewModel\ViewerMVMV.cs" />
+    <Compile Include="ViewModel\RelayCommand.cs" />
+    <Compile Include="ViewModel\ViewModelBase.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -72,5 +75,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

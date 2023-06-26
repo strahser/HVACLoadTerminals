@@ -3,9 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:HVACLoadTerminals"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             xmlns:view="clr-namespace:HVACLoadTerminals"
+             xmlns:viewModel="clr-namespace:HVACLoadTerminals.ViewModel" 
+        d:DesignHeight="450" d:DesignWidth="800">
+
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition></RowDefinition>
@@ -16,41 +18,11 @@
             <ColumnDefinition></ColumnDefinition>
             <ColumnDefinition></ColumnDefinition>       
         </Grid.ColumnDefinitions>
-
-        <StackPanel Grid.Column="1" Grid.Row="0">
-            <TextBlock>Family Choose</TextBlock>
-            <TextBlock x:Name="familySelectedLabel" FontSize="18" />
-            <ComboBox x:Name="familyTypeComboBox" SelectionChanged="familyTypeComboBox_SelectionChanged" />
-        </StackPanel>
         
         <StackPanel Grid.Column="0" Grid.Row="0">
             <TextBlock>Category Choose</TextBlock>
-            <TextBlock x:Name="CategorySelectedLabel" FontSize="18" />
-            <ComboBox x:Name="CategorySelectedLabelComboBox" SelectionChanged="CategorySelectedLabelComboBox_SelectionChanged" />
-            <ListView Margin="10,10,0,13" Name="ListView1" HorizontalAlignment="Left" VerticalAlignment="Top" SelectedValue="Name"/>
-        </StackPanel>
-
-
-        <StackPanel Grid.Column="0"  Grid.Row="1" Grid.ColumnSpan="3">
-            <GroupBox Header="List of Views">
-                <GroupBox.HeaderTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding}" FontSize="15" Foreground="Gray"/>
-                    </DataTemplate>
-                </GroupBox.HeaderTemplate>
-                <TreeView x:Name="treeView1" ItemsSource="{Binding}" >
-                    <TreeView.ItemTemplate>
-                        <HierarchicalDataTemplate ItemsSource="{Binding Value}">
-                            <TextBlock FontWeight="Bold" Text="{Binding Key}" />
-                            <HierarchicalDataTemplate.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding ''}"/>
-                                </DataTemplate>
-                            </HierarchicalDataTemplate.ItemTemplate>
-                        </HierarchicalDataTemplate>
-                    </TreeView.ItemTemplate>
-                </TreeView>
-            </GroupBox>
+            <ComboBox x:Name="CategorySelectedLabelComboBox" ItemsSource="{Binding Categoryes.Keys}" SelectedItem="{Binding SelectedCategory}" SelectedIndex="{Binding Categoryes.Keys}" />
+            <TextBlock Text="{Binding SelectedCategory}"></TextBlock>
         </StackPanel>
     </Grid>
 </Window>

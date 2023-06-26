@@ -1,0 +1,130 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
+namespace HVACLoadTerminals
+{
+    /// <summary>
+    /// Логика взаимодействия для UserControl1.xaml
+    /// </summary>
+    public partial class Viewer : Window
+    {
+        public Document document;
+        private Dictionary<string, BuiltInCategory> categoryes = new Dictionary<string, BuiltInCategory>()
+                {
+                    { "OST_DuctTerminal", BuiltInCategory.OST_DuctTerminal},
+                    { "OST_MechanicalEquipment", BuiltInCategory.OST_MechanicalEquipment},
+                };
+
+        public Viewer(Document doc)
+        {
+            // assign value to field
+            document = doc;
+            InitializeComponent();
+
+            CategorySelectedLabelComboBox.ItemsSource = categoryes.Keys;
+            CategorySelectedLabelComboBox.SelectedIndex=0;
+
+        }
+
+        private void familyTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+            familySelectedLabel.Text = familyTypeComboBox.SelectedItem?.ToString();
+
+        }
+
+        private void CategorySelectedLabelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            BuiltInCategory selectedCategory = categoryes[CategorySelectedLabelComboBox.SelectedItem.ToString()];
+            BuiltInCategory BIC = (BuiltInCategory)BuiltInCategory.Parse(typeof(BuiltInCategory), CategorySelectedLabelComboBox.SelectedItem?.ToString());
+            IList < Element > category = new FilteredElementCollector(document)
+                .WherePasses(new ElementCategoryFilter(BIC))
+                .WhereElementIsElementType()
+                .ToList();
+            ListView1.ItemsSource = category.Select(cat=>cat.Name).ToList();
+            
+            Dictionary<string, List<FamilySymbol>> winFamilyTypes = CollectorQuery.FindFamilyTypes(document, selectedCategory);
+            Dictionary<string, List<string>> winFamilyNames = new Dictionary<string, List<string>>();
+            
+            familyTypeComboBox.ItemsSource = winFamilyTypes.Keys;
+            familyTypeComboBox.SelectedIndex = 0;
+            foreach (KeyValuePair<string, List<FamilySymbol>> items in winFamilyTypes)
+            {
+                winFamilyNames[items.Key] = items.Value.Select(el => el.Name).ToList();
+            }
+            treeView1.DataContext = winFamilyNames;
+        }
+    }
+}
+
+
+<Window x:Class="HVACLoadTerminals.Viewer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:HVACLoadTerminals"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition></ColumnDefinition>
+            <ColumnDefinition></ColumnDefinition>
+            <ColumnDefinition></ColumnDefinition>       
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="1" Grid.Row="0">
+            <TextBlock>Family Choose</TextBlock>
+            <TextBlock x:Name="familySelectedLabel" FontSize="18" />
+            <ComboBox x:Name="familyTypeComboBox" SelectionChanged="familyTypeComboBox_SelectionChanged" />
+        </StackPanel>
+        
+        <StackPanel Grid.Column="0" Grid.Row="0">
+            <TextBlock>Category Choose</TextBlock>
+            <TextBlock x:Name="CategorySelectedLabel" FontSize="18" />
+            <ComboBox x:Name="CategorySelectedLabelComboBox" SelectionChanged="CategorySelectedLabelComboBox_SelectionChanged" />
+            <ListView Margin="10,10,0,13" Name="ListView1" HorizontalAlignment="Left" VerticalAlignment="Top" SelectedValue="Name"/>
+        </StackPanel>
+
+
+        <StackPanel Grid.Column="0"  Grid.Row="1" Grid.ColumnSpan="3">
+            <GroupBox Header="List of Views">
+                <GroupBox.HeaderTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" FontSize="15" Foreground="Gray"/>
+                    </DataTemplate>
+                </GroupBox.HeaderTemplate>
+                <TreeView x:Name="treeView1" ItemsSource="{Binding}" >
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Value}">
+                            <TextBlock FontWeight="Bold" Text="{Binding Key}" />
+                            <HierarchicalDataTemplate.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding ''}"/>
+                                </DataTemplate>
+                            </HierarchicalDataTemplate.ItemTemplate>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </GroupBox>
+        </StackPanel>
+    </Grid>
+</Window>
