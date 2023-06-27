@@ -17,21 +17,23 @@
             <ColumnDefinition></ColumnDefinition>
             <ColumnDefinition></ColumnDefinition>       
         </Grid.ColumnDefinitions>
-
-        <StackPanel Grid.Column="1" Grid.Row="0">
-            <TextBlock>Family Choose</TextBlock>
-            <TextBlock x:Name="familySelectedLabel" FontSize="18" />
-            <ComboBox x:Name="familyTypeComboBox" SelectionChanged="familyTypeComboBox_SelectionChanged" />
-        </StackPanel>
         
         <StackPanel Grid.Column="0" Grid.Row="0">
             <TextBlock>Category Choose</TextBlock>
-            <TextBlock x:Name="CategorySelectedLabel" FontSize="18" />
             <ComboBox x:Name="CategorySelectedLabelComboBox" SelectionChanged="CategorySelectedLabelComboBox_SelectionChanged" />
         </StackPanel>
-        <ListView Margin="10,10,0,13" Name="ListView1" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="1" Grid.Row="1"/>
-        <ListView Margin="10,10,0,13" Name="ListViewParametr" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="0" Grid.Row="1"/>
-        <TextBlock x:Name="ViewParametrSelectedLabel" FontSize="18" Grid.Column="1" Grid.Row="1"/>
+        
+        <StackPanel Grid.Column="1" Grid.Row="0">
+            <TextBlock>Family Choose</TextBlock>
+            <ComboBox x:Name="familyTypeComboBox" SelectionChanged="FamilyTypeComboBox_SelectionChanged" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Grid.Row="0">
+            <TextBlock>Parameters Choose</TextBlock>
+            <ComboBox x:Name="ParameterChooseComboBox" SelectionChanged="ParameterChooseComboBox_SelectionChanged" />
+        </StackPanel>
+
+
         <StackPanel Grid.Column="0"  Grid.Row="2" Grid.ColumnSpan="3">
             <GroupBox Header="List of Views">
                 <GroupBox.HeaderTemplate>
