@@ -35,7 +35,7 @@
 
 
         <StackPanel Grid.Column="0"  Grid.Row="2" Grid.ColumnSpan="3">
-            <GroupBox Header="List of Views">
+            <GroupBox Header="List of Family Type">
                 <GroupBox.HeaderTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding}" FontSize="15" Foreground="Gray"/>
