@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,6 +29,7 @@ namespace HVACLoadTerminals
                     { "OST_MechanicalEquipment", BuiltInCategory.OST_MechanicalEquipment},
                 };
         public Dictionary<string, List<FamilySymbol>> winFamilyTypes { get; set; }
+        public List<Element> familyType { get; set; }
         public Viewer(Document doc)
         {
             // assign value to field
@@ -39,8 +41,6 @@ namespace HVACLoadTerminals
 
         }
 
-
-
         private void CategorySelectedLabelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             BuiltInCategory selectedCategory = categoryes[CategorySelectedLabelComboBox.SelectedItem?.ToString()];
@@ -49,9 +49,7 @@ namespace HVACLoadTerminals
                 .WherePasses(new ElementCategoryFilter(BIC))
                 .WhereElementIsElementType()
                 .ToList();
-            winFamilyTypes = CollectorQuery.FindFamilyTypes(document, selectedCategory);
-           
-
+            winFamilyTypes = CollectorQuery.FindFamilyTypes(document, selectedCategory);         
             familyTypeComboBox.ItemsSource = winFamilyTypes.Keys;
             //familyTypeComboBox.SelectedValue = "value";
             //familyTypeComboBox.DisplayMemberPath = "Key";
@@ -68,18 +66,20 @@ namespace HVACLoadTerminals
 
         {
             if (familyTypeComboBox.SelectedItem != null)
+
             {
-                Element familyType = winFamilyTypes[familyTypeComboBox.SelectedItem?.ToString()].FirstOrDefault();
-                if (familyType != null)
+                familyType = winFamilyTypes[familyTypeComboBox.SelectedItem?.ToString()].ToList<Element>();
+                Element _familyType = familyType.FirstOrDefault();
+                if (_familyType != null)
                 {
                     List<string> parametrList = CollectorQuery.GetParameters(familyType)
-                        .Where(p => familyType.LookupParameter(p).StorageType == StorageType.Double).ToList();
+                        .Where(p => _familyType.LookupParameter(p).StorageType == StorageType.Double).ToList();
                     foreach (string p in parametrList)
                     {
-                        var storeType = familyType.LookupParameter(p).StorageType;
+                        var storeType = _familyType.LookupParameter(p).StorageType;
                         if (storeType == StorageType.Double)
                         {
-                            familyType.LookupParameter(p).AsDouble();
+                            _familyType.LookupParameter(p).AsDouble();
                         }
                     }
                     ParameterChooseComboBox.ItemsSource = parametrList;
@@ -87,10 +87,21 @@ namespace HVACLoadTerminals
                 }
             }
         }
-        private void ParameterChooseComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ParameterChooseComboBox_SelectionChanged( object sender, SelectionChangedEventArgs e)
         {
+            if (familyTypeComboBox.SelectedItem != null)
 
-
+            {
+                foreach (var el in familyType.Where(el => familyType != null))
+            {
+                    try
+                    {
+                        double flow = el.LookupParameter(ParameterChooseComboBox.SelectedItem?.ToString()).AsDouble();
+                        Debug.Write(flow);
+                    }
+                    catch { Debug.Write($"No parameter {ParameterChooseComboBox.SelectedItem?.ToString()}"); }
+            }
+                }
         }
     }
 }
