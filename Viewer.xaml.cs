@@ -23,7 +23,7 @@ namespace HVACLoadTerminals
     public partial class Viewer : Window
     {
         public Document document;
-        private Dictionary<string, BuiltInCategory> categoryes = new Dictionary<string, BuiltInCategory>()
+        private readonly Dictionary<string, BuiltInCategory> categoryes = new Dictionary<string, BuiltInCategory>()
                 {
                     { "OST_DuctTerminal", BuiltInCategory.OST_DuctTerminal},
                     { "OST_MechanicalEquipment", BuiltInCategory.OST_MechanicalEquipment},
@@ -88,7 +88,10 @@ namespace HVACLoadTerminals
             }
         }
         private void ParameterChooseComboBox_SelectionChanged( object sender, SelectionChangedEventArgs e)
+            
         {
+            List<DevicePropertyModel> DevicePropertyList = new List<DevicePropertyModel>();
+
             if (familyTypeComboBox.SelectedItem != null)
 
             {
@@ -96,8 +99,11 @@ namespace HVACLoadTerminals
             {
                     try
                     {
+                        DevicePropertyModel device = new DevicePropertyModel();
                         double flow = el.LookupParameter(ParameterChooseComboBox.SelectedItem?.ToString()).AsDouble();
-                        Debug.Write(flow);
+                        device.Flow = flow;
+                        device.FamilyName = el.Name;
+                        device.FlowParameterName = ParameterChooseComboBox.SelectedItem?.ToString();
                     }
                     catch { Debug.Write($"No parameter {ParameterChooseComboBox.SelectedItem?.ToString()}"); }
             }
