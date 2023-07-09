@@ -104,10 +104,12 @@ namespace HVACLoadTerminals
                         device.Flow = flow;
                         device.FamilyName = el.Name;
                         device.FlowParameterName = ParameterChooseComboBox.SelectedItem?.ToString();
+                        DevicePropertyList.Add(device);
                     }
                     catch { Debug.Write($"No parameter {ParameterChooseComboBox.SelectedItem?.ToString()}"); }
             }
                 }
+            FamilyGrid.ItemsSource = DevicePropertyList;
         }
     }
 }
