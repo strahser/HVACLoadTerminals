@@ -8,10 +8,10 @@ namespace HVACLoadTerminals
 {
    public class DevicePropertyModel
     {
-        public double Flow { get; set; }
         public string FamilyName { get; set; }
-
         public string FlowParameterName { get; set; }
+        public double Flow { get; set; }
+
 
     }
 }

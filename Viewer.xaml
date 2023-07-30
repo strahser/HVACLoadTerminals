@@ -11,6 +11,8 @@
             <RowDefinition></RowDefinition>
             <RowDefinition></RowDefinition>
             <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition></ColumnDefinition>
@@ -23,21 +25,30 @@
             <ComboBox x:Name="CategorySelectedLabelComboBox" SelectionChanged="CategorySelectedLabelComboBox_SelectionChanged" />
         </StackPanel>
         
-        <StackPanel Grid.Column="1" Grid.Row="0">
+        <StackPanel Grid.Column="0" Grid.Row="1">
             <TextBlock>Family Choose</TextBlock>
             <ComboBox x:Name="familyTypeComboBox" SelectionChanged="FamilyTypeComboBox_SelectionChanged" />
         </StackPanel>
 
-        <StackPanel Grid.Column="2" Grid.Row="0">
-            <TextBlock>Parameters Choose</TextBlock>
+        <StackPanel Grid.Column="0" Grid.Row="2">
+            <TextBlock>Flow Parameter Name</TextBlock>
             <ComboBox x:Name="ParameterChooseComboBox" SelectionChanged="ParameterChooseComboBox_SelectionChanged" />
         </StackPanel>
-        <StackPanel Grid.Column="2"  Grid.Row="2" Grid.ColumnSpan="4">
+        <StackPanel Grid.Column="0" Grid.Row="3">
+            <TextBlock>Space Parameters Choose</TextBlock>
+            <ComboBox x:Name="SpaceParameterChooseComboBox" SelectionChanged="SpaceParameterChooseComboBox_SelectionChanged" />
+        </StackPanel>
+         <StackPanel Grid.Column="1"  Grid.Row="0" Grid.ColumnSpan="4">
+            <TextBlock>Selected Terminal property</TextBlock>
             <DataGrid x:Name="FamilyGrid" AutoGenerateColumns="True">
             </DataGrid>
         </StackPanel>
-
-        <StackPanel Grid.Column="0"  Grid.Row="2" Grid.ColumnSpan="1">
+        <StackPanel Grid.Column="1"  Grid.Row="1" Grid.ColumnSpan="4">
+            <TextBlock>Space property</TextBlock>
+            <DataGrid x:Name="SpaceFlowGrid" AutoGenerateColumns="True">
+            </DataGrid>
+        </StackPanel>
+        <StackPanel Grid.Column="0"  Grid.Row="4" Grid.ColumnSpan="1">
             <GroupBox Header="List of Family Type">
                 <GroupBox.HeaderTemplate>
                     <DataTemplate>

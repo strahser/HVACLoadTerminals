@@ -60,6 +60,7 @@
     <Compile Include="DevicePropertyModel.cs" />
     <Compile Include="ExcternalCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SpaceModel.cs" />
     <Compile Include="Viewer.xaml.cs">
       <DependentUpon>Viewer.xaml</DependentUpon>
     </Compile>

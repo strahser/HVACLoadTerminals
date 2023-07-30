@@ -30,6 +30,8 @@ namespace HVACLoadTerminals
                 };
         public Dictionary<string, List<FamilySymbol>> winFamilyTypes { get; set; }
         public List<Element> familyType { get; set; }
+        List<Element> _allSpaces => CollectorQuery.GetAllSpaces(document);
+        public List<DevicePropertyModel> DevicePropertyList { get; set; }
         public Viewer(Document doc)
         {
             // assign value to field
@@ -37,10 +39,11 @@ namespace HVACLoadTerminals
             InitializeComponent();
             CategorySelectedLabelComboBox.ItemsSource = categoryes.Keys;
             CategorySelectedLabelComboBox.SelectedIndex = 0;
-
-
+            List<string> spaceparametrList = CollectorQuery.GetParameters(_allSpaces);
+            SpaceParameterChooseComboBox.SelectedIndex = 0;
+            SpaceParameterChooseComboBox.ItemsSource = spaceparametrList;
         }
-
+        
         private void CategorySelectedLabelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             BuiltInCategory selectedCategory = categoryes[CategorySelectedLabelComboBox.SelectedItem?.ToString()];
@@ -87,11 +90,12 @@ namespace HVACLoadTerminals
                 }
             }
         }
+        
         private void ParameterChooseComboBox_SelectionChanged( object sender, SelectionChangedEventArgs e)
             
         {
-            List<DevicePropertyModel> DevicePropertyList = new List<DevicePropertyModel>();
-
+            DevicePropertyList = new List<DevicePropertyModel>();
+            
             if (familyTypeComboBox.SelectedItem != null)
 
             {
@@ -99,17 +103,64 @@ namespace HVACLoadTerminals
             {
                     try
                     {
-                        DevicePropertyModel device = new DevicePropertyModel();
+                        DevicePropertyModel deviceModel = new DevicePropertyModel();
                         double flow = el.LookupParameter(ParameterChooseComboBox.SelectedItem?.ToString()).AsDouble();
-                        device.Flow = flow;
-                        device.FamilyName = el.Name;
-                        device.FlowParameterName = ParameterChooseComboBox.SelectedItem?.ToString();
-                        DevicePropertyList.Add(device);
+                        deviceModel.Flow = flow;
+                        deviceModel.FamilyName = el.Name;
+                        deviceModel.FlowParameterName = ParameterChooseComboBox.SelectedItem?.ToString();
+                        DevicePropertyList.Add(deviceModel);
                     }
+
                     catch { Debug.Write($"No parameter {ParameterChooseComboBox.SelectedItem?.ToString()}"); }
             }
                 }
+            
             FamilyGrid.ItemsSource = DevicePropertyList;
         }
+
+        private void SpaceParameterChooseComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+                List<SpaceModel> paramList = new List<SpaceModel>();
+            if (SpaceParameterChooseComboBox.SelectedItem != null)
+            {
+                string par = SpaceParameterChooseComboBox.SelectedItem.ToString();
+                foreach (Element el in _allSpaces)                {
+                    var storeType = el.LookupParameter(par).StorageType;
+                    if (storeType == StorageType.Double)
+                    {
+                        double space_flow = el.LookupParameter(par).AsDouble();
+                        DevicePropertyModel selected_device = GetSelectedDeviece(space_flow);
+                        SpaceModel space_model = new SpaceModel();
+                        space_model.SpaceFlow = space_flow;
+                        space_model.SpaceId = el.Id.ToString();
+                        space_model.SpaceName = el.Name.ToString();
+                        space_model.DeviceProperty = selected_device;
+                        try {
+                            space_model.DeviceQuontity = (int)Math.Ceiling(space_flow / selected_device.Flow);
+                        }
+                        catch
+                        {
+                            space_model.DeviceQuontity = 0;
+                        }
+                        paramList.Add(space_model); 
+                    }
+                }
+                SpaceFlowGrid.ItemsSource = paramList;
+            }
+                
+            
+        }
+        private DevicePropertyModel GetSelectedDeviece(double SpaceFlow)
+        {
+            if (DevicePropertyList.Any())
+            {
+                int device_min_number = DevicePropertyList.Min(x => ((int)Math.Ceiling(SpaceFlow / x.Flow)));
+                List<DevicePropertyModel> seleced_element_list = DevicePropertyList.Where(x => x.Flow * device_min_number >= SpaceFlow).ToList();
+                DevicePropertyModel selected_terminal = seleced_element_list.Where(x => x.Flow == seleced_element_list.Min(f => f.Flow)).FirstOrDefault();
+                return selected_terminal;
+            }
+            else { return null; }
+        }  
     }
 }
