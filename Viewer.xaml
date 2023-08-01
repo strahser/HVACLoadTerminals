@@ -40,12 +40,27 @@
         </StackPanel>
          <StackPanel Grid.Column="1"  Grid.Row="0" Grid.ColumnSpan="4">
             <TextBlock>Selected Terminal property</TextBlock>
-            <DataGrid x:Name="FamilyGrid" AutoGenerateColumns="True">
+            <DataGrid x:Name="FamilyGrid"  AutoGenerateColumns="False" 
+                      HorizontalGridLinesBrush="DarkGray"
+                      RowBackground="LightGray" 
+                      AlternatingRowBackground="White">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Имя Семейства" Binding="{Binding Path=FamilyName}" />
+                    <DataGridTextColumn Header="Имя Параметра Расход" Binding="{Binding Path=FlowParameterName}"/>
+                    <DataGridTextColumn Header="Значение Расход" Binding="{Binding Path=Flow}"/>
+                </DataGrid.Columns>
             </DataGrid>
         </StackPanel>
         <StackPanel Grid.Column="1"  Grid.Row="1" Grid.ColumnSpan="4">
             <TextBlock>Space property</TextBlock>
-            <DataGrid x:Name="SpaceFlowGrid" AutoGenerateColumns="True">
+            <DataGrid x:Name="SpaceFlowGrid" AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID Пространства" Binding="{Binding Path=SpaceId}" />
+                    <DataGridTextColumn Header="Имя Пространства" Binding="{Binding Path=SpaceName}"/>
+                    <DataGridTextColumn Header="Расход/мощность" Binding="{Binding Path=SpaceFlow}"/>
+                    <DataGridTextColumn Header="Выбранное семейство" Binding="{Binding Path=DeviceProperty}"/>
+                    <DataGridTextColumn Header="Колличество" Binding="{Binding Path=DeviceQuontity}"/>
+                </DataGrid.Columns>
             </DataGrid>
         </StackPanel>
         <StackPanel Grid.Column="0"  Grid.Row="4" Grid.ColumnSpan="1">

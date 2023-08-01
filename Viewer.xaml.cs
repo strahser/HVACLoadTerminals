@@ -43,7 +43,7 @@ namespace HVACLoadTerminals
             SpaceParameterChooseComboBox.SelectedIndex = 0;
             SpaceParameterChooseComboBox.ItemsSource = spaceparametrList;
         }
-        
+        #region Parameters
         private void CategorySelectedLabelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             BuiltInCategory selectedCategory = categoryes[CategorySelectedLabelComboBox.SelectedItem?.ToString()];
@@ -151,6 +151,7 @@ namespace HVACLoadTerminals
                 
             
         }
+        #endregion
         private DevicePropertyModel GetSelectedDeviece(double SpaceFlow)
         {
             if (DevicePropertyList.Any())
