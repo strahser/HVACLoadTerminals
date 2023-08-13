@@ -120,7 +120,6 @@ namespace HVACLoadTerminals
 
         private void SpaceParameterChooseComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-
                 List<SpaceModel> paramList = new List<SpaceModel>();
             if (SpaceParameterChooseComboBox.SelectedItem != null)
             {
@@ -147,8 +146,7 @@ namespace HVACLoadTerminals
                     }
                 }
                 SpaceFlowGrid.ItemsSource = paramList;
-            }
-                
+            }               
             
         }
         #endregion
