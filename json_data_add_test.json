@@ -1,0 +1,2975 @@
+[
+    {
+        "S_ID": "837895",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_250",
+        "minimum_device_number": 7.0,
+        "flow_to_device_calculated": 324.7,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                15590.070181427887,
+                -8334.274041267672,
+                1938.4
+            ],
+            [
+                15590.070181427896,
+                -3093.17076159153,
+                1938.4
+            ],
+            [
+                15590.07018142789,
+                -7460.756827988315,
+                1938.4
+            ],
+            [
+                15590.070181427891,
+                -6587.2396147089585,
+                1938.4
+            ],
+            [
+                15590.070181427891,
+                -5713.722401429601,
+                1938.4
+            ],
+            [
+                15590.070181427893,
+                -4840.205188150245,
+                1938.4
+            ],
+            [
+                15590.070181427895,
+                -3966.687974870887,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928204",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 146.25,
+        "system_name": "S04",
+        "instance_points": [
+            -3984.929818572081,
+            7799.329238408404,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837896",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 5.0,
+        "flow_to_device_calculated": 371.24,
+        "system_name": "S01",
+        "instance_points": [
+            [
+                9661.718560990432,
+                -8665.223088042545,
+                1938.4
+            ],
+            [
+                575.0,
+                -9441.92498655571,
+                1938.4
+            ],
+            [
+                7390.038920742823,
+                -8859.398562670836,
+                1938.4
+            ],
+            [
+                5118.359280495216,
+                -9053.574037299128,
+                1938.4
+            ],
+            [
+                2846.6796402476084,
+                -9247.749511927419,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837893",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_250",
+        "minimum_device_number": 13.0,
+        "flow_to_device_calculated": 330.6069230769231,
+        "system_name": "S01",
+        "instance_points": [
+            [
+                15590.070181427905,
+                3706.829238408327,
+                1938.4
+            ],
+            [
+                15590.070181427915,
+                8931.82923840846,
+                1938.4
+            ],
+            [
+                15590.070181427905,
+                4142.245905075005,
+                1938.4
+            ],
+            [
+                15590.070181427907,
+                4577.662571741683,
+                1938.4
+            ],
+            [
+                15590.070181427907,
+                5013.07923840836,
+                1938.4
+            ],
+            [
+                15590.07018142791,
+                5448.495905075038,
+                1938.4
+            ],
+            [
+                15590.07018142791,
+                5883.9125717417155,
+                1938.4
+            ],
+            [
+                15590.07018142791,
+                6319.329238408393,
+                1938.4
+            ],
+            [
+                15590.070181427911,
+                6754.745905075071,
+                1938.4
+            ],
+            [
+                15590.070181427911,
+                7190.162571741748,
+                1938.4
+            ],
+            [
+                15590.070181427913,
+                7625.579238408427,
+                1938.4
+            ],
+            [
+                15590.070181427913,
+                8060.995905075105,
+                1938.4
+            ],
+            [
+                15590.070181427915,
+                8496.412571741781,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928206",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 5.0,
+        "flow_to_device_calculated": 168.0,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                -575.0,
+                -11755.022008766464,
+                1938.4
+            ],
+            [
+                -16259.929818572122,
+                -10251.055394697518,
+                1938.4
+            ],
+            [
+                -4496.23245464303,
+                -11379.030355249228,
+                1938.4
+            ],
+            [
+                -8417.46490928606,
+                -11003.038701731992,
+                1938.4
+            ],
+            [
+                -12338.697363929092,
+                -10627.047048214754,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837894",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 120.0,
+        "system_name": "S01",
+        "instance_points": [
+            [
+                14440.070181427905,
+                3706.8292384083306,
+                1938.4
+            ],
+            [
+                7240.070181427913,
+                3706.8292384083534,
+                1938.4
+            ],
+            [
+                12040.07018142791,
+                3706.8292384083384,
+                1938.4
+            ],
+            [
+                9640.070181427911,
+                3706.8292384083456,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837891",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 219.065,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                -17409.929818572095,
+                3706.8292384084325,
+                1938.4
+            ],
+            [
+                -25334.929818572084,
+                3706.82923840846,
+                1938.4
+            ],
+            [
+                -20051.59648523876,
+                3706.8292384084416,
+                1938.4
+            ],
+            [
+                -22693.26315190542,
+                3706.8292384084507,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837899",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_250",
+        "minimum_device_number": 13.0,
+        "flow_to_device_calculated": 231.34307692307692,
+        "system_name": "S01",
+        "instance_points": [
+            [
+                18515.070181427916,
+                -1943.1707615915395,
+                1938.4
+            ],
+            [
+                -25334.929818572084,
+                -1943.1707615913967,
+                1938.4
+            ],
+            [
+                14860.90351476125,
+                -1943.1707615915277,
+                1938.4
+            ],
+            [
+                11206.736848094584,
+                -1943.1707615915157,
+                1938.4
+            ],
+            [
+                7552.570181427916,
+                -1943.1707615915038,
+                1938.4
+            ],
+            [
+                3898.4035147612503,
+                -1943.170761591492,
+                1938.4
+            ],
+            [
+                244.23684809458064,
+                -1943.17076159148,
+                1938.4
+            ],
+            [
+                -3409.9298185720836,
+                -1943.1707615914681,
+                1938.4
+            ],
+            [
+                -7064.0964852387515,
+                -1943.1707615914563,
+                1938.4
+            ],
+            [
+                -10718.263151905416,
+                -1943.1707615914443,
+                1938.4
+            ],
+            [
+                -14372.429818572084,
+                -1943.1707615914324,
+                1938.4
+            ],
+            [
+                -18026.596485238755,
+                -1943.1707615914206,
+                1938.4
+            ],
+            [
+                -21680.763151905412,
+                -1943.1707615914086,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837897",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 183.965,
+        "system_name": "S01",
+        "instance_points": [
+            [
+                -8009.929818572119,
+                -8618.170761591455,
+                1938.4
+            ],
+            [
+                -16259.92981857212,
+                -8618.170761591427,
+                1938.4
+            ],
+            [
+                -10759.92981857212,
+                -8618.170761591446,
+                1938.4
+            ],
+            [
+                -13509.92981857212,
+                -8618.170761591437,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837898",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 5.0,
+        "flow_to_device_calculated": 108.0,
+        "system_name": "S01",
+        "instance_points": [
+            [
+                -17409.929818572124,
+                -9954.228955976845,
+                1938.4
+            ],
+            [
+                -25334.929818572084,
+                -7094.260812568914,
+                1938.4
+            ],
+            [
+                -19391.179818572113,
+                -9239.236920124862,
+                1938.4
+            ],
+            [
+                -21372.429818572105,
+                -8524.244884272879,
+                1938.4
+            ],
+            [
+                -23353.679818572095,
+                -7809.252848420897,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837895",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 272.9,
+        "system_name": "E01",
+        "instance_points": [
+            18515.070181427916,
+            -3093.17076159154,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928204",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 146.25,
+        "system_name": "E04",
+        "instance_points": [
+            -8609.929818572078,
+            8931.82923840846,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837896",
+        "family_device_name": "ADSK_Диффузор_Круглый_Вытяжной",
+        "family_instance_name": "ДВ_250",
+        "minimum_device_number": 3.0,
+        "flow_to_device_calculated": 285.40000000000003,
+        "system_name": "E01",
+        "instance_points": [
+            [
+                575.0,
+                -3093.170761591481,
+                1938.4
+            ],
+            [
+                9661.718560990443,
+                -3093.17076159151,
+                1938.4
+            ],
+            [
+                5118.359280495221,
+                -3093.1707615914956,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837893",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 297.89,
+        "system_name": "E01",
+        "instance_points": [
+            18515.070181427916,
+            8931.82923840846,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928206",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 840.0,
+        "system_name": "E04",
+        "instance_points": [
+            -575.0,
+            -3093.1707615914775,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837894",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 480.0,
+        "system_name": "E01",
+        "instance_points": [
+            7240.070181427921,
+            8931.82923840846,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837891",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 876.26,
+        "system_name": "E01",
+        "instance_points": [
+            -25334.929818572084,
+            8931.82923840846,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928205",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 360.0,
+        "system_name": "E04",
+        "instance_points": [
+            -2834.9298185720813,
+            8931.82923840846,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837899",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "600х600",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 1503.73,
+        "system_name": "E01",
+        "instance_points": [
+            [
+                18515.070181427916,
+                2556.829238408318,
+                1938.4
+            ],
+            [
+                18515.070181427916,
+                -1943.1707615915395,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837892",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 180.0,
+        "system_name": "E01",
+        "instance_points": [
+            -2834.9298185720836,
+            6649.3292384084,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837890",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 480.0,
+        "system_name": "E02",
+        "instance_points": [
+            -16259.929818572089,
+            6649.329238408443,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837898",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 540.0,
+        "system_name": "E01",
+        "instance_points": [
+            -25334.929818572084,
+            -3093.170761591397,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928204",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 200",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 819.84,
+        "system_name": "C04",
+        "instance_points": [
+            -6297.42981857208,
+            8365.579238408436,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837896",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 600",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 8511.3,
+        "system_name": "C01",
+        "instance_points": [
+            5118.359280495219,
+            -6073.372399445312,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837893",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 200",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 1455.16,
+        "system_name": "C01",
+        "instance_points": [
+            17052.570181427913,
+            6319.329238408391,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928206",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 600",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 8167.92,
+        "system_name": "C04",
+        "instance_points": [
+            -8417.46490928606,
+            -8716.854731661722,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837894",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 4620.9,
+        "system_name": "C01",
+        "instance_points": [
+            10840.070181427913,
+            6319.329238408402,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837891",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 4115.51,
+        "system_name": "C01",
+        "instance_points": [
+            -17547.429818572084,
+            7342.454238408451,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928205",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 3501.86,
+        "system_name": "C04",
+        "instance_points": [
+            1627.5701814279182,
+            7342.45423840842,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837899",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 600",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 8633.62,
+        "system_name": "C01",
+        "instance_points": [
+            -3409.9298185720836,
+            306.82923840846036,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837892",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 200",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 1756.08,
+        "system_name": "C01",
+        "instance_points": [
+            -759.9298185720863,
+            5178.079238408386,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837890",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 600",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 9614.4825,
+        "system_name": "C01",
+        "instance_points": [
+            [
+                -16259.92981857209,
+                5178.079238408436,
+                1938.4
+            ],
+            [
+                -3984.929818572086,
+                5178.079238408396,
+                1938.4
+            ],
+            [
+                -12168.263151905423,
+                5178.0792384084225,
+                1938.4
+            ],
+            [
+                -8076.596485238754,
+                5178.07923840841,
+                1938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837898",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 5230.44,
+        "system_name": "C01",
+        "instance_points": [
+            -21372.429818572098,
+            -5808.707822932145,
+            1938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837901",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 3.0,
+        "flow_to_device_calculated": 225.78666666666666,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                -17409.929818572095,
+                3706.8292384084325,
+                4938.400000000001
+            ],
+            [
+                -25334.929818572084,
+                3706.82923840846,
+                4938.400000000001
+            ],
+            [
+                -21372.42981857209,
+                3706.829238408446,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837909",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_250",
+        "minimum_device_number": 3.0,
+        "flow_to_device_calculated": 239.86666666666667,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                -17409.929818572124,
+                -9954.228955976836,
+                4938.400000000001
+            ],
+            [
+                -25334.92981857209,
+                -7094.260812568908,
+                4938.400000000001
+            ],
+            [
+                -21372.429818572105,
+                -8524.244884272872,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837904",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 120.0,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                14440.070181427905,
+                3706.8292384083306,
+                4938.400000000001
+            ],
+            [
+                7240.070181427913,
+                3706.8292384083534,
+                4938.400000000001
+            ],
+            [
+                12040.07018142791,
+                3706.8292384083384,
+                4938.400000000001
+            ],
+            [
+                9640.070181427911,
+                3706.8292384083456,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837907",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 7.0,
+        "flow_to_device_calculated": 220.00571428571428,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                14440.070181427885,
+                -8735.467581253059,
+                4938.400000000001
+            ],
+            [
+                575.0,
+                -11678.346788047109,
+                4938.400000000001
+            ],
+            [
+                12129.225151189905,
+                -9225.947449052066,
+                4938.400000000001
+            ],
+            [
+                9818.380120951924,
+                -9716.427316851075,
+                4938.400000000001
+            ],
+            [
+                7507.535090713943,
+                -10206.907184650085,
+                4938.400000000001
+            ],
+            [
+                5196.690060475963,
+                -10697.387052449092,
+                4938.400000000001
+            ],
+            [
+                2885.8450302379806,
+                -11187.8669202481,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837902",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 5.0,
+        "flow_to_device_calculated": 108.0,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                6090.070181427912,
+                3706.829238408357,
+                4938.400000000001
+            ],
+            [
+                -2834.929818572088,
+                3706.829238408385,
+                4938.400000000001
+            ],
+            [
+                3858.820181427912,
+                3706.8292384083643,
+                4938.400000000001
+            ],
+            [
+                1627.5701814279118,
+                3706.829238408371,
+                4938.400000000001
+            ],
+            [
+                -603.6798185720882,
+                3706.829238408378,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837905",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_250",
+        "minimum_device_number": 13.0,
+        "flow_to_device_calculated": 231.34307692307692,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                18515.070181427916,
+                -1943.1707615915395,
+                4938.400000000001
+            ],
+            [
+                -25334.929818572084,
+                -1943.1707615913967,
+                4938.400000000001
+            ],
+            [
+                14860.90351476125,
+                -1943.1707615915277,
+                4938.400000000001
+            ],
+            [
+                11206.736848094584,
+                -1943.1707615915157,
+                4938.400000000001
+            ],
+            [
+                7552.570181427916,
+                -1943.1707615915038,
+                4938.400000000001
+            ],
+            [
+                3898.4035147612503,
+                -1943.170761591492,
+                4938.400000000001
+            ],
+            [
+                244.23684809458064,
+                -1943.17076159148,
+                4938.400000000001
+            ],
+            [
+                -3409.9298185720836,
+                -1943.1707615914681,
+                4938.400000000001
+            ],
+            [
+                -7064.0964852387515,
+                -1943.1707615914563,
+                4938.400000000001
+            ],
+            [
+                -10718.263151905416,
+                -1943.1707615914443,
+                4938.400000000001
+            ],
+            [
+                -14372.429818572084,
+                -1943.1707615914324,
+                4938.400000000001
+            ],
+            [
+                -18026.596485238755,
+                -1943.1707615914206,
+                4938.400000000001
+            ],
+            [
+                -21680.763151905412,
+                -1943.1707615914086,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837908",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 8.0,
+        "flow_to_device_calculated": 172.5,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                -575.0,
+                -11755.022008766464,
+                4938.400000000001
+            ],
+            [
+                -16259.929818572124,
+                -10251.055394697518,
+                4938.400000000001
+            ],
+            [
+                -2815.7042597960176,
+                -11540.169635328042,
+                4938.400000000001
+            ],
+            [
+                -5056.408519592035,
+                -11325.317261889622,
+                4938.400000000001
+            ],
+            [
+                -7297.112779388052,
+                -11110.4648884512,
+                4938.400000000001
+            ],
+            [
+                -9537.81703918407,
+                -10895.612515012781,
+                4938.400000000001
+            ],
+            [
+                -11778.52129898009,
+                -10680.76014157436,
+                4938.400000000001
+            ],
+            [
+                -14019.225558776105,
+                -10465.90776813594,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837903",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 148.945,
+        "system_name": "S01",
+        "instance_points": [
+            [
+                18515.070181427916,
+                3706.829238408318,
+                4938.400000000001
+            ],
+            [
+                15590.070181427905,
+                3706.829238408327,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837906",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 3.0,
+        "flow_to_device_calculated": 80.0,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                15590.070181427887,
+                -8334.274041267672,
+                4938.400000000001
+            ],
+            [
+                15590.070181427896,
+                -3093.17076159153,
+                4938.400000000001
+            ],
+            [
+                15590.070181427891,
+                -5713.722401429601,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837901",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 677.36,
+        "system_name": "E02",
+        "instance_points": [
+            -25334.929818572084,
+            8931.82923840846,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837909",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 719.6,
+        "system_name": "E02",
+        "instance_points": [
+            -25334.929818572084,
+            -3093.170761591397,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837907",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "600х600",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 1540.04,
+        "system_name": "E02",
+        "instance_points": [
+            575.0,
+            -3093.170761591481,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837902",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 540.0,
+        "system_name": "E01",
+        "instance_points": [
+            -2834.9298185720813,
+            8931.82923840846,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928208",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 300.0,
+        "system_name": "E04",
+        "instance_points": [
+            -3984.9298185720795,
+            8931.82923840846,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837905",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "600х600",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 1503.73,
+        "system_name": "E02",
+        "instance_points": [
+            [
+                18515.070181427916,
+                2556.829238408318,
+                4938.400000000001
+            ],
+            [
+                18515.070181427916,
+                -1943.1707615915395,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837900",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 300.0,
+        "system_name": "E02",
+        "instance_points": [
+            -9059.929818572076,
+            8931.82923840846,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837908",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 1380.0,
+        "system_name": "E02",
+        "instance_points": [
+            -16259.929818572109,
+            -3093.1707615914265,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837903",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 297.89,
+        "system_name": "E02",
+        "instance_points": [
+            18515.070181427916,
+            8931.82923840846,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928209",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 240.0,
+        "system_name": "E04",
+        "instance_points": [
+            -13734.929818572082,
+            8931.82923840846,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837906",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 240.0,
+        "system_name": "E02",
+        "instance_points": [
+            18515.070181427916,
+            -3093.17076159154,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837901",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 3144.53,
+        "system_name": "C02",
+        "instance_points": [
+            -21372.429818572087,
+            6319.3292384084525,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837909",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 3265.77,
+        "system_name": "C02",
+        "instance_points": [
+            -21372.4298185721,
+            -5808.707822932141,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837904",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 4620.9,
+        "system_name": "C02",
+        "instance_points": [
+            10840.070181427913,
+            6319.329238408402,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837907",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 500",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 7021.03,
+        "system_name": "C02",
+        "instance_points": [
+            7507.5350907139455,
+            -6650.038973120793,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837905",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 500",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 6816.81,
+        "system_name": "C02",
+        "instance_points": [
+            [
+                -3409.9298185720836,
+                2556.829238408389,
+                4938.400000000001
+            ],
+            [
+                -3409.9298185720836,
+                -1943.1707615914681,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837900",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 2813.36,
+        "system_name": "C02",
+        "instance_points": [
+            -10822.429818572085,
+            6319.329238408436,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837908",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 500",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 6736.41,
+        "system_name": "C02",
+        "instance_points": [
+            [
+                -8417.464909286055,
+                -3093.170761591452,
+                4938.400000000001
+            ],
+            [
+                -8417.464909286062,
+                -11003.038701731992,
+                4938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837903",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 200",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 1455.16,
+        "system_name": "C02",
+        "instance_points": [
+            17052.570181427913,
+            6319.329238408391,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928209",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 2238.86,
+        "system_name": "C04",
+        "instance_points": [
+            -14997.429818572089,
+            6319.3292384084425,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837906",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 2247.67,
+        "system_name": "C02",
+        "instance_points": [
+            17052.570181427902,
+            -5408.249035526278,
+            4938.400000000001
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928211",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_160",
+        "minimum_device_number": 3.0,
+        "flow_to_device_calculated": 140.0,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                575.0,
+                -10393.170761591484,
+                7938.4
+            ],
+            [
+                575.0,
+                -3093.170761591481,
+                7938.4
+            ],
+            [
+                575.0,
+                -6743.170761591482,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837911",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 3.0,
+        "flow_to_device_calculated": 225.78666666666666,
+        "system_name": "S03",
+        "instance_points": [
+            [
+                -17409.929818572095,
+                3706.8292384084325,
+                7938.4
+            ],
+            [
+                -25334.929818572084,
+                3706.82923840846,
+                7938.4
+            ],
+            [
+                -21372.42981857209,
+                3706.829238408446,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837914",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 120.0,
+        "system_name": "S03",
+        "instance_points": [
+            [
+                14440.070181427905,
+                3706.8292384083306,
+                7938.4
+            ],
+            [
+                7240.070181427913,
+                3706.8292384083534,
+                7938.4
+            ],
+            [
+                12040.07018142791,
+                3706.8292384083384,
+                7938.4
+            ],
+            [
+                9640.070181427911,
+                3706.8292384083456,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837912",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 5.0,
+        "flow_to_device_calculated": 108.0,
+        "system_name": "S03",
+        "instance_points": [
+            [
+                6090.070181427912,
+                3706.829238408357,
+                7938.4
+            ],
+            [
+                -2834.929818572088,
+                3706.829238408385,
+                7938.4
+            ],
+            [
+                3858.820181427912,
+                3706.8292384083643,
+                7938.4
+            ],
+            [
+                1627.5701814279118,
+                3706.829238408371,
+                7938.4
+            ],
+            [
+                -603.6798185720882,
+                3706.829238408378,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837915",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_250",
+        "minimum_device_number": 13.0,
+        "flow_to_device_calculated": 231.73,
+        "system_name": "S02",
+        "instance_points": [
+            [
+                18590.070181427916,
+                -1943.1707615915395,
+                7938.4
+            ],
+            [
+                -25334.929818572084,
+                -1943.1707615913967,
+                7938.4
+            ],
+            [
+                14929.65351476125,
+                -1943.1707615915277,
+                7938.4
+            ],
+            [
+                11269.236848094584,
+                -1943.1707615915157,
+                7938.4
+            ],
+            [
+                7608.820181427916,
+                -1943.1707615915038,
+                7938.4
+            ],
+            [
+                3948.4035147612503,
+                -1943.170761591492,
+                7938.4
+            ],
+            [
+                287.98684809458064,
+                -1943.17076159148,
+                7938.4
+            ],
+            [
+                -3372.4298185720836,
+                -1943.1707615914681,
+                7938.4
+            ],
+            [
+                -7032.8464852387515,
+                -1943.1707615914563,
+                7938.4
+            ],
+            [
+                -10693.263151905416,
+                -1943.1707615914443,
+                7938.4
+            ],
+            [
+                -14353.679818572084,
+                -1943.1707615914324,
+                7938.4
+            ],
+            [
+                -18014.096485238755,
+                -1943.1707615914206,
+                7938.4
+            ],
+            [
+                -21674.513151905412,
+                -1943.1707615914086,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837910",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 7.0,
+        "flow_to_device_calculated": 102.85714285714286,
+        "system_name": "S03",
+        "instance_points": [
+            [
+                -3984.929818572088,
+                3706.8292384083893,
+                7938.4
+            ],
+            [
+                -16259.929818572095,
+                3706.829238408429,
+                7938.4
+            ],
+            [
+                -6030.763151905423,
+                3706.829238408396,
+                7938.4
+            ],
+            [
+                -8076.596485238757,
+                3706.8292384084025,
+                7938.4
+            ],
+            [
+                -10122.42981857209,
+                3706.829238408409,
+                7938.4
+            ],
+            [
+                -12168.263151905427,
+                3706.8292384084157,
+                7938.4
+            ],
+            [
+                -14214.096485238762,
+                3706.8292384084225,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837918",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 210.1375,
+        "system_name": "S03",
+        "instance_points": [
+            [
+                -6961.827201635485,
+                -8718.170761591457,
+                7938.4
+            ],
+            [
+                -12586.82720163548,
+                -3093.170761591437,
+                7938.4
+            ],
+            [
+                -8836.827201635484,
+                -6843.17076159145,
+                7938.4
+            ],
+            [
+                -10711.827201635482,
+                -4968.170761591444,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837913",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 151.79,
+        "system_name": NaN,
+        "instance_points": [
+            [
+                18590.070181427916,
+                3706.8292384083175,
+                7938.4
+            ],
+            [
+                15590.070181427905,
+                3706.8292384083275,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837916",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 3.0,
+        "flow_to_device_calculated": 80.0,
+        "system_name": "S03",
+        "instance_points": [
+            [
+                15590.070181427885,
+                -8333.639964469181,
+                7938.4
+            ],
+            [
+                15590.070181427895,
+                -3093.17076159153,
+                7938.4
+            ],
+            [
+                15590.070181427891,
+                -5713.405363030355,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928211",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 420.0,
+        "system_name": "E04",
+        "instance_points": [
+            6254.151828897126,
+            -3093.1707615914993,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837911",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 677.36,
+        "system_name": NaN,
+        "instance_points": [
+            -25334.929818572084,
+            8931.82923840846,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837919",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 540.0,
+        "system_name": "E03",
+        "instance_points": [
+            -25334.929818572084,
+            -3093.170761591397,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837914",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 480.0,
+        "system_name": "E03",
+        "instance_points": [
+            7240.070181427921,
+            8931.82923840846,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837912",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 540.0,
+        "system_name": "E02",
+        "instance_points": [
+            -2834.9298185720813,
+            8931.82923840846,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837915",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "600х600",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 1506.245,
+        "system_name": "E03",
+        "instance_points": [
+            [
+                18590.070181427916,
+                2556.829238408318,
+                7938.4
+            ],
+            [
+                18590.070181427916,
+                -1943.1707615915395,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928210",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 780.0,
+        "system_name": "E04",
+        "instance_points": [
+            -16259.929818572109,
+            -3093.1707615914265,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837910",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 720.0,
+        "system_name": "E03",
+        "instance_points": [
+            -16259.929818572084,
+            8931.82923840846,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837918",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 840.55,
+        "system_name": "E03",
+        "instance_points": [
+            -12586.82720163548,
+            -3093.170761591437,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837913",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 303.58,
+        "system_name": "E03",
+        "instance_points": [
+            18590.070181427916,
+            8931.82923840846,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837916",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 240.0,
+        "system_name": "E03",
+        "instance_points": [
+            18590.070181427916,
+            -3093.17076159154,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928211",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 4066.14,
+        "system_name": "C04",
+        "instance_points": [
+            2821.5974688235065,
+            -6743.170761591489,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837911",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 3144.53,
+        "system_name": NaN,
+        "instance_points": [
+            -21372.429818572087,
+            6319.3292384084525,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837919",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 5230.44,
+        "system_name": "C03",
+        "instance_points": [
+            -21372.4298185721,
+            -5808.707822932141,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837914",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 4620.9,
+        "system_name": "C03",
+        "instance_points": [
+            10840.070181427913,
+            6319.329238408402,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837912",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 5285.66,
+        "system_name": "C03",
+        "instance_points": [
+            1627.5701814279155,
+            6319.329238408416,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837915",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 500",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 6824.03,
+        "system_name": "C03",
+        "instance_points": [
+            [
+                -3372.4298185720836,
+                2556.829238408389,
+                7938.4
+            ],
+            [
+                -3372.4298185720836,
+                -1943.1707615914681,
+                7938.4
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "928210",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 500",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 7544.17,
+        "system_name": "C04",
+        "instance_points": [
+            -8417.464909286058,
+            -8741.854731661722,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837918",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 3812.99,
+        "system_name": "C03",
+        "instance_points": [
+            -5174.663600817741,
+            -5905.670761591462,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837913",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 200",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 1471.5,
+        "system_name": "C03",
+        "instance_points": [
+            17090.070181427913,
+            6319.329238408391,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837916",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 2254.92,
+        "system_name": "C03",
+        "instance_points": [
+            17090.070181427902,
+            -5399.413027045706,
+            7938.4
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837921",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_160",
+        "minimum_device_number": 5.0,
+        "flow_to_device_calculated": 144.0,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                -3984.929818572088,
+                3706.8292384083893,
+                10938.400000000001
+            ],
+            [
+                -16259.929818572095,
+                3706.829238408429,
+                10938.400000000001
+            ],
+            [
+                -7053.67981857209,
+                3706.8292384083993,
+                10938.400000000001
+            ],
+            [
+                -10122.42981857209,
+                3706.829238408409,
+                10938.400000000001
+            ],
+            [
+                -13191.179818572095,
+                3706.829238408419,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837929",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 5.0,
+        "flow_to_device_calculated": 108.0,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                -17409.929818572124,
+                -9954.228955976836,
+                10938.400000000001
+            ],
+            [
+                -25334.92981857209,
+                -7094.260812568908,
+                10938.400000000001
+            ],
+            [
+                -19391.179818572116,
+                -9239.236920124855,
+                10938.400000000001
+            ],
+            [
+                -21372.429818572105,
+                -8524.244884272872,
+                10938.400000000001
+            ],
+            [
+                -23353.679818572098,
+                -7809.25284842089,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837924",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 3.0,
+        "flow_to_device_calculated": 99.29666666666667,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                15590.070181427905,
+                3706.829238408327,
+                10938.400000000001
+            ],
+            [
+                15590.070181427915,
+                8931.82923840846,
+                10938.400000000001
+            ],
+            [
+                15590.07018142791,
+                6319.329238408393,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837927",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 7.0,
+        "flow_to_device_calculated": 162.85714285714286,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                14440.070181427885,
+                -8735.467581253059,
+                10938.400000000001
+            ],
+            [
+                575.0,
+                -11678.346788047109,
+                10938.400000000001
+            ],
+            [
+                12129.225151189905,
+                -9225.947449052066,
+                10938.400000000001
+            ],
+            [
+                9818.380120951924,
+                -9716.427316851075,
+                10938.400000000001
+            ],
+            [
+                7507.535090713943,
+                -10206.907184650085,
+                10938.400000000001
+            ],
+            [
+                5196.690060475963,
+                -10697.387052449092,
+                10938.400000000001
+            ],
+            [
+                2885.8450302379806,
+                -11187.8669202481,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837922",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 169.34,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                -17409.929818572095,
+                3706.8292384084325,
+                10938.400000000001
+            ],
+            [
+                -25334.929818572084,
+                3706.82923840846,
+                10938.400000000001
+            ],
+            [
+                -20051.59648523876,
+                3706.8292384084416,
+                10938.400000000001
+            ],
+            [
+                -22693.26315190542,
+                3706.8292384084507,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837925",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_200",
+        "minimum_device_number": 3.0,
+        "flow_to_device_calculated": 160.0,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                14440.070181427905,
+                3706.8292384083306,
+                10938.400000000001
+            ],
+            [
+                7240.070181427913,
+                3706.8292384083534,
+                10938.400000000001
+            ],
+            [
+                10840.07018142791,
+                3706.829238408342,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837920",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 22.0,
+        "flow_to_device_calculated": 136.7027272727273,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                18515.070181427916,
+                -1943.1707615915395,
+                10938.400000000001
+            ],
+            [
+                -25334.929818572084,
+                -1943.1707615913967,
+                10938.400000000001
+            ],
+            [
+                16426.97494333268,
+                -1943.1707615915327,
+                10938.400000000001
+            ],
+            [
+                14338.87970523744,
+                -1943.170761591526,
+                10938.400000000001
+            ],
+            [
+                12250.784467142203,
+                -1943.170761591519,
+                10938.400000000001
+            ],
+            [
+                10162.689229046964,
+                -1943.1707615915122,
+                10938.400000000001
+            ],
+            [
+                8074.593990951727,
+                -1943.1707615915054,
+                10938.400000000001
+            ],
+            [
+                5986.498752856489,
+                -1943.1707615914988,
+                10938.400000000001
+            ],
+            [
+                3898.4035147612503,
+                -1943.170761591492,
+                10938.400000000001
+            ],
+            [
+                1810.3082766660118,
+                -1943.1707615914852,
+                10938.400000000001
+            ],
+            [
+                -277.7869614292249,
+                -1943.1707615914784,
+                10938.400000000001
+            ],
+            [
+                -2365.8821995244616,
+                -1943.1707615914715,
+                10938.400000000001
+            ],
+            [
+                -4453.977437619706,
+                -1943.1707615914647,
+                10938.400000000001
+            ],
+            [
+                -6542.072675714939,
+                -1943.170761591458,
+                10938.400000000001
+            ],
+            [
+                -8630.167913810179,
+                -1943.170761591451,
+                10938.400000000001
+            ],
+            [
+                -10718.263151905416,
+                -1943.1707615914443,
+                10938.400000000001
+            ],
+            [
+                -12806.358390000656,
+                -1943.1707615914374,
+                10938.400000000001
+            ],
+            [
+                -14894.453628095893,
+                -1943.1707615914308,
+                10938.400000000001
+            ],
+            [
+                -16982.54886619113,
+                -1943.170761591424,
+                10938.400000000001
+            ],
+            [
+                -19070.644104286366,
+                -1943.1707615914172,
+                10938.400000000001
+            ],
+            [
+                -21158.73934238161,
+                -1943.1707615914104,
+                10938.400000000001
+            ],
+            [
+                -23246.83458047684,
+                -1943.1707615914036,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837928",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 8.0,
+        "flow_to_device_calculated": 237.95875,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                -575.0,
+                -11755.022008766464,
+                10938.400000000001
+            ],
+            [
+                -16259.929818572124,
+                -10251.055394697518,
+                10938.400000000001
+            ],
+            [
+                -2815.7042597960176,
+                -11540.169635328042,
+                10938.400000000001
+            ],
+            [
+                -5056.408519592035,
+                -11325.317261889622,
+                10938.400000000001
+            ],
+            [
+                -7297.112779388052,
+                -11110.4648884512,
+                10938.400000000001
+            ],
+            [
+                -9537.81703918407,
+                -10895.612515012781,
+                10938.400000000001
+            ],
+            [
+                -11778.52129898009,
+                -10680.76014157436,
+                10938.400000000001
+            ],
+            [
+                -14019.225558776105,
+                -10465.90776813594,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837923",
+        "family_device_name": "ADSK_Диффузор_Круглый_Приточный",
+        "family_instance_name": "ДП_160",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 135.0,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                6090.070181427912,
+                3706.829238408357,
+                10938.400000000001
+            ],
+            [
+                -2834.929818572088,
+                3706.829238408385,
+                10938.400000000001
+            ],
+            [
+                3115.070181427912,
+                3706.8292384083666,
+                10938.400000000001
+            ],
+            [
+                140.07018142791185,
+                3706.8292384083757,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837926",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Приточный",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 3.0,
+        "flow_to_device_calculated": 90.96666666666665,
+        "system_name": "S04",
+        "instance_points": [
+            [
+                15590.070181427887,
+                -8334.274041267672,
+                10938.400000000001
+            ],
+            [
+                15590.070181427896,
+                -3093.17076159153,
+                10938.400000000001
+            ],
+            [
+                15590.070181427891,
+                -5713.722401429601,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837929",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 540.0,
+        "system_name": "E04",
+        "instance_points": [
+            -25334.929818572084,
+            -3093.170761591397,
+            10938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837924",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 297.89,
+        "system_name": "E04",
+        "instance_points": [
+            18515.070181427916,
+            8931.82923840846,
+            10938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837927",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 1140.0,
+        "system_name": "E04",
+        "instance_points": [
+            575.0,
+            -3093.170761591481,
+            10938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837922",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "450х450",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 677.36,
+        "system_name": "E04",
+        "instance_points": [
+            -25334.929818572084,
+            8931.82923840846,
+            10938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837925",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 480.0,
+        "system_name": "E04",
+        "instance_points": [
+            7240.070181427921,
+            8931.82923840846,
+            10938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837920",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "600х600",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 1503.73,
+        "system_name": "E04",
+        "instance_points": [
+            [
+                18515.070181427916,
+                2556.829238408318,
+                10938.400000000001
+            ],
+            [
+                18515.070181427916,
+                -1943.1707615915395,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837928",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "600х600",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 1903.67,
+        "system_name": "E04",
+        "instance_points": [
+            -16259.929818572109,
+            -3093.1707615914265,
+            10938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837923",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 540.0,
+        "system_name": "E04",
+        "instance_points": [
+            -2834.9298185720813,
+            8931.82923840846,
+            10938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837926",
+        "family_device_name": "ADSK_Диффузор_Прямоугольный_Вытяжной",
+        "family_instance_name": "300х300",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 272.9,
+        "system_name": "E04",
+        "instance_points": [
+            18515.070181427916,
+            -3093.17076159154,
+            10938.400000000001
+        ],
+        "sys_flow_parametr_name": "ADSK_Расход воздуха",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837921",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 600",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 9724.135,
+        "system_name": "C04",
+        "instance_points": [
+            [
+                -10122.429818572082,
+                8931.82923840846,
+                10938.400000000001
+            ],
+            [
+                -10122.42981857209,
+                3706.829238408409,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837929",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 500",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 7041.88,
+        "system_name": "C04",
+        "instance_points": [
+            [
+                -21372.429818572098,
+                -3093.17076159141,
+                10938.400000000001
+            ],
+            [
+                -21372.429818572105,
+                -8524.244884272872,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837924",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 5120.13,
+        "system_name": "C04",
+        "instance_points": [
+            17052.570181427913,
+            6319.329238408391,
+            10938.400000000001
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837927",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 500",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 7505.8975,
+        "system_name": "C04",
+        "instance_points": [
+            [
+                575.0,
+                -7385.758774819295,
+                10938.400000000001
+            ],
+            [
+                14440.070181427891,
+                -5914.319171422292,
+                10938.400000000001
+            ],
+            [
+                5196.690060475963,
+                -6895.278907020293,
+                10938.400000000001
+            ],
+            [
+                9818.380120951926,
+                -6404.799039221293,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837922",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 5739.125,
+        "system_name": "C04",
+        "instance_points": [
+            [
+                -21372.429818572084,
+                8931.82923840846,
+                10938.400000000001
+            ],
+            [
+                -21372.42981857209,
+                3706.829238408446,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837925",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 500",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 6138.825,
+        "system_name": "C04",
+        "instance_points": [
+            [
+                10840.070181427918,
+                8931.82923840846,
+                10938.400000000001
+            ],
+            [
+                10840.07018142791,
+                3706.829238408342,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837920",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 600",
+        "minimum_device_number": 6.0,
+        "flow_to_device_calculated": 8439.145,
+        "system_name": "C04",
+        "instance_points": [
+            [
+                -25334.929818572084,
+                306.8292384085314,
+                10938.400000000001
+            ],
+            [
+                18515.070181427916,
+                306.8292384083893,
+                10938.400000000001
+            ],
+            [
+                -16564.929818572084,
+                306.829238408503,
+                10938.400000000001
+            ],
+            [
+                -7794.929818572084,
+                306.82923840847457,
+                10938.400000000001
+            ],
+            [
+                975.0701814279164,
+                306.82923840844614,
+                10938.400000000001
+            ],
+            [
+                9745.070181427916,
+                306.8292384084177,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837928",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 600",
+        "minimum_device_number": 4.0,
+        "flow_to_device_calculated": 8021.52,
+        "system_name": "C04",
+        "instance_points": [
+            [
+                -16259.929818572116,
+                -6672.113078144472,
+                10938.400000000001
+            ],
+            [
+                -575.0,
+                -7424.09638517897,
+                10938.400000000001
+            ],
+            [
+                -11031.619879048078,
+                -6922.774180489305,
+                10938.400000000001
+            ],
+            [
+                -5803.309939524039,
+                -7173.435282834137,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837923",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 500",
+        "minimum_device_number": 2.0,
+        "flow_to_device_calculated": 7276.565,
+        "system_name": "C04",
+        "instance_points": [
+            [
+                1627.5701814279205,
+                8931.82923840846,
+                10938.400000000001
+            ],
+            [
+                1627.5701814279118,
+                3706.829238408371,
+                10938.400000000001
+            ]
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    },
+    {
+        "S_ID": "837926",
+        "family_device_name": "42GWC Carrier_univ",
+        "family_instance_name": "42GWC 400",
+        "minimum_device_number": 1.0,
+        "flow_to_device_calculated": 4740.95,
+        "system_name": "C04",
+        "instance_points": [
+            17052.570181427902,
+            -5408.249035526278,
+            10938.400000000001
+        ],
+        "sys_flow_parametr_name": "FANCOIL_01",
+        "sys_name_parametr": "ИмяСистемы"
+    }
+]
