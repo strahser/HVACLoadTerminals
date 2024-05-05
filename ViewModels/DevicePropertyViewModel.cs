@@ -12,6 +12,10 @@ using HVACLoadTerminals.Models;
 using HVACLoadTerminals.StaticData;
 using HVACLoadTerminals.Utils;
 using System.Windows.Controls;
+using System.IO;
+using Newtonsoft.Json;
+using System.Windows;
+using LiteDB;
 
 namespace HVACLoadTerminals
 {
@@ -19,29 +23,118 @@ namespace HVACLoadTerminals
 
     {
         private Document doc { get; set; }
+
         public DevicePropertyViewModel()
         {
             doc = RevitAPI.Document;
             SelectedCategory = CategoriesList[0];
+            Directory.CreateDirectory(StaticParametersDefinition.fullPath);
 
         }
-        public List<SpaceProperty> Spacedata
+        private ObservableCollection<SpaceProperty> _spacedata;
+        public ObservableCollection<SpaceProperty> Spacedata
         {
             get
             {
 
-                List<Element> allSpaces = CollectorQuery.GetAllSpaces(doc);
-                List<SpaceProperty> SpaceList = new List<SpaceProperty>();
-                foreach (Element space in allSpaces)
-                {
+                return _spacedata;
+            }
+            set
+            {
+                _spacedata= value;
+                OnPropertyChanged(nameof(Spacedata));
+            }
+        }
 
-                    SpaceProperty newSpace = new SpaceProperty();
-                    SpaceList.Add(newSpace.PopulateSpaceProperty(space));
-                }
-                return SpaceList;
+        private RelayCommand _saveSpaceDataCommand;
+        public RelayCommand SaveSpaceDataCommand
+        {
+            get
+            {
+                return _saveSpaceDataCommand ??
+                  (_saveSpaceDataCommand = new RelayCommand(obj => SerializeListToJson()));
 
             }
         }
+
+        private RelayCommand _loadSpaceDataCommand;
+        public RelayCommand LoadSpaceDataCommand
+        {
+            get
+            {
+
+                return _loadSpaceDataCommand ??
+                (_loadSpaceDataCommand = new RelayCommand(obj => DeserializeList()));
+
+            }
+        }
+
+
+
+        private void DeserializeList()
+        {
+            try
+            {
+                StreamReader reader = new StreamReader(StaticParametersDefinition.SpaceDataJsonPath);
+                string jsonString = reader.ReadToEnd();
+                _spacedata = JsonConvert.DeserializeObject<ObservableCollection<SpaceProperty>>(jsonString);
+                OnPropertyChanged(nameof(Spacedata));
+                MessageBox.Show( $"Данные были загружены в колличестве {jsonString.Count()} шт.");
+
+            }
+
+            catch (Exception e) { 
+                MessageBox.Show("Сохраните табличные данные перед загрузкой");
+            }
+
+        }
+        private void AddSpaceDataToDB(ObservableCollection<SpaceProperty> SpaceList)
+        {
+            try
+            {
+
+
+                //Open database(or create if doesn't exist)
+                using (var db = new LiteDatabase(Path.Combine(StaticParametersDefinition.fullPath, "MyData.db")))
+                {
+                    var col = db.GetCollection<SpaceProperty>("SpaceProperty");
+
+                    foreach (SpaceProperty property in SpaceList)
+                    {
+
+                        if (col.FindOne(x => x.Id == property.Id) == null)
+                        {
+                            col.Insert(property);
+                        }
+                        else col.Update(property);
+                    }
+
+                }
+            }
+            catch (Exception e) { MessageBox.Show(e.ToString()); }
+        }
+            private void SerializeListToJson()
+        {
+
+            try
+            {
+
+                ObservableCollection<SpaceProperty> SpaceList = new ObservableCollection<SpaceProperty>();
+                foreach (Element space in CollectorQuery.GetAllSpaces(doc))
+                {
+
+                    SpaceProperty newSpace = new SpaceProperty();
+                    newSpace.DeviceCategory = MepCategories.AllCategories;
+                    SpaceList.Add(newSpace.PopulateSpaceProperty(space));
+                }                
+                File.WriteAllText(StaticParametersDefinition.SpaceDataJsonPath, JsonConvert.SerializeObject(SpaceList), Encoding.UTF8);
+                AddSpaceDataToDB(SpaceList);
+                MessageBox.Show("Данные успешно сохранены", "Успешное действие");
+            }
+            catch (Exception e) { MessageBox.Show(e.ToString()); }        
+        }
+
+
         private void GetFamilyDict()
         {
             FamilyTypes = CollectorQuery.FindFamilyTypes(doc, SelectedCategory.Value);
@@ -70,23 +163,19 @@ namespace HVACLoadTerminals
 
                     DevicePropertyList.Add(device);
                 }
-                catch (Exception ex)
-                {
-                    Debug.Write(ex);
-
-                }
+                catch (Exception e) { MessageBox.Show(e.ToString()); }
             }
         }
-        public List<Categories> CategoriesList { get { return MepCategories.AllCategories; } }
+        public List<CustomMepCategories> CategoriesList { get { return MepCategories.AllCategories; } }
         public ObservableCollection<Element> FamilyNames { get; set; }
         public Dictionary<string, List<FamilySymbol>> FamilyTypes { get; set; }
         public List<string> FamilyTypesOfCategory { get; set; }
         public List<string> ParametrList { get; set; }
         public List<DevicePropertyModel> DevicePropertyList { get; set; }
-        private Categories _selectedCategory;
+        private CustomMepCategories _selectedCategory;
         private string _selectedFamily { get; set; }
         private string _selectedProperty { get; set; }
-        public Categories SelectedCategory
+        public CustomMepCategories SelectedCategory
         // выбираем сеймейства по заданной категории
         {
             get { return _selectedCategory; }

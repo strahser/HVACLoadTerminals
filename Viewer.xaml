@@ -34,17 +34,34 @@
         </StackPanel>
 
      </TabItem>
-    <TabItem Header="Вкладка 2">
-        <DockPanel>
-            <DataGrid ItemsSource="{Binding Spacedata}"
-                AutoGenerateColumns="True" 
-                ScrollViewer.CanContentScroll="True"  
-                ScrollViewer.VerticalScrollBarVisibility="Auto" 
-                ScrollViewer.HorizontalScrollBarVisibility="Auto"     
-                AlternationCount="1" AlternatingRowBackground="Bisque"
-                >
-            </DataGrid>
-        </DockPanel>
+    <TabItem Header="Вкладка 2">                
+        <DockPanel>        
+
+                    <Button DockPanel.Dock="Top" Background="AliceBlue" 
+                            Content="Сохранить данные" 
+                            Command="{Binding SaveSpaceDataCommand}"  
+                            Margin="0,0,500,0"/>
+                    <Button DockPanel.Dock="Top" Background="AliceBlue" 
+                            Content="Загрузить данные" 
+                            Command="{Binding LoadSpaceDataCommand}"  
+                            Margin="0,0,500,0"/>
+
+                    <DataGrid x:Name="dg" ItemsSource="{Binding Spacedata}" AutoGenerateColumns="False"  
+                              HorizontalAlignment="Left" AlternatingRowBackground="LightGray" AlternationCount="2">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn x:Name="comboCol" Header="Category" Width="150">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DeviceCategory}" DisplayMemberPath="Name"
+                                                  />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}"></DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+        </DockPanel>        
      </TabItem>
 </TabControl>     
     </Grid>

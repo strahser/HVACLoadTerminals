@@ -3,6 +3,7 @@ using Autodesk.Revit.DB;
 using HVACLoadTerminals.StaticData;
 using HVACLoadTerminals.Utils;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 namespace HVACLoadTerminals.Models
 {
@@ -22,6 +23,7 @@ namespace HVACLoadTerminals.Models
         public double ColdLoad { get; set; }
         public double SupplyAirVolume { get; set; }
         public double ExaustAirVolume { get; set; }
+        public List<CustomMepCategories> DeviceCategory { get; set; }
 
         public SpaceProperty PopulateSpaceProperty(Element space)
         {

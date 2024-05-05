@@ -23,7 +23,7 @@ namespace HVACLoadTerminals
     public partial class Viewer : Window
     {        
 
-        public Viewer(Document doc)
+        public Viewer()
         {
             // assign value to field
 
@@ -31,6 +31,5 @@ namespace HVACLoadTerminals
             DevicePropertyViewModel vm = new DevicePropertyViewModel();
             DataContext = vm;
         }
-
     }
 }
