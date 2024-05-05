@@ -23,7 +23,7 @@ namespace HVACLoadTerminals.Models
         public double ColdLoad { get; set; }
         public double SupplyAirVolume { get; set; }
         public double ExaustAirVolume { get; set; }
-        public List<CustomMepCategories> DeviceCategory { get; set; }
+        public CustomMepCategories DeviceCategory { get; set; }
 
         public SpaceProperty PopulateSpaceProperty(Element space)
         {

@@ -30,6 +30,7 @@ namespace HVACLoadTerminals
             InitializeComponent();
             DevicePropertyViewModel vm = new DevicePropertyViewModel();
             DataContext = vm;
+
         }
     }
 }

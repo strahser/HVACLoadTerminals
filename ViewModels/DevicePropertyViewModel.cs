@@ -29,6 +29,7 @@ namespace HVACLoadTerminals
             doc = RevitAPI.Document;
             SelectedCategory = CategoriesList[0];
             Directory.CreateDirectory(StaticParametersDefinition.fullPath);
+            Spacedata=PopulateSpaceDataRevit();
 
         }
         private ObservableCollection<SpaceProperty> _spacedata;
@@ -88,6 +89,18 @@ namespace HVACLoadTerminals
             }
 
         }
+        public ObservableCollection<SpaceProperty> PopulateSpaceDataRevit()
+        {
+            ObservableCollection<SpaceProperty> SpaceList = new ObservableCollection<SpaceProperty>();
+            foreach (Element space in CollectorQuery.GetAllSpaces(doc))
+            {
+
+                SpaceProperty newSpace = new SpaceProperty();
+                newSpace.DeviceCategory = CategoriesList[0];
+                SpaceList.Add(newSpace.PopulateSpaceProperty(space));
+            }
+            return SpaceList;
+        }
         private void AddSpaceDataToDB(ObservableCollection<SpaceProperty> SpaceList)
         {
             try
@@ -118,16 +131,14 @@ namespace HVACLoadTerminals
 
             try
             {
-
-                ObservableCollection<SpaceProperty> SpaceList = new ObservableCollection<SpaceProperty>();
-                foreach (Element space in CollectorQuery.GetAllSpaces(doc))
+                var SpaceList = PopulateSpaceDataRevit();
+                var defaultSettings = new JsonSerializerSettings
                 {
+                    TypeNameHandling = TypeNameHandling.All,
+                    Formatting = Newtonsoft.Json.Formatting.Indented,
+                };
 
-                    SpaceProperty newSpace = new SpaceProperty();
-                    newSpace.DeviceCategory = MepCategories.AllCategories;
-                    SpaceList.Add(newSpace.PopulateSpaceProperty(space));
-                }                
-                File.WriteAllText(StaticParametersDefinition.SpaceDataJsonPath, JsonConvert.SerializeObject(SpaceList), Encoding.UTF8);
+                File.WriteAllText(StaticParametersDefinition.SpaceDataJsonPath, JsonConvert.SerializeObject(SpaceList, defaultSettings), Encoding.UTF8);
                 AddSpaceDataToDB(SpaceList);
                 MessageBox.Show("Данные успешно сохранены", "Успешное действие");
             }

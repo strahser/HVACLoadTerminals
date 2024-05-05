@@ -6,14 +6,27 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:HVACLoadTerminals" d:DataContext="{d:DesignInstance Type=local:DevicePropertyViewModel}"
         mc:Ignorable="d" 
-             d:DesignHeight="800" d:DesignWidth="800">
+             d:DesignHeight="800" d:DesignWidth="800"
+        Background="{DynamicResource MaterialDesignPaper}"
+        
+>
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Light.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignColors;component/Themes/Recommended/Primary/MaterialDesignColor.DeepPurple.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Button.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
 
     <Grid>
 
+  
         <TabControl>
     <TabItem Header="Вкладка 1">
-        <StackPanel>            
-            <TextBlock>Категория</TextBlock>
+        <StackPanel>                  
+                    <TextBlock>Категория</TextBlock>
             <ComboBox  x:Name="CategorySelectedLabelComboBox" 
                        ItemsSource="{Binding CategoriesList}" 
                        DisplayMemberPath="Name" 
@@ -45,19 +58,30 @@
                             Content="Загрузить данные" 
                             Command="{Binding LoadSpaceDataCommand}"  
                             Margin="0,0,500,0"/>
-
-                    <DataGrid x:Name="dg" ItemsSource="{Binding Spacedata}" AutoGenerateColumns="False"  
+                    <ComboBox 
+                        DockPanel.Dock="Top"
+                       ItemsSource="{Binding CategoriesList}" 
+                       DisplayMemberPath="Name" 
+                       SelectedValue ="{Binding SelectedCategory}" />
+            
+                    <DataGrid x:Name="grdData" ItemsSource="{Binding Spacedata}" AutoGenerateColumns="False"  
                               HorizontalAlignment="Left" AlternatingRowBackground="LightGray" AlternationCount="2">
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn x:Name="comboCol" Header="Category" Width="150">
+                            <DataGridTemplateColumn x:Name="comboCol" Header="Категория" Width="150">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ComboBox ItemsSource="{Binding DeviceCategory}" DisplayMemberPath="Name"
+                                        <ComboBox  
+                                            ItemsSource="{Binding DataContext.CategoriesList, 
+                                            RelativeSource={RelativeSource  AncestorType=DataGrid}}" 
+                                            DisplayMemberPath="Name" 
+                                            SelectedValuePath="{Binding DeviceCategory}"                                           
+                                                  
                                                   />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Name" Binding="{Binding Name}"></DataGridTextColumn>
+                            <DataGridTextColumn Header="Помещение" Binding="{Binding Name}"></DataGridTextColumn>
+                            <DataGridTextColumn Header="Данные категории"   Binding="{Binding DeviceCategory.Name}"></DataGridTextColumn>
                         </DataGrid.Columns>
                     </DataGrid>
 
