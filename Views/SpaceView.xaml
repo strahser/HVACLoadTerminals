@@ -1,0 +1,109 @@
+﻿<Window x:Class="HVACLoadTerminals.Views.SpaceView"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"         
+        TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
+        Background="{DynamicResource MaterialDesign.Brush.Background}"
+        TextElement.FontWeight="Medium"
+        TextElement.FontSize="14"
+        FontFamily="{materialDesign:MaterialDesignFont}"                
+        xmlns:control="http://filterdatagrid.control.com/2021"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:hvacloadterminals="clr-namespace:HVACLoadTerminals" 
+        d:DataContext="{d:DesignInstance Type=hvacloadterminals:SpaceViewModel}"
+        mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <materialDesign:CustomColorTheme BaseTheme="Light" PrimaryColor="Aqua" SecondaryColor="DarkGreen" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Light.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignColors;component/Themes/Recommended/Primary/MaterialDesignColor.DeepPurple.xaml" />
+
+
+                <!--Компоненты библиотеки-->
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Card.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.CheckBox.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Flipper.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Popupbox.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.DataGrid.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!--PRIMARY-->
+            <SolidColorBrush x:Key="PrimaryHueLightBrush" Color="#349fda"/>
+            <SolidColorBrush x:Key="PrimaryHueLightForegroundBrush" Color="#349fda"/>
+            <SolidColorBrush x:Key="PrimaryHueMidBrush" Color="#349fda"/>
+            <SolidColorBrush x:Key="PrimaryHueMidForegroundBrush" Color="#349fda"/>
+            <SolidColorBrush x:Key="PrimaryHueDarkBrush" Color="#349fda"/>
+            <SolidColorBrush x:Key="PrimaryHueDarkForegroundBrush" Color="#349fda"/>
+
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="50,40">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" MinHeight="29" />
+            <RowDefinition Height="16*" />
+            <RowDefinition Height="Auto" MinHeight="29" />
+            <RowDefinition Height="555*" />
+        </Grid.RowDefinitions>
+
+        <Grid
+            Grid.Row="0"
+            Margin="0,10"
+            HorizontalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel
+                Grid.Column="0"
+                HorizontalAlignment="Left"
+                Orientation="Vertical">
+                <Button Content="Сохранить данные" Command="{Binding SaveSpaceDataCommand}" Style="{DynamicResource MaterialDesignRaisedLightButton}"/>
+                <Button  Content="Загрузить данные"  Command="{Binding LoadSpaceDataCommand}" Style="{DynamicResource MaterialDesignRaisedLightButton}"/>
+                <Button x:Name="ShowDeviceModelButton" Content="Показать модельные данные"  Style="{DynamicResource MaterialDesignRaisedLightButton}" 
+Click="ShowDeviceModelButton_Click"/>
+                <TextBox x:Name="ChangedInputValue">New Value</TextBox>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                <Label Content="{Binding ElementName=FilterDataGrid, Path=Translate.LanguageName}" ContentStringFormat="FilterLanguage property : {0}" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock
+            Grid.Row="3"
+            Margin="10,10,0,2"
+            FontSize="13"
+            FontWeight="DemiBold"
+            Text="{Binding ElementName=FilterDataGridAuto, Path=Items.Count, StringFormat=Auto generate columns : {0:### ### ###} items}"
+            Visibility="Visible" />
+
+        <control:FilterDataGrid
+            SelectionUnit="Cell"
+            x:Name="FilterDataGridAuto"
+            Grid.Row="4"
+            Margin="10,10,0,2"
+            AlternatingRowBackground="WhiteSmoke"
+            AlternationCount="2"
+            AutoGenerateColumns="True"
+            Background="Transparent"
+            CanUserAddRows="False"
+            ColumnWidth="*"
+            FilterLanguage="Russian"
+            ItemsSource="{Binding Spacedata, UpdateSourceTrigger=PropertyChanged,Mode=TwoWay}"
+            RowHeaderWidth="30"
+            ShowElapsedTime="True"
+            ShowStatusBar="True"
+            VerticalScrollBarVisibility="Visible"
+            VirtualizingStackPanel.IsVirtualizing="True"
+            Visibility="Visible"
+            AutoGeneratingColumn="grid_AutoGeneratingColumn" 
+            >
+        </control:FilterDataGrid>
+    </Grid>
+</Window>

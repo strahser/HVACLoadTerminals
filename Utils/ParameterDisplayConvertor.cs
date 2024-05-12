@@ -11,26 +11,26 @@ namespace HVACLoadTerminals.Utils
     {
         public static double SquareMeters(Element element, BuiltInParameter parametr)
         {
-            return UnitUtils.ConvertFromInternalUnits(element.get_Parameter(parametr).AsDouble(), UnitTypeId.SquareMeters);
+            return Math.Round(UnitUtils.ConvertFromInternalUnits(element.get_Parameter(parametr).AsDouble(), UnitTypeId.SquareMeters),2);
         }
         public static double CubicMeters(Element element, BuiltInParameter parametr)
         {
-            return UnitUtils.ConvertFromInternalUnits(element.get_Parameter(parametr).AsDouble(), UnitTypeId.CubicMeters); 
+            return  Math.Round (UnitUtils.ConvertFromInternalUnits(element.get_Parameter(parametr).AsDouble(), UnitTypeId.CubicMeters),2); 
         }
         public static double Meters(Element element, BuiltInParameter parametr)
         {
-            return UnitUtils.ConvertFromInternalUnits(element.get_Parameter(parametr).AsDouble(), UnitTypeId.Meters); 
+            return Math.Round(UnitUtils.ConvertFromInternalUnits(element.get_Parameter(parametr).AsDouble(), UnitTypeId.Meters),2); 
         }
 
         public static double CubicMetersPerHour(Element element, string parametr)
         {
-            return UnitUtils.ConvertFromInternalUnits(element.LookupParameter(parametr).AsDouble(), UnitTypeId.CubicMetersPerHour);
+            return Math.Round(UnitUtils.ConvertFromInternalUnits(element.LookupParameter(parametr).AsDouble(), UnitTypeId.CubicMetersPerHour),2);
         }
 
 
         public static double Watts(Element element, string parametr)
         {
-            return UnitUtils.ConvertFromInternalUnits(element.LookupParameter(parametr).AsDouble(), UnitTypeId.Watts);
+            return Math.Round(UnitUtils.ConvertFromInternalUnits(element.LookupParameter(parametr).AsDouble(), UnitTypeId.Watts),2);
         }
     }
 }

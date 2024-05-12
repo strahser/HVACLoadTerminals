@@ -1,6 +1,6 @@
-﻿using System;
+﻿using HVACLoadTerminals.ViewModels;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,24 +13,20 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
-namespace HVACLoadTerminals
+
+namespace HVACLoadTerminals.Views
 {
     /// <summary>
     /// Логика взаимодействия для UserControl1.xaml
     /// </summary>
-    public partial class Viewer : Window
-    {        
-
-        public Viewer()
+    public partial class DeviceView : Window
+    {
+        public DeviceView()
         {
-            // assign value to field
-
             InitializeComponent();
-            DevicePropertyViewModel vm = new DevicePropertyViewModel();
-            DataContext = vm;
-
+            DeviceViewModel DeviceVm = new DeviceViewModel();
+            DataContext = DeviceVm;
+            
         }
     }
 }

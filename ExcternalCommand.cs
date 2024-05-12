@@ -8,6 +8,8 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json;
 using System.IO;
+using System.Windows;
+using HVACLoadTerminals.Views;
 
 
 
@@ -25,8 +27,8 @@ namespace HVACLoadTerminals
             }
 
             // wpf viewer form
-            Viewer viewer = new Viewer();
-            viewer.ShowDialog();
+            Window View = new SpaceView();
+            View.ShowDialog();
             return Result.Succeeded;
         }
         }
