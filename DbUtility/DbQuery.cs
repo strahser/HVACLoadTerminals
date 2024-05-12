@@ -37,7 +37,32 @@ namespace HVACLoadTerminals.DbUtility
 
                 }
             }
-            catch (Exception e) { MessageBox.Show(e.ToString()); }
+            catch (Exception e) { MessageBox.Show(e.Message); }
+
+        }
+        public static void AddDeviceProperryDataToDB(IList<DevicePropertyModel> DeviceList)
+        {
+            try
+            {
+                //Open database(or create if doesn't exist)
+                using (var db = new LiteDatabase(_dbPath))
+                {
+                    var col = db.GetCollection<DevicePropertyModel>("DeviceProperty");
+
+                    foreach (DevicePropertyModel property in DeviceList)
+                    {
+
+                        if (col.FindOne(x => x.Id == property.Id) == null)
+                        {
+                            col.Insert(property);
+                        }
+                        else col.Update(property);
+                    }
+
+                }
+                MessageBox.Show("Add DeviceProperty");
+            }
+            catch (Exception e) { MessageBox.Show(e.Message); }
 
         }
 

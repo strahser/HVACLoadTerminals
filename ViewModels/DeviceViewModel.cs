@@ -1,4 +1,5 @@
 ﻿using Autodesk.Revit.DB;
+using HVACLoadTerminals.DbUtility;
 using HVACLoadTerminals.StaticData;
 using HVACLoadTerminals.Utils;
 using System;
@@ -41,6 +42,7 @@ namespace HVACLoadTerminals.ViewModels
                     {
                         DevicePropertyModel device = new DevicePropertyModel()
                         {
+                            Id = el.Id.ToString(),
                             FamilyType = SelectedFamily,
                             Flow = ParameterDisplayConvertor.CubicMetersPerHour(el, SelectedProperty),
                             FamilyName = el.Name,
@@ -62,6 +64,9 @@ namespace HVACLoadTerminals.ViewModels
         private CustomMepCategories _selectedCategory;
         private string _selectedFamily { get; set; }
         private string _selectedProperty { get; set; }
+
+
+        
         public CustomMepCategories SelectedCategory
         // выбираем сеймейства по заданной категории
         {
@@ -93,6 +98,8 @@ namespace HVACLoadTerminals.ViewModels
                 OnPropertyChanged(nameof(DevicePropertyList));
             }
         }
+
+
         public string SelectedProperty
         {
             // Обновляем таблицу ВРУ по изменею расчетного параметра выбранного семейства
@@ -114,7 +121,7 @@ namespace HVACLoadTerminals.ViewModels
             {
 
                 return _SaveDevieDataCommand ??
-                (_SaveDevieDataCommand = new RelayCommand(obj => StaticParametersDefinition.SerializeDevicePropertyToJson(DevicePropertyList)));
+                (_SaveDevieDataCommand = new RelayCommand(obj => DbQuery.AddDeviceProperryDataToDB(DevicePropertyList)));
 
             }
         }

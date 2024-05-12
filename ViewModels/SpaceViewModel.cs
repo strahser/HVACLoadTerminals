@@ -62,8 +62,7 @@ namespace HVACLoadTerminals
             get
             {
 
-                return _loadSpaceDataCommand ??
-                //(_loadSpaceDataCommand = new RelayCommand(obj => StaticParametersDefinition.DeserializeSpacePropertyFromJson(Spacedata)));
+                return _loadSpaceDataCommand ??                
                 (_loadSpaceDataCommand = new RelayCommand(obj => Spacedata= new ObservableCollection<SpaceProperty>(DbQuery.GetSpacePropertyListFromDb())));
                
             }
@@ -75,11 +74,7 @@ namespace HVACLoadTerminals
             {
 
                 SpaceProperty newSpace = new SpaceProperty();
-                //var ReadDeviceList = StaticParametersDefinition.DeserializeDevicePropertyFromJson();
-                //if (ReadDeviceList != null)
-                //{
-                //    newSpace.DevicePropertyList = new List<DevicePropertyModel>(ReadDeviceList);
-                //}
+                newSpace.SelectedFamily = "ADSK_Диффузор_Прямоугольный_Приточный";
                 SpaceList.Add(newSpace.PopulateSpaceProperty(space));
             }
 
@@ -88,7 +83,6 @@ namespace HVACLoadTerminals
         private void LoadDataToDb()
 
         {
-            StaticParametersDefinition.SerializeSpacePropertyToJson(Spacedata);
             DbQuery.AddSpaceDataToDB(Spacedata);
 
         }

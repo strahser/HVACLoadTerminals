@@ -34,8 +34,13 @@ namespace HVACLoadTerminals.Views
             // assign value to field
             SpaceViewModel vm = new SpaceViewModel();
             DataContext = vm;
-            //if (!File.Exists(dbFileName))
-            //    SQLiteConnection.CreateFile(dbFileName);
+
+
+        }
+        private void AddToSqlTable()
+        {
+            if (!File.Exists(dbFileName))
+                SQLiteConnection.CreateFile(dbFileName);
 
             using (var connection = new SQLiteConnection("Data Source=" + dbFileName + ";Version=3;"))
             {
@@ -51,9 +56,7 @@ namespace HVACLoadTerminals.Views
                 int number = command.ExecuteNonQuery();
                 MessageBox.Show($"В таблицу Users добавлено/изменено объектов: {number}");
             }
-
         }
-
         private void grid_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
         {
             var HeaderDictionry = SpaceProperty.HeaderDictionry();

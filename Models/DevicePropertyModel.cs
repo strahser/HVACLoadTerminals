@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LiteDB;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -11,6 +12,8 @@ namespace HVACLoadTerminals
    public class DevicePropertyModel
 
     {
+        [BsonId]
+        public string Id { get; set; }
         public string FamilyType { get; set; }
 
         [DisplayName("Название параметра")]
@@ -19,12 +22,8 @@ namespace HVACLoadTerminals
         public string FamilyName { get; set; }
         [DisplayName("Расход/Мощность")]
         public double Flow { get; set; }
-        public double Quantity { get; set; }    
+ 
 
-        public void calculate_quantity(double SpaceFlow)
-        {
-            Quantity = SpaceFlow/Flow;
-        }
 
         public override string ToString()
         {

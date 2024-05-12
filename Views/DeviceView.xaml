@@ -20,6 +20,7 @@
             <TextBlock FontSize="16">Характеристика экземпляров семейства</TextBlock>
             <DataGrid x:Name="InstanceProperty" AutoGenerateColumns="False" ItemsSource="{Binding Path= DevicePropertyList}"  AlternationCount="1" AlternatingRowBackground="Bisque" IsReadOnly="True">
                 <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID"  Binding="{Binding Id}"  />
                     <DataGridTextColumn Header="Тип Семейства"  Binding="{Binding FamilyType}"  />
                     <DataGridTextColumn Header="Имя Параметра"  Binding="{Binding FlowParameterName}" />
                     <DataGridTextColumn Header="Имя Семейства"   Binding="{Binding FamilyName}"/>

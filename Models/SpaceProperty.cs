@@ -2,6 +2,7 @@
 using Autodesk.Revit.DB;
 using HVACLoadTerminals.StaticData;
 using HVACLoadTerminals.Utils;
+using LiteDB;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,6 +13,7 @@ namespace HVACLoadTerminals.Models
     public class SpaceProperty
     {
         public bool check { get; set; }
+        [BsonId]
         public string Id { get; set; }
         public string Name { get; set; }
         public string Number { get; set; }
@@ -26,32 +28,33 @@ namespace HVACLoadTerminals.Models
         public double ColdLoad { get; set; }
         public double SupplyAirVolume { get; set; }
         public double ExaustAirVolume { get; set; }
-        public List<DevicePropertyModel> DevicePropertyList { get; set; }
-        public DevicePropertyModel SelectedDevies
-        { get
-            {
-                List<DevicePropertyModel> devicePropertyModels = new List<DevicePropertyModel>(
-                    from device in DevicePropertyList
-                    select new DevicePropertyModel
-                    {
-                        Quantity = Math.Ceiling(SupplyAirVolume / device.Flow),
-                        FamilyName = device.FamilyName,
-                        Flow =device.Flow,
-                    }                                                                                               
-                    );
-                var minDevice = devicePropertyModels.Select(x=>x.Quantity).Min();
-                var selectedMinDevice = devicePropertyModels.Where(device => device.Quantity == minDevice).ToList();
-                var minFlow = selectedMinDevice.Select(device => device.Flow).Min();
-                var selectedDevice = selectedMinDevice.Where(device => device.Flow == minFlow).First();
+        public string SelectedFamily { get; set; }
 
-                foreach (var device in devicePropertyModels)
-                {
-                    Debug.Write($"Id:{Id}--SpaceVolume:{SupplyAirVolume}-Flow:{device.Flow}--Name:{device.FamilyName}--Qantity:{device.Quantity}--selectedDevice:{selectedDevice.FamilyName}");
-                }
+        //public DevicePropertyModel SelectedDevies
+        //{ get
+        //    {
+        //        List<DevicePropertyModel> devicePropertyModels = new List<DevicePropertyModel>(
+        //            from device in DevicePropertyList
+        //            select new DevicePropertyModel
+        //            {
+        //                Quantity = Math.Ceiling(SupplyAirVolume / device.Flow),
+        //                FamilyName = device.FamilyName,
+        //                Flow =device.Flow,
+        //            }                                                                                               
+        //            );
+        //        var minDevice = devicePropertyModels.Select(x=>x.Quantity).Min();
+        //        var selectedMinDevice = devicePropertyModels.Where(device => device.Quantity == minDevice).ToList();
+        //        var minFlow = selectedMinDevice.Select(device => device.Flow).Min();
+        //        var selectedDevice = selectedMinDevice.Where(device => device.Flow == minFlow).First();
 
-                return selectedDevice;
-            }
-        }
+        //        foreach (var device in devicePropertyModels)
+        //        {
+        //            Debug.Write($"Id:{Id}--SpaceVolume:{SupplyAirVolume}-Flow:{device.Flow}--Name:{device.FamilyName}--Qantity:{device.Quantity}--selectedDevice:{selectedDevice.FamilyName}");
+        //        }
+
+        //        return selectedDevice;
+        //    }
+        //}
    
 
 
