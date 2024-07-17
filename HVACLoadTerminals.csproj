@@ -63,11 +63,11 @@
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="RevitAPI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files\Autodesk\Revit 2023\RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPIUI.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files\Autodesk\Revit 2023\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
@@ -105,8 +105,12 @@
   <ItemGroup>
     <Compile Include="DbUtility\DbQuery.cs" />
     <Compile Include="Models\CustomMepCategories.cs" />
+    <Compile Include="Models\IProperty.cs" />
+    <Compile Include="Models\SelectedDeviceModel.cs" />
     <Compile Include="Models\SpaceProperty.cs" />
+    <Compile Include="Models\SpaceSystemProperty.cs" />
     <Compile Include="StaticData\StaticParametersDefinition.cs" />
+    <Compile Include="StaticData\SystemData.cs" />
     <Compile Include="Utils\CollectorQuery.cs" />
     <Compile Include="Models\DevicePropertyModel.cs" />
     <Compile Include="ViewModels\DeviceViewModel.cs" />

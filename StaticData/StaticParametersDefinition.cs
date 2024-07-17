@@ -41,7 +41,7 @@ namespace HVACLoadTerminals.StaticData
             MessageBox.Show($"Данные были загружены в колличестве {_spacedata.Count()} шт.");
         }
 
-        catch (Exception e)
+        catch (Exception)
         {
             MessageBox.Show("Сохраните табличные данные перед загрузкой");
         }

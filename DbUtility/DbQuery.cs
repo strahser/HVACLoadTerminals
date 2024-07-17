@@ -18,11 +18,11 @@ namespace HVACLoadTerminals.DbUtility
         private static readonly string _dbPath = Path.Combine(StaticParametersDefinition.fullPath, StaticParametersDefinition.dbName);
         public static void AddSpaceDataToDB(ObservableCollection<SpaceProperty> SpaceList)
         {
-            try
+            //Open database(or create if doesn't exist)
+            using (var db = new LiteDatabase(_dbPath))
             {
-                //Open database(or create if doesn't exist)
-                using (var db = new LiteDatabase(_dbPath))
-                {
+                try
+            {
                     var col = db.GetCollection<SpaceProperty>("SpaceProperty");
 
                     foreach (SpaceProperty property in SpaceList)
@@ -35,9 +35,10 @@ namespace HVACLoadTerminals.DbUtility
                         else col.Update(property);
                     }
 
+                    MessageBox.Show($"Данные сохранены{SpaceList.Count()}") ;
                 }
+                catch (Exception e) { MessageBox.Show(e.Message); }
             }
-            catch (Exception e) { MessageBox.Show(e.Message); }
 
         }
         public static void AddDeviceProperryDataToDB(IList<DevicePropertyModel> DeviceList)
@@ -68,16 +69,32 @@ namespace HVACLoadTerminals.DbUtility
 
         public static IList<SpaceProperty> GetSpacePropertyListFromDb() {
             List<SpaceProperty>  resList = new List<SpaceProperty>();
-            using (var db = new LiteDatabase(_dbPath))
+            using (LiteDatabase db = new LiteDatabase(_dbPath))
             {
                 var collections = db.GetCollection<SpaceProperty>("SpaceProperty");
                 foreach (SpaceProperty property in collections.FindAll()) {
                     resList.Add(property);
                 }
+                MessageBox.Show($"Данные Пространства получены в колчичестве  {resList.Count()}");
             }
             return resList;
 
         
+        }
+
+        public static IList<DevicePropertyModel> GetDevicePropertyListFromDb()
+        {
+            List<DevicePropertyModel> resList = new List<DevicePropertyModel>();
+            using (var db = new LiteDatabase(_dbPath))
+            {
+                var collections = db.GetCollection<DevicePropertyModel>("DeviceProperty");
+                foreach (DevicePropertyModel property in collections.FindAll())
+                {
+                    resList.Add(property);
+                }
+                MessageBox.Show($"Данные Оборудования  получены в колчичестве {resList.Count()}");
+            }
+            return resList;
         }
     }
 }

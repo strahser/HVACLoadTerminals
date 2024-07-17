@@ -1,4 +1,5 @@
-﻿using LiteDB;
+﻿using HVACLoadTerminals.Models;
+using LiteDB;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,7 +23,8 @@ namespace HVACLoadTerminals
         public string FamilyName { get; set; }
         [DisplayName("Расход/Мощность")]
         public double Flow { get; set; }
- 
+        public double Quantity;
+
 
 
         public override string ToString()

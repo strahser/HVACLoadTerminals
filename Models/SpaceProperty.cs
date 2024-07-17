@@ -1,5 +1,6 @@
 ﻿
 using Autodesk.Revit.DB;
+
 using HVACLoadTerminals.StaticData;
 using HVACLoadTerminals.Utils;
 using LiteDB;
@@ -10,7 +11,7 @@ using System.Linq;
 using System.Windows;
 namespace HVACLoadTerminals.Models
 {
-    public class SpaceProperty
+    public class SpaceProperty 
     {
         public bool check { get; set; }
         [BsonId]
@@ -28,34 +29,27 @@ namespace HVACLoadTerminals.Models
         public double ColdLoad { get; set; }
         public double SupplyAirVolume { get; set; }
         public double ExaustAirVolume { get; set; }
-        public string SelectedFamily { get; set; }
+        public SelectedDeviceModel SupplySelectedModel { get; set; }
+        public SelectedDeviceModel ExaustSelectedModel { get; set; }
+        public SelectedDeviceModel FancoilSelectedModel { get; set; }
 
-        //public DevicePropertyModel SelectedDevies
-        //{ get
-        //    {
-        //        List<DevicePropertyModel> devicePropertyModels = new List<DevicePropertyModel>(
-        //            from device in DevicePropertyList
-        //            select new DevicePropertyModel
-        //            {
-        //                Quantity = Math.Ceiling(SupplyAirVolume / device.Flow),
-        //                FamilyName = device.FamilyName,
-        //                Flow =device.Flow,
-        //            }                                                                                               
-        //            );
-        //        var minDevice = devicePropertyModels.Select(x=>x.Quantity).Min();
-        //        var selectedMinDevice = devicePropertyModels.Where(device => device.Quantity == minDevice).ToList();
-        //        var minFlow = selectedMinDevice.Select(device => device.Flow).Min();
-        //        var selectedDevice = selectedMinDevice.Where(device => device.Flow == minFlow).First();
 
-        //        foreach (var device in devicePropertyModels)
-        //        {
-        //            Debug.Write($"Id:{Id}--SpaceVolume:{SupplyAirVolume}-Flow:{device.Flow}--Name:{device.FamilyName}--Qantity:{device.Quantity}--selectedDevice:{selectedDevice.FamilyName}");
-        //        }
+        public override string ToString()
+        {
+            return $"{Name} №{Number}";
+        }
 
-        //        return selectedDevice;
-        //    }
-        //}
-   
+        public  Dictionary<string, SpaceSystemProperty> SpaceSystemProperty()
+        {
+            return new Dictionary<string, SpaceSystemProperty>()
+            {
+                { SystemData.Supply_System, new SpaceSystemProperty { SystemType = SupplySystemName, SystemLoad = SupplyAirVolume } },
+                { SystemData.Exaust_System, new SpaceSystemProperty { SystemType = ExaustSystemName, SystemLoad = ExaustAirVolume } },
+                { SystemData.Fancoil_System, new SpaceSystemProperty { SystemType = ColdSystemName, SystemLoad = ColdLoad } },
+            };
+        }
+
+
 
 
         public static Dictionary<string, string> HeaderDictionry()
@@ -95,15 +89,9 @@ namespace HVACLoadTerminals.Models
             catch (Exception ex) { Debug.Write(ex); }
 
             return this;
-
-
         }
 
-
     }
-
-
-
 
 }
 

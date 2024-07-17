@@ -12,8 +12,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:hvacloadterminals="clr-namespace:HVACLoadTerminals" 
         d:DataContext="{d:DesignInstance Type=hvacloadterminals:SpaceViewModel}"
-        mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+        mc:Ignorable="d"  
+        WindowState="Maximized">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -29,6 +29,7 @@
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Flipper.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Popupbox.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.DataGrid.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.TabControl.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!--PRIMARY-->
@@ -41,69 +42,156 @@
 
         </ResourceDictionary>
     </Window.Resources>
-    <Grid Margin="50,40">
+    <Grid >
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" MinHeight="29" />
-            <RowDefinition Height="16*" />
-            <RowDefinition Height="Auto" MinHeight="29" />
-            <RowDefinition Height="555*" />
+            <RowDefinition Height="*" MinHeight="200 " />
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="22*" />
         </Grid.RowDefinitions>
-
         <Grid
             Grid.Row="0"
-            Margin="0,10"
-            HorizontalAlignment="Stretch">
+            Margin="0,30,600,18"
+            HorizontalAlignment="Stretch" Grid.RowSpan="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*" />
-                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-
             <StackPanel
                 Grid.Column="0"
                 HorizontalAlignment="Left"
-                Orientation="Vertical">
+                Orientation="Vertical" >
                 <Button Content="Сохранить данные" Command="{Binding SaveSpaceDataCommand}" Style="{DynamicResource MaterialDesignRaisedLightButton}"/>
                 <Button  Content="Загрузить данные"  Command="{Binding LoadSpaceDataCommand}" Style="{DynamicResource MaterialDesignRaisedLightButton}"/>
-                <Button x:Name="ShowDeviceModelButton" Content="Показать модельные данные"  Style="{DynamicResource MaterialDesignRaisedLightButton}" 
-Click="ShowDeviceModelButton_Click"/>
-                <TextBox x:Name="ChangedInputValue">New Value</TextBox>
-            </StackPanel>
-
-            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                <Button x:Name="ShowDeviceModelButton" Content="Модальное окно"  Style="{DynamicResource MaterialDesignRaisedLightButton}" Click="ShowDeviceModelButton_Click"/>
+                <Button x:Name="UpdateButon" Click="UpdateButon_Click" Style="{DynamicResource MaterialDesignRaisedLightButton}">Обновить</Button>
                 <Label Content="{Binding ElementName=FilterDataGrid, Path=Translate.LanguageName}" ContentStringFormat="FilterLanguage property : {0}" />
             </StackPanel>
         </Grid>
+        <DockPanel Grid.Row="2">
+            <!--Auto generate columns-->
+            <TabControl  >
+                <TabItem Header="Помещения" >
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" MinHeight="100 " />
+                            <RowDefinition Height="22*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" >
+                            <Label>приточная система</Label>
+                            <ComboBox  x:Name="SupplySystemCB" IsEditable="False" 
+                       SelectedValue="{Binding SelectedSpace.SupplySystemName, Mode=TwoWay}"
+                       SelectionChanged="SupplySystemCB_SelectionChanged"
+                       />
+                            <Label>вытяжная система</Label>
+                            <ComboBox  x:Name="ExaustSystemCB" IsEditable="False" 
+                       SelectedValue="{Binding SelectedSpace.ExaustSystemName, Mode=TwoWay}" 
+                       SelectionChanged="ExaustSystemCB_SelectionChanged" 
+                       />
+                            <Label>Кондиционирование система</Label>
+                            <ComboBox  x:Name="FancoilystemCB" IsEditable="False" 
+                       SelectedValue="{Binding SelectedSpace.ColdSystemName, Mode=TwoWay}" 
+                       SelectionChanged="FancoilCB_SelectionChanged" 
+                       />
 
-        <TextBlock
-            Grid.Row="3"
-            Margin="10,10,0,2"
-            FontSize="13"
-            FontWeight="DemiBold"
-            Text="{Binding ElementName=FilterDataGridAuto, Path=Items.Count, StringFormat=Auto generate columns : {0:### ### ###} items}"
-            Visibility="Visible" />
+                        </StackPanel>
+                        <control:FilterDataGrid
+                x:Name="FilterDataGridAuto"
+                Grid.ColumnSpan="3"
+                Grid.Row="1"
+                Margin="10"
+                AlternatingRowBackground="WhiteSmoke"
+                AlternationCount="2"
+                AutoGenerateColumns="True"
+                Background="Transparent"
+                CanUserAddRows="False"
+                ColumnWidth="*"
+                FilterLanguage="Russian"
+                ItemsSource="{Binding Spacedata, UpdateSourceTrigger=PropertyChanged,Mode=TwoWay}" 
+                RowHeaderWidth="30"
+                ShowElapsedTime="True"
+                ShowStatusBar="True"
+                VerticalScrollBarVisibility="Visible"
+                HorizontalScrollBarVisibility="Visible"
+                VirtualizingStackPanel.IsVirtualizing="True"
+                Visibility="Visible"
+                AutoGeneratingColumn="grid_AutoGeneratingColumn" SelectionChanged="FilterDataGridAuto_SelectionChanged" 
+                >
+                        </control:FilterDataGrid>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="ВРУ">
+                    <Grid>
 
-        <control:FilterDataGrid
-            SelectionUnit="Cell"
-            x:Name="FilterDataGridAuto"
-            Grid.Row="4"
-            Margin="10,10,0,2"
-            AlternatingRowBackground="WhiteSmoke"
-            AlternationCount="2"
-            AutoGenerateColumns="True"
-            Background="Transparent"
-            CanUserAddRows="False"
-            ColumnWidth="*"
-            FilterLanguage="Russian"
-            ItemsSource="{Binding Spacedata, UpdateSourceTrigger=PropertyChanged,Mode=TwoWay}"
-            RowHeaderWidth="30"
-            ShowElapsedTime="True"
-            ShowStatusBar="True"
-            VerticalScrollBarVisibility="Visible"
-            VirtualizingStackPanel.IsVirtualizing="True"
-            Visibility="Visible"
-            AutoGeneratingColumn="grid_AutoGeneratingColumn" 
-            >
-        </control:FilterDataGrid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="22*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <Label>Приточная Система</Label>
+                            <ComboBox ItemsSource="{Binding FamilyTypeName}"  IsEditable="True"
+                          SelectedItem="{Binding SelectedSpace.SupplySelectedModel.SelectedFamilyType, Mode=TwoWay}"  ></ComboBox>
+                            <Label >Кол-во Прит</Label>
+                            <TextBlock  Text="{Binding SelectedSpace.SupplySelectedModel.Quantity}"></TextBlock>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <Label >Вытяжная Система</Label>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding FamilyTypeName}" IsEditable="True"
+                          SelectedItem="{Binding SelectedSpace.ExaustSelectedModel.SelectedFamilyType, Mode=TwoWay}"></ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <Label >Кондиционирование </Label>
+                            <ComboBox ItemsSource="{Binding FamilyTypeName}" IsEditable="True"
+                          SelectedItem="{Binding SelectedSpace.FancoilSelectedModel.SelectedFamilyType, Mode=TwoWay}"></ComboBox>
+                        </StackPanel>
+                        <DataGrid
+                        x:Name="FilterDataGridDivice"
+                        IsReadOnly="True"
+                        Grid.Row="2"
+                        Grid.ColumnSpan="3"
+                        Margin="10"
+                        AlternatingRowBackground="WhiteSmoke"
+                        AlternationCount="2"
+                        AutoGenerateColumns="False"
+                        Background="Transparent"
+                        CanUserAddRows="False"
+                        ItemsSource="{Binding  Spacedata, UpdateSourceTrigger=PropertyChanged,Mode=TwoWay}"            
+                        RowHeaderWidth="30" 
+                        VerticalScrollBarVisibility="Visible"
+                        HorizontalScrollBarVisibility="Visible"
+                        VirtualizingStackPanel.IsVirtualizing="True"
+                        Visibility="Visible"
+                        AutoGeneratingColumn="grid_AutoGeneratingColumn" SelectionChanged="FilterDataGridDivice_SelectionChanged" 
+                        >
+                            <DataGrid.Columns>
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="ID" Binding="{Binding Id}" />
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="№ Помещения" Binding="{Binding Number}" />
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="Помещение" Binding="{Binding Name}" />
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="Приточная"  Binding="{Binding SupplySelectedModel.SelectedFamilyType}" />
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="Кол." Binding="{Binding SupplySelectedModel.Quantity}"  IsReadOnly="True"/>
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="Кэф" Binding="{Binding SupplySelectedModel.CoefficientEfficiency}"  IsReadOnly="True"/>
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="Вытяжная" Binding="{Binding ExaustSelectedModel.SelectedFamilyType}" />
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="Кол." Binding="{Binding ExaustSelectedModel.Quantity}" IsReadOnly="True"/>
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="Кэф" Binding="{Binding ExaustSelectedModel.CoefficientEfficiency}" IsReadOnly="True"/>
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="Кондиционирование" Binding="{Binding FancoilSelectedModel.SelectedFamilyType}" />
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="Кол." Binding="{Binding FancoilSelectedModel.Quantity}" IsReadOnly="True"/>
+                                <control:DataGridTextColumn IsColumnFiltered="True" Header="Кэф" Binding="{Binding FancoilSelectedModel.CoefficientEfficiency}" IsReadOnly="True"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </DockPanel>
     </Grid>
 </Window>

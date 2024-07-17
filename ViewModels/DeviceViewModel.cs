@@ -47,9 +47,7 @@ namespace HVACLoadTerminals.ViewModels
                             Flow = ParameterDisplayConvertor.CubicMetersPerHour(el, SelectedProperty),
                             FamilyName = el.Name,
                             FlowParameterName = SelectedProperty.ToString()
-
                         };
-
                         DevicePropertyList.Add(device);
                     }
                     catch (Exception e) { MessageBox.Show(e.ToString()); }
