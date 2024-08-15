@@ -1,5 +1,6 @@
 ﻿using Autodesk.Revit.DB;
 using HVACLoadTerminals.DbUtility;
+using HVACLoadTerminals.Models;
 using HVACLoadTerminals.StaticData;
 using HVACLoadTerminals.Utils;
 using System;
@@ -40,13 +41,15 @@ namespace HVACLoadTerminals.ViewModels
 
                     try
                     {
-                        DevicePropertyModel device = new DevicePropertyModel()
+                        EquipmentBase device = new EquipmentBase()
                         {
-                            Id = el.Id.ToString(),
-                            FamilyType = SelectedFamily,
-                            Flow = ParameterDisplayConvertor.CubicMetersPerHour(el, SelectedProperty),
-                            FamilyName = el.Name,
-                            FlowParameterName = SelectedProperty.ToString()
+                            equipment_id = el.Id.ToString(),
+                            family_device_name = SelectedFamily,
+                            max_flow = ParameterDisplayConvertor.CubicMetersPerHour(el, SelectedProperty),
+                            family_instance_name = el.Name,
+                            system_flow_parameter_name = SelectedProperty.ToString(),
+                            system_equipment_type = "TEST"
+
                         };
                         DevicePropertyList.Add(device);
                     }
@@ -58,12 +61,10 @@ namespace HVACLoadTerminals.ViewModels
         public Dictionary<string, List<FamilySymbol>> FamilyTypes { get; set; }
         public List<string> FamilyTypesOfCategory { get; set; }
         public List<string> ParametrList { get; set; }
-        public List<DevicePropertyModel> DevicePropertyList { get; set; }
+        public List<EquipmentBase > DevicePropertyList { get; set; }
         private CustomMepCategories _selectedCategory;
         private string _selectedFamily { get; set; }
         private string _selectedProperty { get; set; }
-
-
         
         public CustomMepCategories SelectedCategory
         // выбираем сеймейства по заданной категории
@@ -91,7 +92,7 @@ namespace HVACLoadTerminals.ViewModels
                 OnPropertyChanged(nameof(SelectedFamily));
                 GetParametersList();
                 OnPropertyChanged(nameof(ParametrList));
-                DevicePropertyList = new List<DevicePropertyModel>();
+                DevicePropertyList = new List<EquipmentBase >();
                 GetDevieceList();
                 OnPropertyChanged(nameof(DevicePropertyList));
             }
@@ -106,7 +107,7 @@ namespace HVACLoadTerminals.ViewModels
             {
                 _selectedProperty = value;
                 OnPropertyChanged(nameof(SelectedProperty));
-                DevicePropertyList = new List<DevicePropertyModel>();
+                DevicePropertyList = new List<EquipmentBase >();
                 GetDevieceList();
                 OnPropertyChanged(nameof(DevicePropertyList));
             }
@@ -119,7 +120,7 @@ namespace HVACLoadTerminals.ViewModels
             {
 
                 return _SaveDevieDataCommand ??
-                (_SaveDevieDataCommand = new RelayCommand(obj => DbQuery.AddDeviceProperryDataToDB(DevicePropertyList)));
+                (_SaveDevieDataCommand = new RelayCommand(obj => DbSqlliteQuery.UpdateTerminalDb(DevicePropertyList)));
 
             }
         }

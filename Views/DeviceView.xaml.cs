@@ -1,6 +1,7 @@
 ﻿using HVACLoadTerminals.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,10 +24,13 @@ namespace HVACLoadTerminals.Views
     {
         public DeviceView()
         {
+            MessageBox.Show("window open");
             InitializeComponent();
             DeviceViewModel DeviceVm = new DeviceViewModel();
             DataContext = DeviceVm;
             
         }
+        private void DataGrid_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
+    => e.Column.Header = ((PropertyDescriptor)e.PropertyDescriptor)?.DisplayName ?? e.Column.Header;
     }
 }

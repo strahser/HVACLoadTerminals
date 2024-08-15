@@ -1,4 +1,5 @@
-﻿using HVACLoadTerminals.Models;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using LiteDB;
 using System;
 using System.Collections.Generic;
@@ -9,44 +10,70 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace HVACLoadTerminals
+
+
 {
-   public class DevicePropertyModel
 
+
+    // Модель EquipmentBase, наследуемая от BaseModel
+
+    public class EquipmentBase
     {
-        [BsonId]
-        public string Id { get; set; }
-        public string FamilyType { get; set; }
+        // Перечисление для типа оборудования
+        public enum SystemType
+        {
+            [Display(Name = "Тип 1")]
+            Type1,
 
-        [DisplayName("Название параметра")]
-        public string FlowParameterName { get; set; }
-        [DisplayName("Название семейства")]
-        public string FamilyName { get; set; }
-        [DisplayName("Расход/Мощность")]
-        public double Flow { get; set; }
-        public double Quantity;
+            [Display(Name = "Тип 2")]
+            Type2,
+
+            // ... другие типы
+        }
+
+        // Поле для типа оборудования
+
+        [DisplayName("Тип оборудования")]
+        public string system_equipment_type { get; set; }
+
+        // Остальные поля
+
+        [DisplayName("ID Оборудования")]
+        public string equipment_id { get; set; }
 
 
 
+        [DisplayName("Тип оборудования")]
+        public string family_device_name { get; set; }
+
+        [DisplayName("Экземпляр оборудования")]
+
+        public string family_instance_name { get; set; }
+
+        [DisplayName("Макс. расход")]
+        public double max_flow { get; set; }
+
+        [DisplayName("Нормальная скорость")]
+       
+
+        public string Manufacture { get; set; }
+        [DisplayName("Наим. парам. макс расход")]
+
+        public string system_flow_parameter_name { get; set; }
+
+
+        public string system_name_parameter { get; set; }
+
+        [DisplayName("Дата создания")]
+        public DateTime creation_stamp { get; set; } = DateTime.Now;
+
+        [DisplayName("Дата обновления")]
+        public DateTime update_stamp { get; set; } = DateTime.Now;
+
+        // Переопределение метода ToString
         public override string ToString()
         {
-            return $"{FamilyType}-{FamilyName}";
+            return family_device_name;
         }
-
-        public static Dictionary<string, decimal?> DisplayNameModel<T>(T t)
-        {
-            Type type = typeof(T);
-            PropertyInfo[] properties = type.GetProperties();
-            Dictionary<string, decimal?> dic = new Dictionary<string, decimal?>();
-            foreach (var p in properties)
-            {
-                // Display name
-                var name = p.GetCustomAttribute<DisplayNameAttribute>().DisplayName;
-                // Corresponding value
-                var value = t.GetType().GetProperty(p.Name).GetValue(t, null);
-                dic.Add(name, Convert.ToDecimal(value));
-            }
-            return dic;
-        }
-
     }
 }

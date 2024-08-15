@@ -2,8 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:HVACLoadTerminals.Views" xmlns:viewmodels="clr-namespace:HVACLoadTerminals.ViewModels" d:DataContext="{d:DesignInstance Type=viewmodels:DeviceViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:viewmodels="clr-namespace:HVACLoadTerminals.ViewModels" d:DataContext="{d:DesignInstance Type=viewmodels:DeviceViewModel}"
         mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
@@ -18,14 +17,18 @@
             <TextBlock>Параметр</TextBlock>
             <ComboBox x:Name="ParameterChooseComboBox" ItemsSource="{Binding ParametrList}" SelectedValue="{Binding SelectedProperty}"/>
             <TextBlock FontSize="16">Характеристика экземпляров семейства</TextBlock>
-            <DataGrid x:Name="InstanceProperty" AutoGenerateColumns="False" ItemsSource="{Binding Path= DevicePropertyList}"  AlternationCount="1" AlternatingRowBackground="Bisque" IsReadOnly="True">
-                <DataGrid.Columns>
+            <DataGrid x:Name="EquipmentPropertyDataGrid" AutoGenerateColumns="True" 
+                      ItemsSource="{Binding Path= DevicePropertyList}"  
+                      AlternationCount="1" AlternatingRowBackground="Bisque" IsReadOnly="True"
+                      AutoGeneratingColumn="DataGrid_AutoGeneratingColumn"                      
+                      >
+                <!--<DataGrid.Columns>
                     <DataGridTextColumn Header="ID"  Binding="{Binding Id}"  />
                     <DataGridTextColumn Header="Тип Семейства"  Binding="{Binding FamilyType}"  />
                     <DataGridTextColumn Header="Имя Параметра"  Binding="{Binding FlowParameterName}" />
                     <DataGridTextColumn Header="Имя Семейства"   Binding="{Binding FamilyName}"/>
                     <DataGridTextColumn Header="Значение параметра"  Binding="{Binding Flow}"/>
-                </DataGrid.Columns>
+                </DataGrid.Columns>-->
             </DataGrid>
             <Button Command="{Binding SaveDevieDataCommand}">Сохранить данные</Button>
         </StackPanel>

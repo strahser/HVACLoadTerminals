@@ -1,0 +1,45 @@
+﻿<Window x:Class="HVACLoadTerminals.Views.OffsetDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Смещение кривой"
+        Height="600"
+        Width="800">
+    <Grid x:Name="MainGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical">
+            <Label Content="Выберите кривую:" />
+            <ComboBox x:Name="CurveComboBox" />
+            <Label Content="Расстояние смещения (мм):" />
+            <TextBox x:Name="OffsetDistanceTextBox" />
+            <Label Content="Количество точек:" />
+            <TextBox x:Name="NumberOfPointsTextBox" Text="5" />
+            <Label Content="Начальное смещение (мм):" />
+            <TextBox x:Name="StartOffsetTextBox" Text="0" />
+            <CheckBox x:Name="UseSecondCurveCheckBox" Content="Использовать вторую кривую" Checked="UseSecondCurveCheckBox_Checked" Unchecked="UseSecondCurveCheckBox_Unchecked"/>
+            <ComboBox x:Name="SecondCurveComboBox" IsEnabled="False"/>
+            <Label Content="Выберите оборудование:" />
+            <ComboBox x:Name="SystemEquipmentTypeComboBox" SelectionChanged="SystemEquipmentTypeComboBox_SelectionChanged"/>
+            <Label Content="Тип оборудования:" />
+            <ComboBox x:Name="FamilyDeviceNameComboBox" SelectionChanged="FamilyDeviceNameComboBox_SelectionChanged"/>
+            <Label Content="Имя экземпляра:" />
+            <TextBox x:Name="FamilyInstanceNameTextBox" IsEnabled="False"/>
+            <Label Content="Расход системы:" />
+            <TextBox x:Name="SystemFlowTextBox" IsEnabled="False"/>
+            <TextBox x:Name="CalculationOptionsTextBox" Grid.Row="10" Grid.Column="0" />
+        </StackPanel>
+
+        <Canvas x:Name="OffsetCanvas" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+        <Button Content="OK" Grid.Row="2" Grid.Column="0" Click="OkButton_Click"/>
+        <Button Content="Отмена" Grid.Row="2" Grid.Column="1" Click="CancelButton_Click"/>
+    </Grid>
+</Window>

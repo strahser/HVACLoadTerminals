@@ -5,7 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Autodesk.Revit.DB;
 
-namespace HVACLoadTerminals
+
+namespace HVACLoadTerminals.Models
 {
     public class CustomMepCategories
     {

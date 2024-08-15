@@ -15,45 +15,21 @@ namespace HVACLoadTerminals.DbUtility
 {
     public class DbQuery
     {
-        private static readonly string _dbPath = Path.Combine(StaticParametersDefinition.fullPath, StaticParametersDefinition.dbName);
-        public static void AddSpaceDataToDB(ObservableCollection<SpaceProperty> SpaceList)
-        {
-            //Open database(or create if doesn't exist)
-            using (var db = new LiteDatabase(_dbPath))
-            {
-                try
-            {
-                    var col = db.GetCollection<SpaceProperty>("SpaceProperty");
+        private static readonly string _dbPath = Path.Combine("");
 
-                    foreach (SpaceProperty property in SpaceList)
-                    {
-
-                        if (col.FindOne(x => x.Id == property.Id) == null)
-                        {
-                            col.Insert(property);
-                        }
-                        else col.Update(property);
-                    }
-
-                    MessageBox.Show($"Данные сохранены{SpaceList.Count()}") ;
-                }
-                catch (Exception e) { MessageBox.Show(e.Message); }
-            }
-
-        }
-        public static void AddDeviceProperryDataToDB(IList<DevicePropertyModel> DeviceList)
+        public static void AddDeviceProperryDataToDB(IList<EquipmentBase > DeviceList)
         {
             try
             {
                 //Open database(or create if doesn't exist)
                 using (var db = new LiteDatabase(_dbPath))
                 {
-                    var col = db.GetCollection<DevicePropertyModel>("DeviceProperty");
+                    var col = db.GetCollection<EquipmentBase >("DeviceProperty");
 
-                    foreach (DevicePropertyModel property in DeviceList)
+                    foreach (EquipmentBase  property in DeviceList)
                     {
 
-                        if (col.FindOne(x => x.Id == property.Id) == null)
+                        if (col.FindOne(x => x.equipment_id == property.equipment_id) == null)
                         {
                             col.Insert(property);
                         }
@@ -67,28 +43,15 @@ namespace HVACLoadTerminals.DbUtility
 
         }
 
-        public static IList<SpaceProperty> GetSpacePropertyListFromDb() {
-            List<SpaceProperty>  resList = new List<SpaceProperty>();
-            using (LiteDatabase db = new LiteDatabase(_dbPath))
-            {
-                var collections = db.GetCollection<SpaceProperty>("SpaceProperty");
-                foreach (SpaceProperty property in collections.FindAll()) {
-                    resList.Add(property);
-                }
-                MessageBox.Show($"Данные Пространства получены в колчичестве  {resList.Count()}");
-            }
-            return resList;
 
-        
-        }
 
-        public static IList<DevicePropertyModel> GetDevicePropertyListFromDb()
+        public static IList<EquipmentBase > GetDevicePropertyListFromDb()
         {
-            List<DevicePropertyModel> resList = new List<DevicePropertyModel>();
+            List<EquipmentBase > resList = new List<EquipmentBase >();
             using (var db = new LiteDatabase(_dbPath))
             {
-                var collections = db.GetCollection<DevicePropertyModel>("DeviceProperty");
-                foreach (DevicePropertyModel property in collections.FindAll())
+                var collections = db.GetCollection<EquipmentBase >("DeviceProperty");
+                foreach (EquipmentBase  property in collections.FindAll())
                 {
                     resList.Add(property);
                 }
