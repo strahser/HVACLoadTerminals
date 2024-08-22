@@ -99,7 +99,7 @@ namespace HVACLoadTerminals
 
     public static class SpaceBoundaryUtils
     {
-        // ... (код для OffsetCurvesInward и DrawOffsetCurves) ...
+        // ... (код для OffsetCurvesInward и DrawCurves) ...
 
         public static List<XYZ> GetPolygonPointsFromCurves(List<Curve> curves)
         {
@@ -288,7 +288,7 @@ namespace HVACLoadTerminals
 
     public static class DrawRevitModelLine
     {
-        public static void DrawOffsetCurves(Document doc, Space _space, List<Curve> offsetCurves)
+        public static void DrawCurves(Document doc, Space _space, List<Curve> Curves)
         {
             // Получаем уровень из Space
             Level level = _space.Level as Level;
@@ -309,7 +309,7 @@ namespace HVACLoadTerminals
 
 
             // Создаем модельные линии для отрисовки кривых
-            foreach (Curve offsetCurve in offsetCurves)
+            foreach (Curve offsetCurve in Curves)
             {
                 // Создаем модельную линию (приводим к типу ModelLine)
                 ModelLine modelLine = doc.Create.NewModelCurve(offsetCurve, sketchPlane) as ModelLine;

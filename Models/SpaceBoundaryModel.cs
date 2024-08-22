@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using Autodesk.Revit.DB;
+using System.Collections.Generic;
 
 
 
 namespace HVACLoadTerminals
 {
+
     public class SpaceBoundaryModel
     {
         public string SpaceId { get; set; }
@@ -20,11 +22,20 @@ namespace HVACLoadTerminals
         // Координаты Z для точек полигона
         public List<double> pz { get; set; }
 
-        public SpaceBoundaryModel()
+        public Curve OffsetCurve { get; set; }
+        public PointsList OffsetPoints { get; set; }
+    }
+    public class PointsList
+    {
+        public List<double> X;
+        public List<double> Y;
+        public List<double> Z;
+
+        public PointsList(List<double> x, List<double> y, List<double> z)
         {
-            px = new List<double>();
-            py = new List<double>();
-            pz = new List<double>();
+            X = x;
+            Y = y;
+            Z = z;
         }
     }
 }

@@ -80,6 +80,7 @@
     <Compile Include="DbUtility\SQLiteHelper.cs" />
     <Compile Include="Models\CustomMepCategories.cs" />
     <Compile Include="Models\SpaceBoundaryModel.cs" />
+    <Compile Include="Utils\CanvasHelper.cs" />
     <Compile Include="Utils\DSUtility.cs" />
     <Compile Include="Utils\SpaceBoundary.cs" />
     <Compile Include="StaticData\SystemData.cs" />
@@ -130,6 +131,9 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm">
       <Version>8.2.2</Version>
+    </PackageReference>
+    <PackageReference Include="DotNetProjects.WpfToolkit.DataVisualization">
+      <Version>6.1.94</Version>
     </PackageReference>
     <PackageReference Include="DynamoVisualProgramming.DynamoServices">
       <Version>3.2.2.5494</Version>

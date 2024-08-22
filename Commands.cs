@@ -11,6 +11,8 @@ using System.IO;
 
 
 using System;
+using System.Data.Common;
+using System.Data.SQLite;
 
 
 namespace HVACLoadTerminals
@@ -47,6 +49,9 @@ namespace HVACLoadTerminals
             UIDocument uiDoc = uiApp.ActiveUIDocument;
             Document doc = uiDoc.Document;
             Element selectedElement = null;
+            string projectPath = doc.PathName;
+            string projectDirectory = Path.GetDirectoryName(projectPath);
+            string filePath1 = Path.Combine(projectDirectory, "polygon.json");
 
             // Получаем выбранное пространство.
             try
@@ -66,7 +71,9 @@ namespace HVACLoadTerminals
                 SpaceBoundary spaceBoundary = new SpaceBoundary(space);
                 // Открываем диалоговое окно для выбора кривой и расстояния смещения
                 var cleanCurves = spaceBoundary.cleanCurves;
-                OffsetDialog dialog = new OffsetDialog(spaceBoundary);
+                SQLiteConnection  connection = new SQLiteConnection("Data Source=d:\\Yandex\\YandexDisk\\ProjectCoding\\HvacAppDjango\\db.sqlite3");
+                connection.Open();  
+                OffsetDialog dialog = new OffsetDialog(connection, spaceBoundary, filePath1);
                 if (dialog.ShowDialog() == true)
                 {
                     // Получаем выбранную кривую и расстояние смещения из диалогового окна
@@ -76,10 +83,8 @@ namespace HVACLoadTerminals
                     // Преобразуем расстояние смещения из миллиметров в футы
                     double offsetDistanceFeet = offsetDistanceMm / 304.8;
                 }
-                string projectPath = doc.PathName;
-                string projectDirectory = Path.GetDirectoryName(projectPath);
-                string filePath1 = Path.Combine(projectDirectory, "polygon.json");
-                //JsonUtils.ExportToJson(filePath1, spaceBoundary.spaceBoundaryModel);
+
+
                 TaskDialog.Show("Успешно", $"успешно сохранено {filePath1}");
                 return Result.Succeeded;
             }

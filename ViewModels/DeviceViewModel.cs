@@ -1,15 +1,12 @@
 ﻿using Autodesk.Revit.DB;
 using HVACLoadTerminals.DbUtility;
 using HVACLoadTerminals.Models;
-using HVACLoadTerminals.StaticData;
+
 using HVACLoadTerminals.Utils;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace HVACLoadTerminals.ViewModels
