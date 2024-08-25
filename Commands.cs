@@ -74,16 +74,7 @@ namespace HVACLoadTerminals
                 SQLiteConnection  connection = new SQLiteConnection("Data Source=d:\\Yandex\\YandexDisk\\ProjectCoding\\HvacAppDjango\\db.sqlite3");
                 connection.Open();  
                 OffsetDialog dialog = new OffsetDialog(connection, spaceBoundary, filePath1);
-                if (dialog.ShowDialog() == true)
-                {
-                    // Получаем выбранную кривую и расстояние смещения из диалогового окна
-                    int selectedCurveIndex = dialog.SelectedCurveIndex;
-                    double offsetDistanceMm = dialog.OffsetDistanceMm;
-
-                    // Преобразуем расстояние смещения из миллиметров в футы
-                    double offsetDistanceFeet = offsetDistanceMm / 304.8;
-                }
-
+                dialog.ShowDialog();                
 
                 TaskDialog.Show("Успешно", $"успешно сохранено {filePath1}");
                 return Result.Succeeded;

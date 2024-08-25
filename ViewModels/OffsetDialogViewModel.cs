@@ -12,7 +12,11 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Shapes;
 using System.Windows.Controls.DataVisualization.Charting;
-
+using System.Windows.Markup;
+using Newtonsoft.Json;
+using System.IO;
+using System.Windows.Controls;
+using System.Windows.Media;
 
 
 
@@ -20,6 +24,7 @@ namespace HVACLoadTerminals.ViewModels
 {
     public class OffsetDialogViewModel : ObservableObject
     {
+        private readonly double _ftValue = 304.8;
         private readonly SQLiteConnection _connection;
         private  SpaceBoundary _spaceBoundary;
         public SpaceBoundary SpaceBoundary
@@ -65,12 +70,11 @@ namespace HVACLoadTerminals.ViewModels
         private int _selectedCurveIndex1; // Установлено начальное значение 0 (первая кривая)
         public int SelectedCurveIndex1
         {
-            get {return _selectedCurveIndex1; }
+            get { return _selectedCurveIndex1; }
             set
             {
                 SetProperty(ref _selectedCurveIndex1, value);
                 // Перерисовываем смещенную кривую при изменении SelectedCurveIndex1
-      
                 DrawCurves();
             }
         }
@@ -147,7 +151,17 @@ namespace HVACLoadTerminals.ViewModels
                 }
             }
         }
-
+        // Свойство для хранения начального смещения
+        private double _startOffsetDistance = 500;
+        public double StartOffsetDistance
+        {
+            get { return _startOffsetDistance; }
+            set
+            {
+                SetProperty(ref _startOffsetDistance, value);
+                    DrawCurves();
+            }
+        }
         // Свойство для хранения количества точек разделения
         private int _numberOfPoints=2;
         public int NumberOfPoints
@@ -159,14 +173,6 @@ namespace HVACLoadTerminals.ViewModels
                 // Вызываем DrawCurves при изменении NumberOfPoints
                 DrawCurves();
             }
-        }
-
-        // Свойство для хранения начального смещения
-        private double _startOffset;
-        public double StartOffset
-        {
-            get { return _startOffset; }
-            set { SetProperty(ref _startOffset, value); }
         }
 
         private ObservableCollection<string> _systemEquipmentTypes = new ObservableCollection<string>();
@@ -202,7 +208,30 @@ namespace HVACLoadTerminals.ViewModels
         }
 
         private string jsonPath;
+        private ObservableCollection<ChartDataPoint> _dataPoints;
 
+        public ObservableCollection<ChartDataPoint> DataPoints
+        {
+            get { return _dataPoints; }
+   
+            set { SetProperty(ref _dataPoints, value);
+                DrawCurves();
+            }
+            
+        }
+
+        private Canvas _canvas;
+        public Canvas Canvas
+        {
+            get { return _canvas; }
+            set
+            {
+                SetProperty(ref _canvas, value);
+            }
+        }
+
+        // ObservableCollection to hold the shapes for binding
+        public ObservableCollection<Shape> CanvasShapes { get; } = new ObservableCollection<Shape>();
 
         // Конструктор
         public OffsetDialogViewModel(SQLiteConnection connection, SpaceBoundary spaceBoundary, string _jsonPath)
@@ -224,10 +253,7 @@ namespace HVACLoadTerminals.ViewModels
             {
                 SelectedCurveIndex1 = 0;
             }
-
-            _chart = new Chart();
-            Chart = _chart;
-
+            DrawCurves();
         }
 
         // Метод для загрузки данных SystemEquipmentTypes
@@ -311,37 +337,92 @@ namespace HVACLoadTerminals.ViewModels
         }
 
         // Отрисовка кривых на Canvas
+
         private void DrawCurves()
         {
+            Canvas = new Canvas();
             try
             {
-
                 CalculateOffsetPoints();
-                if (
-                    _spaceBoundary.spaceBoundaryModel.OffsetPoints.X != null &&
-                    _spaceBoundary.spaceBoundaryModel.OffsetPoints.Y != null
-                    )
+
+                // Сериализуем данные в JSON
+                string json = JsonConvert.SerializeObject(SpaceBoundary.spaceBoundaryModel, Formatting.Indented); 
+
+                // Записываем JSON в файл
+                System.IO.File.WriteAllText(jsonPath, json);
+
+                // Plot the polygon
+                var spaceBoundary = SpaceBoundary.spaceBoundaryModel;
+                double scaleFactor = 10;
+                Polygon polygon = new Polygon
                 {
-                    LineSeries lineSeries = new LineSeries();
-                    lineSeries.ItemsSource = _spaceBoundary.spaceBoundaryModel.OffsetPoints.X.Select((x, i) => new KeyValuePair<double, double>(x, _spaceBoundary.spaceBoundaryModel.OffsetPoints.Y[i]));
-                    Chart.Series.Add(lineSeries);
+                    Stroke = Brushes.Blue,
+                    StrokeThickness = 2,
+                };
+                for (int i = 0; i < spaceBoundary.px.Count; i++)
+                {
+                    // Scale coordinates using scaleFactor
+                    double scaledX = spaceBoundary.px[i] * scaleFactor;
+                    double scaledY = spaceBoundary.py[i] * scaleFactor;
+                    polygon.Points.Add(new System.Windows.Point(scaledX, scaledY));
                 }
-                else
+                Canvas.Children.Add(polygon);
+
+                // Plot the offset points (using Rectangles as an example)
+                for (int i = 0; i < spaceBoundary.OffsetPoints.X.Count; i++)
                 {
-                    Debug.Write($"ошибка в методеDrawCurves _spaceBoundary: {_spaceBoundary.spaceBoundaryModel}" +
-                        $"OffsetPoints.X:{_spaceBoundary.spaceBoundaryModel.OffsetPoints.X}" +
-                        $"OffsetPoints.Y:{_spaceBoundary.spaceBoundaryModel.OffsetPoints.Y}");
+                    // Adjust the size of the rectangle as needed
+                    System.Windows.Shapes.Rectangle offsetPoint = new System.Windows.Shapes.Rectangle
+                    {
+                        Width = 10,
+                        Height = 10,
+                        Fill = Brushes.Red,
+                    };
+
+                    // **Set Left and Top using scaled coordinates**
+                    Canvas.SetLeft(offsetPoint, spaceBoundary.OffsetPoints.X[i] * scaleFactor);
+                    Canvas.SetTop(offsetPoint, spaceBoundary.OffsetPoints.Y[i] * scaleFactor);
+
+                    Canvas.Children.Add(offsetPoint);
+                }
+
+                // Add line labels
+                for (int i = 0; i < spaceBoundary.px.Count - 1; i++)
+                {
+                    // Calculate midpoint of each line
+                    double midX = (spaceBoundary.px[i] + spaceBoundary.px[i + 1]) / 2 * scaleFactor;
+                    double midY = (spaceBoundary.py[i] + spaceBoundary.py[i + 1]) / 2 * scaleFactor;
+
+                    // Create a TextBlock for the label
+                    TextBlock label = new TextBlock
+                    {
+                        Text = (i).ToString(), // Line number
+                        FontSize = 12,
+                        Foreground = Brushes.Black,
+                        TextAlignment = TextAlignment.Center
+                    };
+
+
+
+
+                    // Position the label at the midpoint
+                    Canvas.SetLeft(label, midX);
+                    Canvas.SetTop(label, midY);
+                    Canvas.Children.Add(label);
                 }
             }
-            catch (Exception ex) { Debug.Write(ex); }
+            catch (Exception except) { MessageBox.Show(except.ToString()); }
         }
+    
 
         private void CalculateOffsetPoints() {
             Curve curve = _curves[SelectedCurveIndex1];
             // 1. Смещаем кривую внутрь
-            Curve offsetCurve = SpaceBoundaryUtils.OffsetCurvesInward(curve, OffsetDistance);
+            double offsetFt = OffsetDistance /_ftValue;
+            double startOfsetFt = StartOffsetDistance > 0 ? StartOffsetDistance / _ftValue : offsetFt;
+            Curve offsetCurve = SpaceBoundaryUtils.OffsetCurvesInward(curve, -offsetFt);
                 // 2. Получаем список точек на смещенной кривой
-                List<XYZ> offsetPoints = SpaceBoundaryUtils.GetPointsOnCurve(offsetCurve, NumberOfPoints);
+                List<XYZ> offsetPoints = SpaceBoundaryUtils.GetPointsOnCurve(offsetCurve, NumberOfPoints, startOfsetFt);
 
             // 3. Заполняем OffsetPoints
             _spaceBoundary.spaceBoundaryModel.OffsetPoints = new PointsList(
@@ -352,7 +433,23 @@ namespace HVACLoadTerminals.ViewModels
            
         }
 
-
+        private void LoadChartDataFromJson(string jsonPath)
+        {
+            try
+            {
+                if (File.Exists(jsonPath))
+                {
+                    string json = File.ReadAllText(jsonPath);
+                    DataPoints = JsonConvert.DeserializeObject<ObservableCollection<ChartDataPoint>>(json);
+                    MessageBox.Show($"Количество точек: {DataPoints.Count}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle the exception, e.g., log it or display a message to the user
+                MessageBox.Show($"Ошибка загрузки данных из JSON: {ex.Message}");
+            }
+        }
         private string GetTableName(string systemEquipmentType)
         {
             switch (systemEquipmentType)
@@ -367,11 +464,6 @@ namespace HVACLoadTerminals.ViewModels
                     return null;
             }
         }
-    
-    }
-    public class CurveIndex
-    {
-        public int Index { get; set; }
-        public string Name { get; set; }
+   
     }
 }
