@@ -8,9 +8,8 @@ using Autodesk.Revit.UI;
 using System.Windows;
 using HVACLoadTerminals.Views;
 using System.Diagnostics;
-
-
-
+using System.IO;
+using System.Collections.ObjectModel;
 
 namespace HVACLoadTerminals
 {
@@ -31,7 +30,7 @@ namespace HVACLoadTerminals
 
         }
 
-        public  List<Curve> GetCurves()
+        public List<Curve> GetCurves()
         {
             // Получаем геометрию пространства.
             Options options = new Options();
@@ -73,7 +72,7 @@ namespace HVACLoadTerminals
             // Проверяем, направлена ли нормаль грани вниз.
             return normal.Z < 0;
         }
-        public  SpaceBoundaryModel GetSpaceBoundaryModel(List<Curve> curves)
+        public SpaceBoundaryModel GetSpaceBoundaryModel(List<Curve> curves)
         {
             // Преобразуем точки полигона в список координат X, Y и Z возвращает SpaceBoundaryModel (px,py,...)
             List<XYZ> polygonPoints = SpaceBoundaryUtils.GetPolygonPointsFromCurves(curves);
@@ -242,7 +241,6 @@ namespace HVACLoadTerminals
             // Получаем начало и конец кривой
             XYZ startPoint = curve.GetEndPoint(0);
             XYZ endPoint = curve.GetEndPoint(1);
-
             // Создаем вектор, который перпендикулярен кривой
             XYZ normalVector = endPoint - startPoint;
 
@@ -256,17 +254,14 @@ namespace HVACLoadTerminals
         {
             if (curve.Length < startOffset) { startOffset = curve.Length/ numberOfPoints; }
             List<XYZ> points = new List<XYZ>();
-
             if (numberOfPoints < 2)
             {
                 // Если точка одна, размещаем ее по центру кривой
                 points.Add(curve.Evaluate(curve.Length / 2, false));
                 return points;
             }
-
             // Вычисляем шаг параметра для равномерного распределения точек по длине кривой
             double parameterIncrement = (curve.Length - startOffset - startOffset) / (numberOfPoints - 1);
-
             // Создаем список точек, вычисляя их координаты на кривой по заданному шагу параметра
             for (int i = 0; i < numberOfPoints; i++)
             {
@@ -281,7 +276,6 @@ namespace HVACLoadTerminals
                     // Выведите сообщение или запишите в лог, что параметр выходит за пределы допустимого диапазона
                 }
             }
-
             return points;
         }
     }
@@ -365,6 +359,24 @@ namespace HVACLoadTerminals
             System.IO.File.WriteAllText(filePath, json);
 
 
+        }
+
+        private static void LoadChartDataFromJson(string jsonPath)
+        {
+            try
+            {
+                if (File.Exists(jsonPath))
+                {
+                    string json = File.ReadAllText(jsonPath);
+                   var DataPoints = JsonConvert.DeserializeObject<ObservableCollection<ChartDataPoint>>(json);
+                    MessageBox.Show($"Количество точек: {DataPoints.Count}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle the exception, e.g., log it or display a message to the user
+                MessageBox.Show($"Ошибка загрузки данных из JSON: {ex.Message}");
+            }
         }
     }
 }

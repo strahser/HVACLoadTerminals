@@ -17,16 +17,16 @@ namespace HVACLoadTerminals.DbUtility
     {
         private static readonly string _dbPath = Path.Combine("");
 
-        public static void AddDeviceProperryDataToDB(IList<EquipmentBase > DeviceList)
+        public static void AddDeviceProperryDataToDB(IList<DevicePropertyModel > DeviceList)
         {
             try
             {
                 //Open database(or create if doesn't exist)
                 using (var db = new LiteDatabase(_dbPath))
                 {
-                    var col = db.GetCollection<EquipmentBase >("DeviceProperty");
+                    var col = db.GetCollection<DevicePropertyModel >("DeviceProperty");
 
-                    foreach (EquipmentBase  property in DeviceList)
+                    foreach (DevicePropertyModel  property in DeviceList)
                     {
 
                         if (col.FindOne(x => x.equipment_id == property.equipment_id) == null)
@@ -45,13 +45,13 @@ namespace HVACLoadTerminals.DbUtility
 
 
 
-        public static IList<EquipmentBase > GetDevicePropertyListFromDb()
+        public static IList<DevicePropertyModel > GetDevicePropertyListFromDb()
         {
-            List<EquipmentBase > resList = new List<EquipmentBase >();
+            List<DevicePropertyModel > resList = new List<DevicePropertyModel >();
             using (var db = new LiteDatabase(_dbPath))
             {
-                var collections = db.GetCollection<EquipmentBase >("DeviceProperty");
-                foreach (EquipmentBase  property in collections.FindAll())
+                var collections = db.GetCollection<DevicePropertyModel >("DeviceProperty");
+                foreach (DevicePropertyModel  property in collections.FindAll())
                 {
                     resList.Add(property);
                 }

@@ -1,5 +1,4 @@
 ﻿using Autodesk.Revit.DB;
-using HVACLoadTerminals.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,9 +60,15 @@ namespace HVACLoadTerminals
             Z = z;
         }
 
+        public override string ToString()
+        {
+            return $"Количество Точек: {X.Count}";
+        }
 
-
-        // Helper methods for combining X with Y and X with Z
+        public List<XYZ> GetPoints()
+        {
+            return X.Select((x, i) => new XYZ(x, Y[i], Z[i])).ToList();
+        }
 
     }
     public class ChartDataPoint

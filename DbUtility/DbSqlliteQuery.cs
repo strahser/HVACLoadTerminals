@@ -9,7 +9,7 @@ namespace HVACLoadTerminals.DbUtility
     public static class DbSqlliteQuery
     {
 
-        public static  void UpdateTerminalDb(List<EquipmentBase> equipmentModels)
+        public static  void UpdateTerminalDb(List<DevicePropertyModel> equipmentModels)
         {
             // Путь к базе данных
             string dbPath = Path.GetFullPath(@"c:\Users\Strakhov\YandexDisk\ProjectCoding\InputDataStreamlit\Simple building\HVACData\db.sqlite3");

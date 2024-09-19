@@ -32,5 +32,22 @@ namespace HVACLoadTerminals.Utils
         {
             return Math.Round(UnitUtils.ConvertFromInternalUnits(element.LookupParameter(parametr).AsDouble(), UnitTypeId.Watts),2);
         }
+
+        public static double ConvertCubicMetersPerHourToCubicFeet(double cubicMetersPerHour)
+        {
+            // Get the conversion factor from cubic meters per hour to cubic feet per minute
+            double conversionFactor = UnitUtils.ConvertFromInternalUnits( cubicMetersPerHour, UnitTypeId.CubicFeetPerMinute);
+
+            // Convert cubic meters per hour to cubic feet per minute
+            double cubicFeetPerMinute = cubicMetersPerHour * conversionFactor;
+
+            // Convert cubic feet per minute to cubic feet
+            double cubicFeet = cubicFeetPerMinute * 60;
+
+            return cubicFeet;
+        }
+
+        public static readonly double ftValue = 304.8;
     }
+
 }

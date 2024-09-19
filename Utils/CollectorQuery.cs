@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 namespace HVACLoadTerminals
@@ -145,14 +146,27 @@ namespace HVACLoadTerminals
 
         }
 
-        public static IList<Element> GetFamilyInstances(Document doc, string elementName)
+        public static ElementId GetFamilyInstances(Document doc, string elementName)
         {
 
             List<Element> listOfElements = new FilteredElementCollector(doc).OfClass(typeof(FamilySymbol)).WhereElementIsElementType()
                     .ToElements().Where(e => e.Name == elementName).ToList<Element>();
             ElementId symbolId = listOfElements.FirstOrDefault().Id;
-               IList<Element> familyInstances = new FilteredElementCollector(doc).WherePasses(new FamilyInstanceFilter(doc, symbolId)).ToElements();
-            return familyInstances;
+
+               //IList<Element> familyInstances = new FilteredElementCollector(doc).WherePasses(new FamilyInstanceFilter(doc, symbolId)).ToElements();
+            return symbolId;
+        }
+
+
+        public static ElementId GetFamilyInstances(Document doc, DevicePropertyModel device)
+        {
+           string elementName = device.family_instance_name;
+            List<Element> listOfElements = new FilteredElementCollector(doc).OfClass(typeof(FamilySymbol)).WhereElementIsElementType()
+                    .ToElements().Where(e => e.Name == elementName).ToList<Element>();
+            ElementId symbolId = listOfElements.FirstOrDefault().Id;
+
+            //IList<Element> familyInstances = new FilteredElementCollector(doc).WherePasses(new FamilyInstanceFilter(doc, symbolId)).ToElements();
+            return symbolId;
         }
 
         public static IList<Element> GetElementListTypeOfCategory(Document doc, BuiltInCategory _selectedCategory)

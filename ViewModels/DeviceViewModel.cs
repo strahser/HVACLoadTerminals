@@ -38,7 +38,7 @@ namespace HVACLoadTerminals.ViewModels
 
                     try
                     {
-                        EquipmentBase device = new EquipmentBase()
+                        DevicePropertyModel device = new DevicePropertyModel()
                         {
                             equipment_id = el.Id.ToString(),
                             family_device_name = SelectedFamily,
@@ -58,7 +58,7 @@ namespace HVACLoadTerminals.ViewModels
         public Dictionary<string, List<FamilySymbol>> FamilyTypes { get; set; }
         public List<string> FamilyTypesOfCategory { get; set; }
         public List<string> ParametrList { get; set; }
-        public List<EquipmentBase > DevicePropertyList { get; set; }
+        public List<DevicePropertyModel > DevicePropertyList { get; set; }
         private CustomMepCategories _selectedCategory;
         private string _selectedFamily { get; set; }
         private string _selectedProperty { get; set; }
@@ -89,7 +89,7 @@ namespace HVACLoadTerminals.ViewModels
                 OnPropertyChanged(nameof(SelectedFamily));
                 GetParametersList();
                 OnPropertyChanged(nameof(ParametrList));
-                DevicePropertyList = new List<EquipmentBase >();
+                DevicePropertyList = new List<DevicePropertyModel >();
                 GetDevieceList();
                 OnPropertyChanged(nameof(DevicePropertyList));
             }
@@ -104,7 +104,7 @@ namespace HVACLoadTerminals.ViewModels
             {
                 _selectedProperty = value;
                 OnPropertyChanged(nameof(SelectedProperty));
-                DevicePropertyList = new List<EquipmentBase >();
+                DevicePropertyList = new List<DevicePropertyModel >();
                 GetDevieceList();
                 OnPropertyChanged(nameof(DevicePropertyList));
             }

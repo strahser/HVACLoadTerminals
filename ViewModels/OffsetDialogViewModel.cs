@@ -1,8 +1,6 @@
 ﻿
 using Autodesk.Revit.DB;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using HVACLoadTerminals.Utils;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,20 +9,40 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Shapes;
-using System.Windows.Controls.DataVisualization.Charting;
-using System.Windows.Markup;
-using Newtonsoft.Json;
-using System.IO;
 using System.Windows.Controls;
 using System.Windows.Media;
-
-
+using HVACLoadTerminals.Models;
+using HVACLoadTerminals.Utils;
+using Newtonsoft.Json;
 
 namespace HVACLoadTerminals.ViewModels
 {
     public class OffsetDialogViewModel : ObservableObject
     {
-        private readonly double _ftValue = 304.8;
+        #region свойства
+
+
+        private string _spaceID;
+        public string SpaceID
+        {
+            get { return _spaceID; }
+            set
+            {
+                SetProperty(ref _spaceID, value);
+            }
+        }
+
+        private Canvas _canvas;
+        public Canvas Canvas
+        {
+            get { return _canvas; }
+            set
+            {
+                SetProperty(ref _canvas, value);
+            }
+        }
+
+
         private readonly SQLiteConnection _connection;
         private  SpaceBoundary _spaceBoundary;
         public SpaceBoundary SpaceBoundary
@@ -35,8 +53,9 @@ namespace HVACLoadTerminals.ViewModels
                 SetProperty(ref _spaceBoundary, value);
             }
         }
+        #endregion
 
-
+        #region Input Data
         // Свойства для хранения выбранного типа оборудования
         private string _selectedSystemEquipmentType;
         public string SelectedSystemEquipmentType
@@ -47,12 +66,65 @@ namespace HVACLoadTerminals.ViewModels
                 SetProperty(ref _selectedSystemEquipmentType, value);
                 try
                 {
-                    UpdateFamilyDeviceNames();
                     UpdateEquipmentData();
+                    UpdateFamilyDeviceNames();
+
                 }
                 catch (Exception excapt) { Debug.Write(excapt); }
             }
         }
+
+        // Свойства для хранения данных Data Grid таблица выбранных device 
+
+        private ObservableCollection<DevicePropertyModel> _calculatedDeviceInstance = new ObservableCollection<DevicePropertyModel>();
+
+        public ObservableCollection<DevicePropertyModel> CalculatedDeviceInstance
+        {
+            get { return _calculatedDeviceInstance; }
+            set
+            {
+                SetProperty(ref _calculatedDeviceInstance, value);
+            }
+        }
+        private DevicePropertyModel _selectedDevice;
+        public DevicePropertyModel SelectedDevice
+        {
+            get {  return _selectedDevice; }
+            set
+            {
+                
+                SetProperty(ref _selectedDevice, value);
+            }
+        }
+        public Document _Document = RevitAPI.Document;
+
+        private string GetTableName(string systemEquipmentType)
+        {
+            // возращает имя таблицы из базы данных
+            switch (systemEquipmentType)
+            {
+                case "Exhaust_system":
+                    return "Systems_exhaustsystem";
+                case "Fan_coil_system":
+                    return "Systems_fancoilsystem";
+                case "Supply_system":
+                    return "Systems_supplysystem";
+                default:
+                    return null;
+            }
+        }
+
+        // Свойства для хранения типа системы (для обращения через конвектор к таблице базы данных
+        private string _tableName;
+        public string tableName
+        {
+            get { return _tableName; }
+            set
+            {
+                SetProperty(ref _tableName, value);
+            }
+        }
+
 
         // Свойства для хранения выбранного имени оборудования
         private string _selectedFamilyDeviceName;
@@ -74,8 +146,8 @@ namespace HVACLoadTerminals.ViewModels
             set
             {
                 SetProperty(ref _selectedCurveIndex1, value);
-                // Перерисовываем смещенную кривую при изменении SelectedCurveIndex1
                 DrawCurves();
+
             }
         }
         // Свойства для хранения выбранного индекса второй кривой
@@ -84,14 +156,6 @@ namespace HVACLoadTerminals.ViewModels
         {
             get { return _selectedCurveIndex2; }
             set { SetProperty(ref _selectedCurveIndex2, value); }
-        }
-
-        // Свойства для хранения выбранного значения UseSecondCurve
-        private bool _useSecondCurve;
-        public bool UseSecondCurve
-        {
-            get { return _useSecondCurve; }
-            set { SetProperty(ref _useSecondCurve, value); }
         }
 
 
@@ -103,14 +167,6 @@ namespace HVACLoadTerminals.ViewModels
             get { return _familyInstanceName; }
             set { SetProperty(ref _familyInstanceName, value); }
         }
-        // Свойства для хранения значения MaxFlow
-
-        private double _maxFlow;
-        public double MaxFlow
-        {
-            get { return _maxFlow; }
-            set { SetProperty(ref _maxFlow, value); }
-        }
 
         private double _systemFlow;
         public double SystemFlow
@@ -118,25 +174,74 @@ namespace HVACLoadTerminals.ViewModels
             get { return _systemFlow; }
             set { SetProperty(ref _systemFlow, value); }
         }
+
+        private string _systemName;
+        public string SystemName
+        {
+            get { return _systemName; }
+            set { SetProperty(ref _systemName, value); }
+        }
         // Свойства для хранения значения CalculationOptions
 
-        private string _calculationOptions;
-        public string CalculationOptions
+
+        private static ObservableCollection<CalculationOption> _calculationOptions;
+
+        public static ObservableCollection<CalculationOption> CalculationOptions
         {
-            get { return _calculationOptions; }
-            set { SetProperty(ref _calculationOptions, value); }
+            get
+            {
+                if (_calculationOptions == null)
+                {
+                    _calculationOptions = new ObservableCollection<CalculationOption>
+                    {
+                        CalculationOptionsTypes.MinimumTerminals,CalculationOptionsTypes.DirectiveTerminalsNumber
+                    };
+                }
+
+                return _calculationOptions;
+            }
         }
-        private Chart _chart;
-        public Chart Chart
+
+        private CalculationOption _selectedCalculationOption;
+
+        public CalculationOption SelectedCalculationOption
         {
-            get { return _chart; }
-            set { SetProperty(ref _chart, value); }
+            get { return _selectedCalculationOption; }
+            set
+            {
+                SetProperty(ref _selectedCalculationOption, value);
+            }
         }
-        private CanvasHelper _canvasHelper;
-        // Свойство для хранения смещенной кривой
-        private Polyline _offsetPolyline;
+
+        private string _selectedCalculationOptionFromDB;
+
+        public string SelectedCalculationOptionFromDB
+        {
+            get { return _selectedCalculationOptionFromDB; }
+            set
+            {
+                SetProperty(ref _selectedCalculationOptionFromDB, value);
+
+                // Проверяем, совпадает ли полученная запись с выбранной моделью
+                if (_selectedCalculationOptionFromDB != null)
+                {
+                    // Находим соответствующий элемент в коллекции
+                    var matchingOption = CalculationOptions.FirstOrDefault(o => o.Name == _selectedCalculationOptionFromDB);
+
+                    if (matchingOption != null)
+                    {
+                        SelectedCalculationOption = matchingOption; // Устанавливаем выбор по умолчанию
+                    }
+                    else
+                    {
+                        SelectedCalculationOption = CalculationOptions.FirstOrDefault(); // Устанавливаем первый элемент по умолчанию
+                    }
+                }
+            }
+        }
 
         // Свойство для хранения расстояния смещения
+
         private double _offsetDistance = 500;
         public double OffsetDistance
         {
@@ -181,6 +286,14 @@ namespace HVACLoadTerminals.ViewModels
             get { return _systemEquipmentTypes; }
             set { SetProperty(ref _systemEquipmentTypes, value); }
         }
+        // Свойство для хранения модели оборудования
+        private ObservableCollection<DevicePropertyModel> equipmentBases = new ObservableCollection<DevicePropertyModel>();
+        public ObservableCollection<DevicePropertyModel> EquipmentBases
+        {
+            get { return equipmentBases; }
+            set { SetProperty(ref equipmentBases, value); }
+        }
+
 
         // Свойство для хранения списка имен оборудования
         private ObservableCollection<string> _familyDeviceNames = new ObservableCollection<string>();
@@ -190,14 +303,17 @@ namespace HVACLoadTerminals.ViewModels
             set { SetProperty(ref _familyDeviceNames, value); }
         }
 
-        // Свойство для хранения списка индексов кривых
+
         // Свойство для хранения списка индексов кривых
         private ObservableCollection<int> _curveIndices = new ObservableCollection<int>();
+
         public ObservableCollection<int> CurveIndices
         {
             get { return _curveIndices; }
             set { SetProperty(ref _curveIndices, value); }
         }
+
+        // Свойство для хранения списка  кривых
 
         private ObservableCollection<Autodesk.Revit.DB.Curve> _curves = new ObservableCollection<Autodesk.Revit.DB.Curve>();
 
@@ -207,7 +323,7 @@ namespace HVACLoadTerminals.ViewModels
             set { SetProperty(ref _curves, value); }
         }
 
-        private string jsonPath;
+        // Свойство для хранения списка  смещенных точек (при десериализации)
         private ObservableCollection<ChartDataPoint> _dataPoints;
 
         public ObservableCollection<ChartDataPoint> DataPoints
@@ -220,27 +336,23 @@ namespace HVACLoadTerminals.ViewModels
             
         }
 
-        private Canvas _canvas;
-        public Canvas Canvas
-        {
-            get { return _canvas; }
-            set
-            {
-                SetProperty(ref _canvas, value);
-            }
-        }
-
         // ObservableCollection to hold the shapes for binding
         public ObservableCollection<Shape> CanvasShapes { get; } = new ObservableCollection<Shape>();
 
         // Конструктор
-        public OffsetDialogViewModel(SQLiteConnection connection, SpaceBoundary spaceBoundary, string _jsonPath)
+        public OffsetDialogViewModel(SQLiteConnection connection, SpaceBoundary spaceBoundary)
         {
-            _connection = connection;
-            _spaceBoundary = spaceBoundary;
-            jsonPath = _jsonPath;
-            _curves = new ObservableCollection<Autodesk.Revit.DB.Curve>(spaceBoundary.cleanCurves);  // Используем конструктор ObservableCollection
-            CurveIndices = new ObservableCollection<int>(Enumerable.Range(0, _curves.Count));
+           _connection = connection;
+           _spaceBoundary = spaceBoundary;
+           SpaceID = SpaceBoundary._space.Id.ToString();
+           _curves = new ObservableCollection<Autodesk.Revit.DB.Curve>(spaceBoundary.cleanCurves);  // Используем конструктор ObservableCollection
+           CurveIndices = new ObservableCollection<int>(Enumerable.Range(0, _curves.Count));
+           SelectedCalculationOption = CalculationOptions.FirstOrDefault();
+
+            AssignValueCommand = new RelayCommand(obj => AssignValue());
+            CalculateTerminalsCommand = new RelayCommand(obj => GetMinimumTerminalFamilyInstance());
+            InsertDevicesCommand = new RelayCommand(obj => InsertDevices());
+            
             // Заполнение ComboBox для system_equipment_type
             LoadSystemEquipmentTypes();
             // Установка первого значения в качестве выбранного
@@ -255,6 +367,21 @@ namespace HVACLoadTerminals.ViewModels
             }
             DrawCurves();
         }
+        // Метод для получения половины длины выбранной кривой
+        public RelayCommand AssignValueCommand { get; }
+
+        public RelayCommand CalculateTerminalsCommand { get; }
+        public RelayCommand InsertDevicesCommand { get; }
+
+        private void AssignValue()
+        {
+            OffsetDistance = Curves[SelectedCurveIndex2].Length / 2 * ParameterDisplayConvertor.ftValue;
+        }
+
+
+        #endregion
+
+        #region Обнавление Полигона
 
         // Метод для загрузки данных SystemEquipmentTypes
         private void LoadSystemEquipmentTypes()
@@ -279,7 +406,7 @@ namespace HVACLoadTerminals.ViewModels
             FamilyDeviceNames.Clear();
 
             // Определение таблицы в зависимости от выбранного типа системы
-            string tableName = GetTableName(SelectedSystemEquipmentType);
+            _tableName = GetTableName(SelectedSystemEquipmentType);
 
             if (tableName != null)
             {
@@ -287,6 +414,7 @@ namespace HVACLoadTerminals.ViewModels
 
                 using (SQLiteCommand command = new SQLiteCommand(query, _connection))
                 {
+
                     command.Parameters.AddWithValue("@system_equipment_type", SelectedSystemEquipmentType);
                     using (SQLiteDataReader reader = command.ExecuteReader())
                     {
@@ -314,29 +442,148 @@ namespace HVACLoadTerminals.ViewModels
         {
             // Определение таблицы в зависимости от выбранного типа системы
             string tableName = GetTableName(SelectedSystemEquipmentType);
-
             if (tableName != null)
             {
                 // Запрос для получения family_instance_name, max_flow и calculation_options
-                string query = $"SELECT  system_flow, calculation_options FROM {tableName} WHERE space_id = @space_id";
+                string query = $"SELECT system_flow, calculation_options, Systems_systemname.system_name" +
+                    $" FROM {tableName}" +
+                    $" JOIN Systems_systemname ON {tableName}.system_name_id = Systems_systemname.id"+
+                    $" WHERE space_id = @space_id";
+
 
                 using (SQLiteCommand command = new SQLiteCommand(query, _connection))
                 {
                     command.Parameters.AddWithValue("@space_id", _spaceBoundary._space.Id.ToString());
                     using (SQLiteDataReader reader = command.ExecuteReader())
                     {
-                        if (reader.Read())
+                        if (reader.Read() && Convert.ToDouble(reader["system_flow"])>0)
                         {
                             // Установка свойств в ViewModel
-                            SystemFlow = Convert.ToDouble(reader["system_flow"]); // Предполагается, что "max_flow" - числовое значение
-                            CalculationOptions = reader["calculation_options"].ToString();
+                            SystemFlow = Convert.ToDouble(reader["system_flow"]);
+                            SystemName = reader["system_name"].ToString();
+                            _selectedCalculationOptionFromDB = reader["calculation_options"].ToString();
+
                         }
+                        else
+                        {
+                            SystemFlow = 0;
+                        }
+                    }
+                }
+
+
+            }
+        }
+
+        // Метод для получения всех экземпляров из базы данных по заданном типу семейства
+        private void GetSelectedFamilyEquipmentDB()
+        {
+            var query2 = $"SELECT family_device_name, family_instance_name, max_flow FROM Terminals_equipmentbase WHERE family_device_name = '{SelectedFamilyDeviceName}'";
+            EquipmentBases.Clear();
+            using (var command = new SQLiteCommand(query2, _connection))
+            {
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        EquipmentBases.Add(new DevicePropertyModel
+                        {
+                            family_device_name = reader.GetString(0),
+                            family_instance_name = reader.GetString(1),
+                            max_flow = reader.GetDouble(2)
+                        }
+                         );
                     }
                 }
             }
         }
+        private void GetMinimumTerminalFamilyInstance()
+        {
+            GetSelectedFamilyEquipmentDB();
+            if (SelectedCalculationOption.Name== CalculationOptionsTypes.MinimumTerminals.Name)
+            {
+                calculateMinimumDevices();
+            }
+            else if (SelectedCalculationOption.Name == CalculationOptionsTypes.DirectiveTerminalsNumber.Name)
+            {
+                calculateMinimumDevices(NumberOfPoints);
+            }
 
+        }
+
+        // // Метод для расчета минимального колличества оборудования через KEF,сортировку.
+        private void calculateMinimumDevices(int deirctiveNumber = 0)
+        {
+            if (SystemFlow > 0)
+            {
+                try
+            {
+                
+                DevicePropertyModel minDevicesByTerminal = EquipmentBases
+                    .Select(t =>
+                    {
+                        t.SystemFlow = SystemFlow;
+                        t.system_name = SystemName;
+                        if ((int)Math.Ceiling(SystemFlow / t.max_flow) > deirctiveNumber)
+                        {
+                            t.MinDevices = (int)Math.Ceiling(SystemFlow / t.max_flow);
+                            t.KEf = Math.Round(SystemFlow / (Math.Ceiling(SystemFlow / t.max_flow) * t.max_flow), 2);                            
+                        }
+                        else
+                        {
+                            t.MinDevices = deirctiveNumber;
+                            t.KEf = Math.Round(SystemFlow / (deirctiveNumber * t.max_flow), 2);
+                        }
+                        t.real_flow = t.SystemFlow / t.MinDevices;                        
+                       
+                        return t; // Return the modified DevicePropertyModel object
+                })
+                    .Where(t => t.KEf <= 1)
+                    .OrderBy(t => t.MinDevices)
+                    .ThenByDescending(t => t.KEf)
+                    .FirstOrDefault();
+                    CalculateOffsetPoints();
+                    NumberOfPoints = minDevicesByTerminal.MinDevices;
+                    minDevicesByTerminal.DevicePointList = _spaceBoundary.spaceBoundaryModel.OffsetPoints;
+                    CalculatedDeviceInstance.Add(minDevicesByTerminal);
+
+                }
+            catch (Exception e) { Debug.Write(e); }
+            }
+        }
+
+
+        // Вставка терминалов
+
+        private void InsertDevices()
+        {
+        if (SelectedDevice!=null)
+
+            try {
+                ElementId _elementId = CollectorQuery.GetFamilyInstances(_Document, SelectedDevice);
+
+                FamilySymbol elementInstance = _Document.GetElement(new ElementId(_elementId.IntegerValue)) as FamilySymbol;
+                InsertTerminal terminal = new InsertTerminal(_Document);
+
+                terminal.InsertElementsAtPoints(elementInstance, SelectedDevice);                
+                MessageBox.Show($"{SelectedDevice.family_instance_name} установлено");
+            }
+            catch (Exception e) { Debug.Write($"Ошибка вставки{ e}"); }
+            else
+            {
+                MessageBox.Show("Выберите запись для вставки");
+            }
+        }
         // Отрисовка кривых на Canvas
+
+        private void SavePolygonsCoordinatesToJson()
+        {
+            // Сериализуем данные в JSON
+            string json = JsonConvert.SerializeObject(SpaceBoundary.spaceBoundaryModel, Formatting.Indented);
+
+            // Записываем JSON в файл
+            System.IO.File.WriteAllText(RevitAPI.polygonJsonPathe, json);
+        }
 
         private void DrawCurves()
         {
@@ -344,26 +591,28 @@ namespace HVACLoadTerminals.ViewModels
             try
             {
                 CalculateOffsetPoints();
-
-                // Сериализуем данные в JSON
-                string json = JsonConvert.SerializeObject(SpaceBoundary.spaceBoundaryModel, Formatting.Indented); 
-
-                // Записываем JSON в файл
-                System.IO.File.WriteAllText(jsonPath, json);
-
                 // Plot the polygon
                 var spaceBoundary = SpaceBoundary.spaceBoundaryModel;
                 double scaleFactor = 10;
+                System.Windows.Shapes.Line wpfLine = CreateWpfLineFromRevitCurve(_curves[SelectedCurveIndex1], scaleFactor);
+                Canvas.Children.Add(wpfLine);
+
                 Polygon polygon = new Polygon
                 {
                     Stroke = Brushes.Blue,
                     StrokeThickness = 2,
                 };
+
+                // Создаем полигон из точек
                 for (int i = 0; i < spaceBoundary.px.Count; i++)
                 {
                     // Scale coordinates using scaleFactor
                     double scaledX = spaceBoundary.px[i] * scaleFactor;
                     double scaledY = spaceBoundary.py[i] * scaleFactor;
+
+                    // Mirror the Y coordinate for vertical flip
+                    scaledY = -scaledY;
+
                     polygon.Points.Add(new System.Windows.Point(scaledX, scaledY));
                 }
                 Canvas.Children.Add(polygon);
@@ -381,7 +630,7 @@ namespace HVACLoadTerminals.ViewModels
 
                     // **Set Left and Top using scaled coordinates**
                     Canvas.SetLeft(offsetPoint, spaceBoundary.OffsetPoints.X[i] * scaleFactor);
-                    Canvas.SetTop(offsetPoint, spaceBoundary.OffsetPoints.Y[i] * scaleFactor);
+                    Canvas.SetTop(offsetPoint, -spaceBoundary.OffsetPoints.Y[i] * scaleFactor); // Mirror vertically
 
                     Canvas.Children.Add(offsetPoint);
                 }
@@ -392,7 +641,6 @@ namespace HVACLoadTerminals.ViewModels
                     // Calculate midpoint of each line
                     double midX = (spaceBoundary.px[i] + spaceBoundary.px[i + 1]) / 2 * scaleFactor;
                     double midY = (spaceBoundary.py[i] + spaceBoundary.py[i + 1]) / 2 * scaleFactor;
-
                     // Create a TextBlock for the label
                     TextBlock label = new TextBlock
                     {
@@ -401,25 +649,43 @@ namespace HVACLoadTerminals.ViewModels
                         Foreground = Brushes.Black,
                         TextAlignment = TextAlignment.Center
                     };
-
-
-
-
                     // Position the label at the midpoint
                     Canvas.SetLeft(label, midX);
-                    Canvas.SetTop(label, midY);
+                    Canvas.SetTop(label, -midY); // Mirror vertically
                     Canvas.Children.Add(label);
                 }
             }
             catch (Exception except) { MessageBox.Show(except.ToString()); }
         }
-    
 
+        private void AddCurveLable(int scaleFactor)
+        {
+            // Add line labels
+            for (int i = 0; i < Curves.Count; i++)
+            {
+                // Calculate midpoint of each line
+                double midX = (Curves[i].GetEndPoint(0).X + Curves[i].GetEndPoint(1).X) / 2 * scaleFactor;
+                double midY = (Curves[i].GetEndPoint(0).Y + Curves[i].GetEndPoint(1).Y) / 2 * scaleFactor;
+
+                // Create a TextBlock for the label
+                TextBlock label = new TextBlock
+                {
+                    Text = (i).ToString(), // Line number
+                    FontSize = 12,
+                    Foreground = Brushes.Black,
+                    TextAlignment = TextAlignment.Center
+                };
+                // Position the label at the midpoint
+                Canvas.SetLeft(label, midX);
+                Canvas.SetTop(label, midY);
+                Canvas.Children.Add(label);
+            }
+        }
         private void CalculateOffsetPoints() {
             Curve curve = _curves[SelectedCurveIndex1];
             // 1. Смещаем кривую внутрь
-            double offsetFt = OffsetDistance /_ftValue;
-            double startOfsetFt = StartOffsetDistance > 0 ? StartOffsetDistance / _ftValue : offsetFt;
+            double offsetFt = OffsetDistance / ParameterDisplayConvertor.ftValue;
+            double startOfsetFt = StartOffsetDistance > 0 ? StartOffsetDistance / ParameterDisplayConvertor.ftValue : offsetFt;
             Curve offsetCurve = SpaceBoundaryUtils.OffsetCurvesInward(curve, -offsetFt);
                 // 2. Получаем список точек на смещенной кривой
                 List<XYZ> offsetPoints = SpaceBoundaryUtils.GetPointsOnCurve(offsetCurve, NumberOfPoints, startOfsetFt);
@@ -429,41 +695,32 @@ namespace HVACLoadTerminals.ViewModels
                 offsetPoints.Select(p => p.X).ToList(),
                 offsetPoints.Select(p => p.Y).ToList(),
                 offsetPoints.Select(p => p.Z).ToList()
-                );
-           
+                );     
         }
 
-        private void LoadChartDataFromJson(string jsonPath)
+        public static System.Windows.Shapes.Line CreateWpfLineFromRevitCurve(Curve curve, double scaleFactor = 10)
         {
-            try
-            {
-                if (File.Exists(jsonPath))
-                {
-                    string json = File.ReadAllText(jsonPath);
-                    DataPoints = JsonConvert.DeserializeObject<ObservableCollection<ChartDataPoint>>(json);
-                    MessageBox.Show($"Количество точек: {DataPoints.Count}");
-                }
-            }
-            catch (Exception ex)
-            {
-                // Handle the exception, e.g., log it or display a message to the user
-                MessageBox.Show($"Ошибка загрузки данных из JSON: {ex.Message}");
-            }
+            // Get the start and end points of the Revit curve
+            XYZ startPoint = curve.GetEndPoint(0);
+            XYZ endPoint = curve.GetEndPoint(1);
+
+            // Convert the Revit points to WPF points and mirror vertically
+            System.Windows.Point wpfStartPoint = new System.Windows.Point(startPoint.X * scaleFactor, -startPoint.Y * scaleFactor);
+            System.Windows.Point wpfEndPoint = new System.Windows.Point(endPoint.X * scaleFactor, -endPoint.Y * scaleFactor);
+
+            // Create a new WPF Line object
+            System.Windows.Shapes.Line line = new System.Windows.Shapes.Line();
+            line.X1 = wpfStartPoint.X;
+            line.Y1 = wpfStartPoint.Y;
+            line.X2 = wpfEndPoint.X;
+            line.Y2 = wpfEndPoint.Y;
+            line.StrokeThickness = 5;
+            line.Stroke = Brushes.Red;
+
+            return line;
         }
-        private string GetTableName(string systemEquipmentType)
-        {
-            switch (systemEquipmentType)
-            {
-                case "Exhaust_system":
-                    return "Systems_exhaustsystem";
-                case "Fan_coil_system":
-                    return "Systems_fancoilsystem";
-                case "Supply_system":
-                    return "Systems_supplysystem";
-                default:
-                    return null;
-            }
-        }
-   
     }
+    #endregion
+
+ 
 }

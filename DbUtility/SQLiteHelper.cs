@@ -4,8 +4,11 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
 using System.Windows;
+using System.Linq;
+using Newtonsoft.Json;
 
 namespace SQLiteCRUD
+
 {
 
     public class SQLiteHelper
@@ -41,7 +44,7 @@ namespace SQLiteCRUD
         }
 
         // Метод для добавления или обновления записи в базе данных
-        public void CreateOrUpdate(List<EquipmentBase> data)
+        public void CreateOrUpdate(List<DevicePropertyModel> data)
         {
             List <string> updatedList = new List<string>();
             List<string> newList = new List<string>();
@@ -112,6 +115,22 @@ namespace SQLiteCRUD
                 }
             }
             MessageBox.Show($"Добавлено {newList.Count} значений\n Обнавлено {updatedList.Count} значений");
+        }
+    }
+
+    public class DatabaseConfig
+    {
+        public string name { get; set; }
+        public string filePath { get; set; }
+
+        public static string ConfigConnectionString(string projectDirectory, string connectionName = "work")
+        {
+            string jsonFilePathConfig = Path.Combine(projectDirectory, "config.json");
+            string jsonString = File.ReadAllText(jsonFilePathConfig);
+            DatabaseConfig[] configs = JsonConvert.DeserializeObject<DatabaseConfig[]>(jsonString);
+            DatabaseConfig config = configs.FirstOrDefault(c => c.name == connectionName);
+            string connectionString = $"Data Source={config.filePath}";
+            return connectionString;
         }
     }
 }

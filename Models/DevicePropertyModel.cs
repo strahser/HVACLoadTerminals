@@ -15,28 +15,19 @@ namespace HVACLoadTerminals
 {
 
 
-    // Модель EquipmentBase, наследуемая от BaseModel
+    // Модель DevicePropertyModel, наследуемая от BaseModel
 
-    public class EquipmentBase
+    public class DevicePropertyModel
     {
-        // Перечисление для типа оборудования
-        public enum SystemType
-        {
-            [Display(Name = "Тип 1")]
-            Type1,
+        [DisplayName("Расход Системы")]
+        public double SystemFlow { get; set; }
 
-            [Display(Name = "Тип 2")]
-            Type2,
-
-            // ... другие типы
-        }
-
-        // Поле для типа оборудования
+        [DisplayName("Наименование Системы")]
+        public string system_name { get; set; }
 
         [DisplayName("Тип оборудования")]
         public string system_equipment_type { get; set; }
 
-        // Остальные поля
 
         [DisplayName("ID Оборудования")]
         public string equipment_id { get; set; }
@@ -53,6 +44,9 @@ namespace HVACLoadTerminals
         [DisplayName("Макс. расход")]
         public double max_flow { get; set; }
 
+        [DisplayName("Реал. расход")]
+        public double real_flow { get; set; }
+
         [DisplayName("Нормальная скорость")]
        
 
@@ -64,16 +58,21 @@ namespace HVACLoadTerminals
 
         public string system_name_parameter { get; set; }
 
+        public int MinDevices { get; set; }
+
+        public double KEf { get; set; }
+
+        public PointsList DevicePointList { get; set; }
+
         [DisplayName("Дата создания")]
         public DateTime creation_stamp { get; set; } = DateTime.Now;
 
         [DisplayName("Дата обновления")]
         public DateTime update_stamp { get; set; } = DateTime.Now;
 
-        // Переопределение метода ToString
         public override string ToString()
         {
-            return family_device_name;
+            return $"Семейство: {family_device_name}- Тип: {family_instance_name}-Кэф: {KEf}";
         }
     }
 }
