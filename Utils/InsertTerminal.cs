@@ -2,11 +2,12 @@
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.DB.Structure;
 using Autodesk.Revit.UI;
+using HVACLoadTerminals.StaticData;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-
+using System.Windows;
 
 namespace HVACLoadTerminals.Utils
 {
@@ -16,7 +17,7 @@ namespace HVACLoadTerminals.Utils
 
         private DevicePropertyModel selectedDeviece;
        public List<MechanicalSystemType> Mechanicaltypes { get 
-            { return GetSystemType(); } 
+            { return CollectorQuery.GetSystemType(doc); } 
         }  
         public InsertTerminal(Document _doc)
         {
@@ -42,7 +43,7 @@ namespace HVACLoadTerminals.Utils
                         SetFlowParameter( instance, selectedDeviece.SystemFlow);
                         AddToSystem(instance, selectedDeviece.system_name);
                     }
-                    catch (Exception e) { Debug.Write("Ошибка при создании" + e); }
+                    catch (Exception e) { Debug.Write("Ошибка при вставки семейства" + e); }
                 }
                 transaction.Commit();
             }
@@ -54,14 +55,12 @@ namespace HVACLoadTerminals.Utils
             Parameter flowParameter = familyInstance.get_Parameter(BuiltInParameter.RBS_DUCT_FLOW_PARAM);
             if (flowParameter != null)
             {
-                flowParameter.Set(flowValue * 0.009809596);
+                flowParameter.Set(flowValue * ParameterDisplayConvertor.meterToFeetPerHour);
             }
             else
             {
                 TaskDialog.Show("Error", "The parameter 'RBS_DUCT_FLOW_PARAM' does not exist in this family instance.");
             }
-
-
         }
 
         private MechanicalSystem GetExistingSystem(string systemName)
@@ -79,31 +78,13 @@ namespace HVACLoadTerminals.Utils
             return newSystem;
         }
 
-        private List<MechanicalSystemType> GetSystemType()
-        {
-            FilteredElementCollector collector = new FilteredElementCollector(doc);
-            List<MechanicalSystemType> systemTypes = collector.OfClass(typeof(MechanicalSystemType)).Cast<MechanicalSystemType>().ToList();
-            List<ElementId> systemTypeIds = systemTypes.Select(system => system.Id).ToList();
-            return systemTypes;
-        }
 
-        private MechanicalSystemType systemType(string airType)
-        {
-            switch (airType)
-            {
-                case "ExhaustAir":
-                    return Mechanicaltypes.FirstOrDefault(x => x.Name == "ADSK_Отработанный воздух");
-                case "SupplyAir":
-                    return Mechanicaltypes.FirstOrDefault(x => x.Name == "ADSK_Приточный воздух");
-                default: return Mechanicaltypes.FirstOrDefault();
-            }
-        }
         private  void AddToSystem(FamilyInstance element, string sysName)
         {
             // Get the connector for the element
             Connector connector = element.MEPModel.ConnectorManager.Connectors.Cast<Connector>().FirstOrDefault();
             MechanicalSystem system = GetExistingSystem(sysName);
-            var systemTypeData = systemType(connector.DuctSystemType.ToString());
+            var systemTypeData = SystemData.systemType(Mechanicaltypes,connector.DuctSystemType.ToString());
             if (system == null)
             {
 

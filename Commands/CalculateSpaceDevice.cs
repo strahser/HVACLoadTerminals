@@ -10,8 +10,7 @@ using System.Linq;
 using System;
 using System.Data.Common;
 using System.Data.SQLite;
-using SQLiteCRUD;
-using HVACLoadTerminals.Utils;
+
 
 namespace HVACLoadTerminals.Commands
 {
@@ -21,12 +20,7 @@ namespace HVACLoadTerminals.Commands
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            //UIApplication uiApp = commandData.Application;
-            //UIDocument uiDoc = uiApp.ActiveUIDocument;
-            //Document doc = uiDoc.Document;
             RevitAPI.Initialize(commandData);
-
-
             Element selectedElement;
             try
             {
@@ -45,7 +39,7 @@ namespace HVACLoadTerminals.Commands
                 SpaceBoundary spaceBoundary = new SpaceBoundary(space);
                 // Открываем диалоговое окно для выбора кривой и расстояния смещения
                 var cleanCurves = spaceBoundary.cleanCurves;
-                SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConfigConnectionString(RevitAPI.projectDirectory));
+                SQLiteConnection connection = RevitAPI.connection;
                 connection.Open();
                 OffsetDialog dialog = new OffsetDialog(connection, spaceBoundary);
                 dialog.ShowDialog();

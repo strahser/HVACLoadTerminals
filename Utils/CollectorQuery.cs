@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
 namespace HVACLoadTerminals
 {
@@ -176,6 +177,14 @@ namespace HVACLoadTerminals
             .WhereElementIsElementType()
             .ToList();
             return _familyElementList;
+        }
+
+        public static List<MechanicalSystemType> GetSystemType(Document doc)
+        {
+            FilteredElementCollector collector = new FilteredElementCollector(doc);
+            List<MechanicalSystemType> systemTypes = collector.OfClass(typeof(MechanicalSystemType)).Cast<MechanicalSystemType>().ToList();
+            List<ElementId> systemTypeIds = systemTypes.Select(system => system.Id).ToList();
+            return systemTypes;
         }
     }
 

@@ -12,10 +12,9 @@ namespace HVACLoadTerminals.DbUtility
         public static  void UpdateTerminalDb(List<DevicePropertyModel> equipmentModels)
         {
             // Путь к базе данных
-            string dbPath = Path.GetFullPath(@"c:\Users\Strakhov\YandexDisk\ProjectCoding\InputDataStreamlit\Simple building\HVACData\db.sqlite3");
             string tableName = "Terminals_equipmentbase";
             // Строка подключения
-            string connectionString = $"Data Source={dbPath};Version=3;";
+            string connectionString = $"Data Source={RevitAPI.DbPath};Version=3;";
             var helper = new SQLiteCRUD.SQLiteHelper(connectionString, tableName);
             helper.CreateOrUpdate(equipmentModels);
             

@@ -59,6 +59,7 @@ namespace HVACLoadTerminals.ViewModels
         public List<string> FamilyTypesOfCategory { get; set; }
         public List<string> ParametrList { get; set; }
         public List<DevicePropertyModel > DevicePropertyList { get; set; }
+
         private CustomMepCategories _selectedCategory;
         private string _selectedFamily { get; set; }
         private string _selectedProperty { get; set; }

@@ -18,21 +18,28 @@
             <Label Content="Тип оборудования:" Margin="5"/>
         <ComboBox x:Name="SystemEquipmentTypeComboBox" 
                   ItemsSource="{Binding SystemEquipmentTypes}"
-                  SelectedItem="{Binding SelectedSystemEquipmentType}" 
+                  SelectedItem="{Binding SelectedSystemEquipmentType}"     
                   Grid.Row="0" Grid.Column="1" Margin="5"/>
         <Label Content="Название оборудования:"  Margin="5"/>
         <ComboBox x:Name="FamilyDeviceNameComboBox" 
                   ItemsSource="{Binding FamilyDeviceNames}"
                   SelectedItem="{Binding SelectedFamilyDeviceName}" 
                  Margin="5"/>
-        <!-- ComboBox для выбора индекса первой кривой -->
-        <Label Content="Индекс первой кривой:"  Margin="5"/>
+        <!--<Label Content="Тип Системы:"  Margin="5"/>
+        <ComboBox x:Name="SystemTypeseNameComboBox" 
+                ItemsSource="{Binding SystemTypes}"
+                SelectedItem="{Binding SelectedSystemType}" 
+                DisplayMemberPath="Name"
+                SelectedValuePath="Id"
+                Margin="5"/>-->
+            <!-- ComboBox для выбора индекса первой кривой -->
+        <Label Content="Номер выбранной стены:"  Margin="5"/>
         <ComboBox x:Name="CurveIndexComboBox1" 
                   ItemsSource="{Binding CurveIndices}" 
                   SelectedItem="{Binding SelectedCurveIndex1, Mode=TwoWay}" 
                   Margin="5"/>
         <!-- ComboBox для выбора индекса второй кривой -->
-        <Label Content="Индекс второй кривой:" Margin="5"/>
+        <Label Content="Номер стены для получения центра:" Margin="5"/>
         <ComboBox x:Name="CurveIndexComboBox2" 
                   ItemsSource="{Binding CurveIndices}"                   
                   SelectedItem="{Binding SelectedCurveIndex2, Mode=TwoWay}" 
@@ -54,19 +61,10 @@
             <TextBlock Text="Результат расчета " FontSize="16" TextAlignment="Center"/>
             <TextBlock Text="Id Пространства: "/>
             <TextBlock Text="{Binding SpaceID}"/>
-            <DataGrid x:Name="dataGrid" AutoGenerateColumns="False" Grid.Row="1" 
-              ItemsSource="{Binding CalculatedDeviceInstance}" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Наименование Системы " Binding="{Binding system_name}"/>
-                    <DataGridTextColumn Header="Расход Системы " Binding="{Binding SystemFlow}"/>
-                    <DataGridTextColumn Header="Тип " Binding="{Binding family_device_name}"/>
-                    <DataGridTextColumn Header="Экземпляр" Binding="{Binding family_instance_name}"/>
-                    <DataGridTextColumn Header="Макс.расход" Binding="{Binding max_flow}"/>
-                    <DataGridTextColumn Header="Кол-во" Binding="{Binding MinDevices}"/>
-                    <DataGridTextColumn Header="K_Ef" Binding="{Binding KEf}"/>
-                    <DataGridTextColumn Header="Points" Binding="{Binding DevicePointList}"/>
-                </DataGrid.Columns>
-            </DataGrid>
+            <TextBlock Text="Расход системы: "/>
+            <TextBlock Text="{Binding SystemFlow}"/>
+            <TextBlock Text="Наименование системы: "/>
+            <TextBlock Text="{Binding SystemName}"/>       
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -84,6 +82,19 @@
             </Grid>
             <Button Command="{Binding CalculateTerminalsCommand}" Content="Расчитать оборудование" Margin="5" />
             <Button Command="{Binding InsertDevicesCommand}" Content="Установить оборудование" Margin="5" />
+            <DataGrid x:Name="dataGrid" AutoGenerateColumns="False" Grid.Row="1" 
+              ItemsSource="{Binding CalculatedDeviceInstance}" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Наименование Системы " Binding="{Binding system_name}"/>
+                    <DataGridTextColumn Header="Расход Системы " Binding="{Binding SystemFlow}"/>
+                    <DataGridTextColumn Header="Тип " Binding="{Binding family_device_name}"/>
+                    <DataGridTextColumn Header="Экземпляр" Binding="{Binding family_instance_name}"/>
+                    <DataGridTextColumn Header="Макс.расход" Binding="{Binding max_flow}"/>
+                    <DataGridTextColumn Header="Кол-во" Binding="{Binding MinDevices}"/>
+                    <DataGridTextColumn Header="K_Ef" Binding="{Binding KEf}"/>
+                    <DataGridTextColumn Header="Points" Binding="{Binding DevicePointList}"/>
+                </DataGrid.Columns>
+            </DataGrid>
             <TextBlock Text="Выбранный экземпляр: "/>
             <TextBlock Text="{Binding SelectedDevice }"/>
         </StackPanel>

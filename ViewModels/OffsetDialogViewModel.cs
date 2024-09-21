@@ -14,12 +14,45 @@ using System.Windows.Media;
 using HVACLoadTerminals.Models;
 using HVACLoadTerminals.Utils;
 using Newtonsoft.Json;
-
+using HVACLoadTerminals.StaticData;
+using Autodesk.Revit.DB.Mechanical;
+using ReactiveUI;
+using System.Reactive;
+using System.Reactive.Linq;
 namespace HVACLoadTerminals.ViewModels
 {
     public class OffsetDialogViewModel : ObservableObject
     {
-        #region свойства
+        // Конструктор
+        public OffsetDialogViewModel(SQLiteConnection connection, SpaceBoundary spaceBoundary)
+        {
+            _connection = connection;
+            _spaceBoundary = spaceBoundary;
+            SpaceID = SpaceBoundary._space.Id.ToString();
+            _curves = new ObservableCollection<Autodesk.Revit.DB.Curve>(spaceBoundary.cleanCurves);  // Используем конструктор ObservableCollection
+            CurveIndices = new ObservableCollection<int>(Enumerable.Range(0, _curves.Count));
+            SelectedCalculationOption = CalculationOptions.FirstOrDefault();
+
+            AssignValueCommand = new RelayCommand(obj => AssignValue());
+            CalculateTerminalsCommand = new RelayCommand(obj => GetMinimumTerminalFamilyInstance());
+            InsertDevicesCommand = new RelayCommand(obj => InsertDevices());
+
+            // Заполнение ComboBox для system_equipment_type
+            LoadSystemEquipmentTypesFromDb();
+            // Установка первого значения в качестве выбранного
+            if (SystemEquipmentTypes.Count > 0)
+            {
+                SelectedSystemEquipmentType = SystemEquipmentTypes[0];
+            }
+            // Установка выбранной кривой по умолчанию 
+            if (_curves.Count > 0)
+            {
+                SelectedCurveIndex1 = 0;
+            }
+            DrawCurves();
+        }
+
+        #region свойства Пространство
 
 
         private string _spaceID;
@@ -55,10 +88,10 @@ namespace HVACLoadTerminals.ViewModels
         }
         #endregion
 
-        #region Input Data
+        #region Свойства
         // Свойства для хранения выбранного типа оборудования
-        private string _selectedSystemEquipmentType;
-        public string SelectedSystemEquipmentType
+        private SystemsTypes _selectedSystemEquipmentType;
+        public SystemsTypes SelectedSystemEquipmentType
         {
             get { return _selectedSystemEquipmentType; }
             set
@@ -66,26 +99,16 @@ namespace HVACLoadTerminals.ViewModels
                 SetProperty(ref _selectedSystemEquipmentType, value);
                 try
                 {
-                    UpdateEquipmentData();
+                    GetSystemNameAndFlow();
                     UpdateFamilyDeviceNames();
 
                 }
-                catch (Exception excapt) { Debug.Write(excapt); }
+                catch (Exception except) { Debug.Write(except); }
             }
         }
 
-        // Свойства для хранения данных Data Grid таблица выбранных device 
 
-        private ObservableCollection<DevicePropertyModel> _calculatedDeviceInstance = new ObservableCollection<DevicePropertyModel>();
 
-        public ObservableCollection<DevicePropertyModel> CalculatedDeviceInstance
-        {
-            get { return _calculatedDeviceInstance; }
-            set
-            {
-                SetProperty(ref _calculatedDeviceInstance, value);
-            }
-        }
         private DevicePropertyModel _selectedDevice;
         public DevicePropertyModel SelectedDevice
         {
@@ -96,23 +119,10 @@ namespace HVACLoadTerminals.ViewModels
                 SetProperty(ref _selectedDevice, value);
             }
         }
+
         public Document _Document = RevitAPI.Document;
 
-        private string GetTableName(string systemEquipmentType)
-        {
-            // возращает имя таблицы из базы данных
-            switch (systemEquipmentType)
-            {
-                case "Exhaust_system":
-                    return "Systems_exhaustsystem";
-                case "Fan_coil_system":
-                    return "Systems_fancoilsystem";
-                case "Supply_system":
-                    return "Systems_supplysystem";
-                default:
-                    return null;
-            }
-        }
+
 
         // Свойства для хранения типа системы (для обращения через конвектор к таблице базы данных
         private string _tableName;
@@ -134,7 +144,19 @@ namespace HVACLoadTerminals.ViewModels
             set
             {
                 SetProperty(ref _selectedFamilyDeviceName, value);
-                UpdateEquipmentData(); // Вызов обновления данных о оборудовании
+                GetSystemNameAndFlow(); // Вызов обновления данных о оборудовании
+            }
+        }
+
+
+        // Свойства для хранения выбранного имени оборудования
+        private ElementId _selectedSystemType;
+        public ElementId SelectedSystemType
+        {
+            get { return _selectedSystemType; }
+            set
+            {
+                SetProperty(ref _selectedSystemType, value);
             }
         }
 
@@ -181,6 +203,19 @@ namespace HVACLoadTerminals.ViewModels
             get { return _systemName; }
             set { SetProperty(ref _systemName, value); }
         }
+
+
+        // Свойства для хранения данных Data Grid таблица выбранных device 
+
+        private ObservableCollection<DevicePropertyModel> _calculatedDeviceInstance = new ObservableCollection<DevicePropertyModel>();
+        public ObservableCollection<DevicePropertyModel> CalculatedDeviceInstance
+        {
+            get { return _calculatedDeviceInstance; }
+            set
+            {
+                SetProperty(ref _calculatedDeviceInstance, value);
+            }
+        }
         // Свойства для хранения значения CalculationOptions
 
 
@@ -199,6 +234,18 @@ namespace HVACLoadTerminals.ViewModels
                 }
 
                 return _calculationOptions;
+            }
+        }
+
+
+
+        private ObservableCollection<MechanicalSystemType> _systemTypes = new ObservableCollection<MechanicalSystemType>(CollectorQuery.GetSystemType(RevitAPI.Document));
+        public ObservableCollection<MechanicalSystemType> SystemTypes
+        {
+            get { return _systemTypes; }
+            set
+            {
+                SetProperty(ref _systemTypes, value);
             }
         }
 
@@ -280,8 +327,8 @@ namespace HVACLoadTerminals.ViewModels
             }
         }
 
-        private ObservableCollection<string> _systemEquipmentTypes = new ObservableCollection<string>();
-        public ObservableCollection<string> SystemEquipmentTypes
+        private ObservableCollection<SystemsTypes> _systemEquipmentTypes = new ObservableCollection<SystemsTypes>();
+        public ObservableCollection<SystemsTypes> SystemEquipmentTypes
         {
             get { return _systemEquipmentTypes; }
             set { SetProperty(ref _systemEquipmentTypes, value); }
@@ -294,7 +341,6 @@ namespace HVACLoadTerminals.ViewModels
             set { SetProperty(ref equipmentBases, value); }
         }
 
-
         // Свойство для хранения списка имен оборудования
         private ObservableCollection<string> _familyDeviceNames = new ObservableCollection<string>();
         public ObservableCollection<string> FamilyDeviceNames
@@ -302,7 +348,6 @@ namespace HVACLoadTerminals.ViewModels
             get { return _familyDeviceNames; }
             set { SetProperty(ref _familyDeviceNames, value); }
         }
-
 
         // Свойство для хранения списка индексов кривых
         private ObservableCollection<int> _curveIndices = new ObservableCollection<int>();
@@ -339,34 +384,7 @@ namespace HVACLoadTerminals.ViewModels
         // ObservableCollection to hold the shapes for binding
         public ObservableCollection<Shape> CanvasShapes { get; } = new ObservableCollection<Shape>();
 
-        // Конструктор
-        public OffsetDialogViewModel(SQLiteConnection connection, SpaceBoundary spaceBoundary)
-        {
-           _connection = connection;
-           _spaceBoundary = spaceBoundary;
-           SpaceID = SpaceBoundary._space.Id.ToString();
-           _curves = new ObservableCollection<Autodesk.Revit.DB.Curve>(spaceBoundary.cleanCurves);  // Используем конструктор ObservableCollection
-           CurveIndices = new ObservableCollection<int>(Enumerable.Range(0, _curves.Count));
-           SelectedCalculationOption = CalculationOptions.FirstOrDefault();
 
-            AssignValueCommand = new RelayCommand(obj => AssignValue());
-            CalculateTerminalsCommand = new RelayCommand(obj => GetMinimumTerminalFamilyInstance());
-            InsertDevicesCommand = new RelayCommand(obj => InsertDevices());
-            
-            // Заполнение ComboBox для system_equipment_type
-            LoadSystemEquipmentTypes();
-            // Установка первого значения в качестве выбранного
-            if (SystemEquipmentTypes.Count > 0)
-            {
-                SelectedSystemEquipmentType = SystemEquipmentTypes[0];
-            }
-            // Установка выбранной кривой по умолчанию 
-            if (_curves.Count > 0)
-            {
-                SelectedCurveIndex1 = 0;
-            }
-            DrawCurves();
-        }
         // Метод для получения половины длины выбранной кривой
         public RelayCommand AssignValueCommand { get; }
 
@@ -381,10 +399,10 @@ namespace HVACLoadTerminals.ViewModels
 
         #endregion
 
-        #region Обнавление Полигона
+        #region Методы класса
 
-        // Метод для загрузки данных SystemEquipmentTypes
-        private void LoadSystemEquipmentTypes()
+        private void GetDistinctSystemEquipmentTypeFromDb()
+
         {
             string query = "SELECT DISTINCT system_equipment_type FROM Terminals_equipmentbase";
             using (SQLiteCommand command = new SQLiteCommand(query, _connection))
@@ -393,10 +411,18 @@ namespace HVACLoadTerminals.ViewModels
                 {
                     while (reader.Read())
                     {
-                        SystemEquipmentTypes.Add(reader["system_equipment_type"].ToString());
+
+                        string system_equipment_typeName = reader["system_equipment_type"].ToString();
                     }
                 }
             }
+
+        }
+
+        // Метод для загрузки данных SystemEquipmentTypes
+        private void LoadSystemEquipmentTypesFromDb()
+        {
+            SystemEquipmentTypes =SystemData.GetSystemEquipmentTypes(SpaceID,_connection);
         }
 
         // Метод для обновления FamilyDeviceNames
@@ -406,7 +432,7 @@ namespace HVACLoadTerminals.ViewModels
             FamilyDeviceNames.Clear();
 
             // Определение таблицы в зависимости от выбранного типа системы
-            _tableName = GetTableName(SelectedSystemEquipmentType);
+            _tableName = SelectedSystemEquipmentType.TableDbName;
 
             if (tableName != null)
             {
@@ -414,8 +440,7 @@ namespace HVACLoadTerminals.ViewModels
 
                 using (SQLiteCommand command = new SQLiteCommand(query, _connection))
                 {
-
-                    command.Parameters.AddWithValue("@system_equipment_type", SelectedSystemEquipmentType);
+                    command.Parameters.AddWithValue("@system_equipment_type", SelectedSystemEquipmentType.Value);
                     using (SQLiteDataReader reader = command.ExecuteReader())
                     {
                         while (reader.Read())
@@ -438,10 +463,10 @@ namespace HVACLoadTerminals.ViewModels
 }
 
         // Метод для обновления данных о выбранном оборудовании
-        private void UpdateEquipmentData()
+        private void GetSystemNameAndFlow()
         {
             // Определение таблицы в зависимости от выбранного типа системы
-            string tableName = GetTableName(SelectedSystemEquipmentType);
+
             if (tableName != null)
             {
                 // Запрос для получения family_instance_name, max_flow и calculation_options
@@ -449,11 +474,9 @@ namespace HVACLoadTerminals.ViewModels
                     $" FROM {tableName}" +
                     $" JOIN Systems_systemname ON {tableName}.system_name_id = Systems_systemname.id"+
                     $" WHERE space_id = @space_id";
-
-
                 using (SQLiteCommand command = new SQLiteCommand(query, _connection))
                 {
-                    command.Parameters.AddWithValue("@space_id", _spaceBoundary._space.Id.ToString());
+                    command.Parameters.AddWithValue("@space_id", SpaceID);
                     using (SQLiteDataReader reader = command.ExecuteReader())
                     {
                         if (reader.Read() && Convert.ToDouble(reader["system_flow"])>0)
@@ -462,7 +485,6 @@ namespace HVACLoadTerminals.ViewModels
                             SystemFlow = Convert.ToDouble(reader["system_flow"]);
                             SystemName = reader["system_name"].ToString();
                             _selectedCalculationOptionFromDB = reader["calculation_options"].ToString();
-
                         }
                         else
                         {
@@ -470,8 +492,6 @@ namespace HVACLoadTerminals.ViewModels
                         }
                     }
                 }
-
-
             }
         }
 
@@ -482,7 +502,7 @@ namespace HVACLoadTerminals.ViewModels
             EquipmentBases.Clear();
             using (var command = new SQLiteCommand(query2, _connection))
             {
-                using (var reader = command.ExecuteReader())
+                using (SQLiteDataReader reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
@@ -562,7 +582,7 @@ namespace HVACLoadTerminals.ViewModels
             try {
                 ElementId _elementId = CollectorQuery.GetFamilyInstances(_Document, SelectedDevice);
 
-                FamilySymbol elementInstance = _Document.GetElement(new ElementId(_elementId.IntegerValue)) as FamilySymbol;
+                FamilySymbol elementInstance = _Document.GetElement(new ElementId(_elementId.Value)) as FamilySymbol;
                 InsertTerminal terminal = new InsertTerminal(_Document);
 
                 terminal.InsertElementsAtPoints(elementInstance, SelectedDevice);                
@@ -698,7 +718,7 @@ namespace HVACLoadTerminals.ViewModels
                 );     
         }
 
-        public static System.Windows.Shapes.Line CreateWpfLineFromRevitCurve(Curve curve, double scaleFactor = 10)
+        private static System.Windows.Shapes.Line CreateWpfLineFromRevitCurve(Curve curve, double scaleFactor = 10)
         {
             // Get the start and end points of the Revit curve
             XYZ startPoint = curve.GetEndPoint(0);

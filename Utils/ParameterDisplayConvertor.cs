@@ -48,6 +48,7 @@ namespace HVACLoadTerminals.Utils
         }
 
         public static readonly double ftValue = 304.8;
+        public static readonly double meterToFeetPerHour = 0.009809596;
     }
 
 }
