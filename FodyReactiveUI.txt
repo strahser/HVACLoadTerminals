@@ -1,4 +1,4 @@
-﻿
+
 using Autodesk.Revit.DB;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
@@ -24,9 +24,6 @@ namespace HVACLoadTerminals.ViewModels
 {
     public class OffsetDialogViewModel : ReactiveObject
     {
-        public ReactiveCommand<Unit, Unit> GetCurveCenterCommand { get; }
-        public ReactiveCommand<Unit, Unit> CalculateTerminalsCommand { get; }
-        public ReactiveCommand<Unit, Unit> InsertDevicesCommand { get; }
         // Конструктор
         public OffsetDialogViewModel(SQLiteConnection connection, SpaceBoundary spaceBoundary)
         {
@@ -36,38 +33,45 @@ namespace HVACLoadTerminals.ViewModels
             Curves = new ObservableCollection<Autodesk.Revit.DB.Curve>(spaceBoundary.cleanCurves);  // Используем конструктор ObservableCollection
             CurveIndices = new ObservableCollection<int>(Enumerable.Range(0, Curves.Count));
             SelectedCalculationOption = CalculationOptions.FirstOrDefault();
-            try { 
+
             GetCurveCenterCommand = ReactiveCommand.Create(() => GetCurveCenter());
-            }
-            catch (Exception ex) {Debug.Write(ex); }
-            CalculateTerminalsCommand = ReactiveCommand.Create(() => GetMinimumTerminalFamilyInstance());
+            CalculateTerminalsCommand = ReactiveCommand.Create(() => calculateMinimumDevices());
             InsertDevicesCommand = ReactiveCommand.Create(() => InsertDevices());
 
+            OffsetDistance = 500;
+            StartOffsetDistance = 500;
+            NumberOfPoints = 2;
+            SystemEquipmentTypes = new ObservableCollection<SystemsTypes>();
+            EquipmentBases = new ObservableCollection<DevicePropertyModel>();
+            FamilyDeviceNames = new ObservableCollection<string>();
+            CurveIndices = new ObservableCollection<int>();
+            Curves = new ObservableCollection<Curve>();
+            DataPoints = new ObservableCollection<ChartDataPoint>();
+            CanvasShapes = new ObservableCollection<Shape>();
+            CalculationOptions = new ObservableCollection<CalculationOption>
+        {
+            CalculationOptionsTypes.MinimumTerminals,
+            CalculationOptionsTypes.DirectiveTerminalsNumber
+        };
             SystemTypes = new ObservableCollection<MechanicalSystemType>(CollectorQuery.GetSystemType(RevitAPI.Document));
-            // Заполнение ComboBox для system_equipment_type
-            LoadSystemEquipmentTypesFromDb();
-            DrawCurves();
-            // Установка первого значения в качестве выбранного
-            if (SystemEquipmentTypes.Count > 0)
-            {
-                SelectedSystemEquipmentType = SystemEquipmentTypes[0];
-            }
-            // Установка выбранной кривой по умолчанию 
-            if (Curves.Count > 0)
-            {
-                SelectedCurveIndex1 = 0;
-                SelectedCurveIndex2 = 0;
-            }
-            // Подписки на изменения свойств
-            this.WhenAnyValue(
-                x => x.SelectedCurveIndex1,
-                x => x.OffsetDistance,
-                x => x.StartOffsetDistance, 
-                x => x.NumberOfPoints, 
-                x => x.SelectedSystemEquipmentType
-                )
-                .Subscribe(_ => DrawCurves());
 
+            // Инициализация команд
+            GetCurveCenterCommand = ReactiveCommand.Create(() => GetCurveCenter());
+            //CalculateTerminalsCommand = ReactiveCommand.Create(() => CalculateTerminals());
+            InsertDevicesCommand = ReactiveCommand.Create(() => InsertDevices());
+
+            // Подписки на изменения свойств
+            this.WhenAnyValue(x => x.OffsetDistance)
+                .Where(d => d > 0)
+                .Subscribe(_ => DrawCurves());
+            this.WhenAnyValue(x => x.StartOffsetDistance)
+                .Subscribe(_ => DrawCurves());
+            this.WhenAnyValue(x => x.NumberOfPoints)
+                .Subscribe(_ => DrawCurves());
+            this.WhenAnyValue(x => x.DataPoints)
+                .Subscribe(_ => DrawCurves());
+            this.WhenAnyValue(x => x.SelectedFamilyDeviceName)
+                .Subscribe(_ => GetSystemNameAndFlow());
             this.WhenAnyValue(x => x.SelectedCalculationOptionFromDB)
                 .Subscribe(selectedFromDB =>
                 {
@@ -77,23 +81,28 @@ namespace HVACLoadTerminals.ViewModels
                         SelectedCalculationOption = matchingOption ?? CalculationOptions.FirstOrDefault();
                     }
                 });
-            this.WhenAnyValue(x=>x.SelectedSystemEquipmentType).Subscribe(_=>UpdateFamilyDeviceNames());
-            this.WhenAnyValue(x => x.SelectedSystemEquipmentType)
-                .Subscribe(_ => GetSystemNameAndFlow());
+
+            // Заполнение ComboBox для system_equipment_type
+            LoadSystemEquipmentTypesFromDb();
+            // Установка первого значения в качестве выбранного
+            if (SystemEquipmentTypes.Count > 0)
+            {
+                SelectedSystemEquipmentType = SystemEquipmentTypes[0];
+            }
+            // Установка выбранной кривой по умолчанию 
+            if (Curves.Count > 0)
+            {
+                SelectedCurveIndex1 = 0;
+            }
+            DrawCurves();
         }
 
-
         #region свойства Пространство
-
         public Document _Document = RevitAPI.Document;
         public SQLiteConnection Connection { get; set; }
 
         [Reactive]
         public string SpaceID { get; set; }
-
-        [Reactive] public double SystemFlow { get; set; }
-
-        [Reactive] public string SystemName { get; set; }
 
         [Reactive] public Canvas Canvas { get; set; }
 
@@ -113,15 +122,20 @@ namespace HVACLoadTerminals.ViewModels
 
         [Reactive] public int SelectedCurveIndex2 { get; set; }
 
+        [Reactive] public string FamilyInstanceName { get; set; }
+
+        [Reactive] public double SystemFlow { get; set; }
+
+        [Reactive] public string SystemName { get; set; }
+
         [Reactive] public ObservableCollection<DevicePropertyModel> CalculatedDeviceInstance { get; set; } = new ObservableCollection<DevicePropertyModel>();
 
         [Reactive]
         public ObservableCollection<CalculationOption> CalculationOptions { get; set; } = new ObservableCollection<CalculationOption>
-                                                                                        {
-                                                                                            CalculationOptionsTypes.MinimumTerminals,
-
-                                                                                            CalculationOptionsTypes.DirectiveTerminalsNumber
-                                                                                        };
+    {
+        CalculationOptionsTypes.MinimumTerminals,
+        CalculationOptionsTypes.DirectiveTerminalsNumber
+    };
 
         [Reactive] public ObservableCollection<MechanicalSystemType> SystemTypes { get; set; } = new ObservableCollection<MechanicalSystemType>(CollectorQuery.GetSystemType(RevitAPI.Document));
 
@@ -145,26 +159,19 @@ namespace HVACLoadTerminals.ViewModels
 
         [Reactive] public ObservableCollection<Curve> Curves { get; set; } = new ObservableCollection<Curve>();
 
+        [Reactive] public ObservableCollection<ChartDataPoint> DataPoints { get; set; } = new ObservableCollection<ChartDataPoint>();
+
+        // Свойство для хранения списка фигур для отображения
+        [Reactive] public ObservableCollection<Shape> CanvasShapes { get; set; } = new ObservableCollection<Shape>();
+
+        public ReactiveCommand<Unit, Unit> GetCurveCenterCommand { get; }
+        public ReactiveCommand<Unit, Unit> CalculateTerminalsCommand { get; }
+        public ReactiveCommand<Unit, Unit> InsertDevicesCommand { get; }
+
         #endregion
 
         #region Методы класса
-        private void CalculateOffsetPoints()
-        {
-            Curve curve = Curves[SelectedCurveIndex1];
-            // 1. Смещаем кривую внутрь
-            double offsetFt = OffsetDistance / ParameterDisplayConvertor.ftValue;
-            double startOfsetFt = StartOffsetDistance > 0 ? StartOffsetDistance / ParameterDisplayConvertor.ftValue : offsetFt;
-            Curve offsetCurve = SpaceBoundaryUtils.OffsetCurvesInward(curve, -offsetFt);
-            // 2. Получаем список точек на смещенной кривой
-            List<XYZ> offsetPoints = SpaceBoundaryUtils.GetPointsOnCurve(offsetCurve, NumberOfPoints, startOfsetFt);
 
-            // 3. Заполняем OffsetPoints
-            SpaceBoundary.spaceBoundaryModel.OffsetPoints = new PointsList(
-                offsetPoints.Select(p => p.X).ToList(),
-                offsetPoints.Select(p => p.Y).ToList(),
-                offsetPoints.Select(p => p.Z).ToList()
-                );
-        }
         private void GetCurveCenter()
         {
             OffsetDistance = Curves[SelectedCurveIndex2].Length / 2 * ParameterDisplayConvertor.ftValue;
@@ -470,16 +477,33 @@ namespace HVACLoadTerminals.ViewModels
                 Canvas.Children.Add(label);
             }
         }
+        private void CalculateOffsetPoints() {
+            Curve curve = Curves[SelectedCurveIndex1];
+            // 1. Смещаем кривую внутрь
+            double offsetFt = OffsetDistance / ParameterDisplayConvertor.ftValue;
+            double startOfsetFt = StartOffsetDistance > 0 ? StartOffsetDistance / ParameterDisplayConvertor.ftValue : offsetFt;
+            Curve offsetCurve = SpaceBoundaryUtils.OffsetCurvesInward(curve, -offsetFt);
+                // 2. Получаем список точек на смещенной кривой
+                List<XYZ> offsetPoints = SpaceBoundaryUtils.GetPointsOnCurve(offsetCurve, NumberOfPoints, startOfsetFt);
 
+            // 3. Заполняем OffsetPoints
+            SpaceBoundary.spaceBoundaryModel.OffsetPoints = new PointsList(
+                offsetPoints.Select(p => p.X).ToList(),
+                offsetPoints.Select(p => p.Y).ToList(),
+                offsetPoints.Select(p => p.Z).ToList()
+                );     
+        }
 
         private static System.Windows.Shapes.Line CreateWpfLineFromRevitCurve(Curve curve, double scaleFactor = 10)
         {
             // Get the start and end points of the Revit curve
             XYZ startPoint = curve.GetEndPoint(0);
             XYZ endPoint = curve.GetEndPoint(1);
+
             // Convert the Revit points to WPF points and mirror vertically
             System.Windows.Point wpfStartPoint = new System.Windows.Point(startPoint.X * scaleFactor, -startPoint.Y * scaleFactor);
             System.Windows.Point wpfEndPoint = new System.Windows.Point(endPoint.X * scaleFactor, -endPoint.Y * scaleFactor);
+
             // Create a new WPF Line object
             System.Windows.Shapes.Line line = new System.Windows.Shapes.Line();
             line.X1 = wpfStartPoint.X;
@@ -488,6 +512,7 @@ namespace HVACLoadTerminals.ViewModels
             line.Y2 = wpfEndPoint.Y;
             line.StrokeThickness = 5;
             line.Stroke = Brushes.Red;
+
             return line;
         }
     }

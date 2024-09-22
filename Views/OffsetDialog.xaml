@@ -45,7 +45,7 @@
                   SelectedItem="{Binding SelectedCurveIndex2, Mode=TwoWay}" 
                  Margin="5"/>
         <!-- Checkbox для выбора использования второй кривой -->
-        <Button Command="{Binding AssignValueCommand}" Content="Получить Центр кривой 2"  Margin="5" />
+            <Button Command="{Binding GetCurveCenterCommand}" Content="Получить Центр кривой 2"  Margin="5" />
         <!-- TextBox для ввода расстояния смещения -->
         <Label Content="Смещение:" Margin="5"/>
         <TextBox x:Name="OffsetDistanceTextBox" 
@@ -80,7 +80,7 @@
                 <TextBox Grid.Row="1" Grid.Column="1" x:Name="NumberOfPointsTextBox" 
                  Text="{Binding NumberOfPoints, Mode=TwoWay}" Margin="5"/>
             </Grid>
-            <Button Command="{Binding CalculateTerminalsCommand}" Content="Расчитать оборудование" Margin="5" />
+            <Button x:Name="CalculateTerminalsButton" Command="{Binding CalculateTerminalsCommand}" Content="Расчитать оборудование" Margin="5" />
             <Button Command="{Binding InsertDevicesCommand}" Content="Установить оборудование" Margin="5" />
             <DataGrid x:Name="dataGrid" AutoGenerateColumns="False" Grid.Row="1" 
               ItemsSource="{Binding CalculatedDeviceInstance}" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}">
