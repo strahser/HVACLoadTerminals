@@ -32,8 +32,6 @@ namespace HVACLoadTerminals
         [DisplayName("ID Оборудования")]
         public string equipment_id { get; set; }
 
-
-
         [DisplayName("Тип оборудования")]
         public string family_device_name { get; set; }
 
@@ -47,14 +45,12 @@ namespace HVACLoadTerminals
         [DisplayName("Реал. расход")]
         public double real_flow { get; set; }
 
-        [DisplayName("Нормальная скорость")]
-       
+        [DisplayName("Нормальная скорость")]      
 
         public string Manufacture { get; set; }
-        [DisplayName("Наим. парам. макс расход")]
 
+        [DisplayName("Наим. парам. расход")]
         public string system_flow_parameter_name { get; set; }
-
 
         public string system_name_parameter { get; set; }
 

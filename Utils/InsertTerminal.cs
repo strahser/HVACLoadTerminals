@@ -40,7 +40,7 @@ namespace HVACLoadTerminals.Utils
                     {
                         // Create an instance of the family symbol at the point
                         FamilyInstance instance = doc.Create.NewFamilyInstance(point, familySymbol, StructuralType.NonStructural);
-                        SetFlowParameter( instance, selectedDeviece.SystemFlow);
+                        SetFlowParameter( instance, selectedDeviece.SystemFlow/selectedDeviece.MinDevices,selectedDeviece.system_flow_parameter_name);
                         AddToSystem(instance, selectedDeviece.system_name);
                     }
                     catch (Exception e) { Debug.Write("Ошибка при вставки семейства" + e); }
@@ -49,18 +49,27 @@ namespace HVACLoadTerminals.Utils
             }
         }
 
-        private void SetFlowParameter(FamilyInstance familyInstance, double flowValue)
+        private void SetFlowParameter(FamilyInstance familyInstance, double flowValue,string parameterName)
         {
+
             // Get the built-in parameter
-            Parameter flowParameter = familyInstance.get_Parameter(BuiltInParameter.RBS_DUCT_FLOW_PARAM);
-            if (flowParameter != null)
+            try
             {
-                flowParameter.Set(flowValue * ParameterDisplayConvertor.meterToFeetPerHour);
+                //Parameter flowParameter = familyInstance.get_Parameter(BuiltInParameter.RBS_DUCT_FLOW_PARAM);
+
+                Parameter flowParameter = familyInstance.LookupParameter(parameterName);
+                if (flowParameter != null)
+            {   if (selectedDeviece.system_equipment_type == StaticSystemsTypes.Supply_system 
+                    || selectedDeviece.system_equipment_type == StaticSystemsTypes.Exhaust_system)
+                    {
+                        flowParameter.Set(flowValue * ParameterDisplayConvertor.meterToFeetPerHour);
+                    }
+                else { flowParameter.Set(flowValue* 10.76381609) ; }
+                
             }
-            else
-            {
-                TaskDialog.Show("Error", "The parameter 'RBS_DUCT_FLOW_PARAM' does not exist in this family instance.");
             }
+            catch { TaskDialog.Show("Error", "The parameter 'RBS_DUCT_FLOW_PARAM' does not exist in this family instance."); }
+
         }
 
         private MechanicalSystem GetExistingSystem(string systemName)
@@ -87,7 +96,6 @@ namespace HVACLoadTerminals.Utils
             var systemTypeData = SystemData.systemType(Mechanicaltypes,connector.DuctSystemType.ToString());
             if (system == null)
             {
-
                 system = CreateNewSystem(sysName, systemTypeData.Id);
             }
             var connectorCondition = connector != null && connector.DuctSystemType.ToString() == system.SystemType.ToString();

@@ -87,6 +87,10 @@ namespace HVACLoadTerminals.ViewModels
 
         [Reactive] public string SystemName { get; set; }
 
+        [Reactive] public CalculationOption SelectedCalculationOption { get; set; }
+
+        [Reactive] public string SelectedCalculationOptionFromDB { get; set; }
+
         [Reactive] public Canvas CustomCanvas { get; set; }
 
         [Reactive] public SpaceBoundary SpaceBoundary { get; set; }
@@ -109,10 +113,8 @@ namespace HVACLoadTerminals.ViewModels
 
         [Reactive] public ElementId SelectedSystemType { get; set; }
 
-        [Reactive] public CalculationOption SelectedCalculationOption { get; set; }
-
-        [Reactive] public string SelectedCalculationOptionFromDB { get; set; }
-
+        #endregion
+        #region Обзорные Коллекции  
         [Reactive] public ObservableCollection<DevicePropertyModel> CalculatedDeviceInstance { get; set; } = new ObservableCollection<DevicePropertyModel>();
 
         [Reactive] public ObservableCollection<CalculationOption> CalculationOptions { get; set; } = new ObservableCollection<CalculationOption>
@@ -135,7 +137,6 @@ namespace HVACLoadTerminals.ViewModels
         [Reactive] public ObservableCollection<Curve> Curves { get; set; } = new ObservableCollection<Curve>();
 
         #endregion
-
         #region Методы класса
         private void CalculateOffsetPoints()
         {
@@ -238,7 +239,7 @@ namespace HVACLoadTerminals.ViewModels
         // Метод для получения всех экземпляров из базы EquipmentDB  по заданном типу семейства
         private void GetSelectedFamilyEquipmentDB()
         {
-            var query2 = $"SELECT family_device_name, family_instance_name, max_flow FROM Terminals_equipmentbase WHERE family_device_name = '{SelectedFamilyDeviceName}'";
+            var query2 = $"SELECT family_device_name, family_instance_name, max_flow,system_flow_parameter_name,system_equipment_type FROM Terminals_equipmentbase WHERE family_device_name = '{SelectedFamilyDeviceName}'";
             EquipmentBases.Clear();
             using (var command = new SQLiteCommand(query2, Connection))
             {
@@ -250,7 +251,9 @@ namespace HVACLoadTerminals.ViewModels
                         {
                             family_device_name = reader.GetString(0),
                             family_instance_name = reader.GetString(1),
-                            max_flow = reader.GetDouble(2)
+                            max_flow = reader.GetDouble(2),
+                            system_flow_parameter_name = reader.GetString(3),
+                            system_equipment_type = reader.GetString(4)
                         }
                          );
                     }

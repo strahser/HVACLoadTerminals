@@ -11,6 +11,12 @@ using System.Windows;
 namespace HVACLoadTerminals.StaticData
 
 {
+    public static class StaticSystemsTypes
+    {
+        public static  string Supply_system = "Supply_system";
+        public static string Exhaust_system = "Exhaust_system";
+        public static string Fan_coil_system = "Fan_coil_system";
+    }
     public class SystemsTypes
     {
         public string Name;
@@ -30,15 +36,15 @@ namespace HVACLoadTerminals.StaticData
         {
             new SystemsTypes
             {
-               Name = "Приточная",Value ="Supply_system",TableDbName ="Systems_supplysystem"
+               Name = "Приточная",Value = StaticSystemsTypes.Supply_system,TableDbName ="Systems_supplysystem"
             },
            new SystemsTypes
             {
-               Name = "Вытяжная",Value ="Exhaust_system",TableDbName ="Systems_exhaustsystem"
+               Name = "Вытяжная",Value = StaticSystemsTypes.Exhaust_system,TableDbName ="Systems_exhaustsystem"
             },
            new SystemsTypes
             {
-               Name = "Кондиционирование",Value ="Fan_coil_system",TableDbName ="Systems_fancoilsystem"
+               Name = "Кондиционирование",Value = StaticSystemsTypes.Fan_coil_system,TableDbName ="Systems_fancoilsystem"
             },
         };
 
