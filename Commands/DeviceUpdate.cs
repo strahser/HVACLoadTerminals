@@ -22,9 +22,9 @@ namespace HVACLoadTerminals
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            if (RevitAPI.UiApplication == null)
+            if (RevitConfig.UiApplication == null)
             {
-                RevitAPI.Initialize(commandData);
+                RevitConfig.Initialize(commandData);
             }
 
             // wpf viewer form

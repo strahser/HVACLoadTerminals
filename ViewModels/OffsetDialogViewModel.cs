@@ -1,6 +1,5 @@
 ﻿
 using Autodesk.Revit.DB;
-using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,7 +12,6 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using HVACLoadTerminals.Models;
 using HVACLoadTerminals.Utils;
-using Newtonsoft.Json;
 using HVACLoadTerminals.StaticData;
 using Autodesk.Revit.DB.Mechanical;
 using ReactiveUI;
@@ -24,26 +22,24 @@ namespace HVACLoadTerminals.ViewModels
 {
     public class OffsetDialogViewModel : ReactiveObject
     {
-        public ReactiveCommand<Unit, Unit> GetCurveCenterCommand { get; }
-        public ReactiveCommand<Unit, Unit> CalculateTerminalsCommand { get; }
-        public ReactiveCommand<Unit, Unit> InsertDevicesCommand { get; }
+        public Document _Document = RevitConfig.Document;
+        public SQLiteConnection Connection { get; set; }
+        public RelayCommand GetCurveCenterCommand { get; }
+        public RelayCommand CalculateTerminalsCommand { get; }
+        public RelayCommand InsertDevicesCommand { get; }
         // Конструктор
         public OffsetDialogViewModel(SQLiteConnection connection, SpaceBoundary spaceBoundary)
         {
+            GetCurveCenterCommand = new RelayCommand(o => GetCurveCenter());
+            CalculateTerminalsCommand = new RelayCommand(o => GetMinimumTerminalFamilyInstance());
+            InsertDevicesCommand = new RelayCommand(o => InsertDevices());
             Connection = connection;
             SpaceBoundary = spaceBoundary;
             SpaceID = SpaceBoundary._space.Id.ToString();
-            Curves = new ObservableCollection<Autodesk.Revit.DB.Curve>(spaceBoundary.cleanCurves);  // Используем конструктор ObservableCollection
+            Curves = new ObservableCollection<Autodesk.Revit.DB.Curve>(SpaceBoundary.cleanCurves);  
             CurveIndices = new ObservableCollection<int>(Enumerable.Range(0, Curves.Count));
             SelectedCalculationOption = CalculationOptions.FirstOrDefault();
-            try { 
-            GetCurveCenterCommand = ReactiveCommand.Create(() => GetCurveCenter());
-            }
-            catch (Exception ex) {Debug.Write(ex); }
-            CalculateTerminalsCommand = ReactiveCommand.Create(() => GetMinimumTerminalFamilyInstance());
-            InsertDevicesCommand = ReactiveCommand.Create(() => InsertDevices());
-
-            SystemTypes = new ObservableCollection<MechanicalSystemType>(CollectorQuery.GetSystemType(RevitAPI.Document));
+            SystemTypes = new ObservableCollection<MechanicalSystemType>(CollectorQuery.GetSystemType(RevitConfig.Document));
             // Заполнение ComboBox для system_equipment_type
             LoadSystemEquipmentTypesFromDb();
             DrawCurves();
@@ -83,57 +79,50 @@ namespace HVACLoadTerminals.ViewModels
         }
 
 
-        #region свойства Пространство
+        #region свойства 
 
-        public Document _Document = RevitAPI.Document;
-        public SQLiteConnection Connection { get; set; }
-
-        [Reactive]
-        public string SpaceID { get; set; }
+        [Reactive] public string SpaceID { get; set; }
 
         [Reactive] public double SystemFlow { get; set; }
 
         [Reactive] public string SystemName { get; set; }
 
-        [Reactive] public Canvas Canvas { get; set; }
+        [Reactive] public Canvas CustomCanvas { get; set; }
 
         [Reactive] public SpaceBoundary SpaceBoundary { get; set; }
-
-        [Reactive] public SystemsTypes SelectedSystemEquipmentType { get; set; }
-
-        [Reactive] public DevicePropertyModel SelectedDevice { get; set; }
-
-        [Reactive] public string TableName { get; set; }
-
-        [Reactive] public string SelectedFamilyDeviceName { get; set; }
-
-        [Reactive] public ElementId SelectedSystemType { get; set; }
-
-        [Reactive] public int SelectedCurveIndex1 { get; set; } = 0;
-
-        [Reactive] public int SelectedCurveIndex2 { get; set; }
-
-        [Reactive] public ObservableCollection<DevicePropertyModel> CalculatedDeviceInstance { get; set; } = new ObservableCollection<DevicePropertyModel>();
-
-        [Reactive]
-        public ObservableCollection<CalculationOption> CalculationOptions { get; set; } = new ObservableCollection<CalculationOption>
-                                                                                        {
-                                                                                            CalculationOptionsTypes.MinimumTerminals,
-
-                                                                                            CalculationOptionsTypes.DirectiveTerminalsNumber
-                                                                                        };
-
-        [Reactive] public ObservableCollection<MechanicalSystemType> SystemTypes { get; set; } = new ObservableCollection<MechanicalSystemType>(CollectorQuery.GetSystemType(RevitAPI.Document));
-
-        [Reactive] public CalculationOption SelectedCalculationOption { get; set; }
-
-        [Reactive] public string SelectedCalculationOptionFromDB { get; set; }
 
         [Reactive] public double OffsetDistance { get; set; } = 500;
 
         [Reactive] public double StartOffsetDistance { get; set; } = 500;
 
         [Reactive] public int NumberOfPoints { get; set; } = 2;
+
+        [Reactive] public int SelectedCurveIndex1 { get; set; } = 0;
+
+        [Reactive] public int SelectedCurveIndex2 { get; set; } = 0;
+
+        [Reactive] public SystemsTypes SelectedSystemEquipmentType { get; set; }
+
+        [Reactive] public DevicePropertyModel SelectedDevice { get; set; }
+
+        [Reactive] public string SelectedFamilyDeviceName { get; set; }
+
+        [Reactive] public ElementId SelectedSystemType { get; set; }
+
+        [Reactive] public CalculationOption SelectedCalculationOption { get; set; }
+
+        [Reactive] public string SelectedCalculationOptionFromDB { get; set; }
+
+        [Reactive] public ObservableCollection<DevicePropertyModel> CalculatedDeviceInstance { get; set; } = new ObservableCollection<DevicePropertyModel>();
+
+        [Reactive] public ObservableCollection<CalculationOption> CalculationOptions { get; set; } = new ObservableCollection<CalculationOption>
+                                                                                        {
+                                                                                            CalculationOptionsTypes.MinimumTerminals,
+
+                                                                                            CalculationOptionsTypes.DirectiveTerminalsNumber
+                                                                                        };
+
+        [Reactive] public ObservableCollection<MechanicalSystemType> SystemTypes { get; set; } = new ObservableCollection<MechanicalSystemType>(CollectorQuery.GetSystemType(RevitConfig.Document));
 
         [Reactive] public ObservableCollection<SystemsTypes> SystemEquipmentTypes { get; set; } = new ObservableCollection<SystemsTypes>();
 
@@ -165,27 +154,10 @@ namespace HVACLoadTerminals.ViewModels
                 offsetPoints.Select(p => p.Z).ToList()
                 );
         }
+
         private void GetCurveCenter()
         {
             OffsetDistance = Curves[SelectedCurveIndex2].Length / 2 * ParameterDisplayConvertor.ftValue;
-        }
-
-        private void GetDistinctSystemEquipmentTypeFromDb()
-
-        {
-            string query = "SELECT DISTINCT system_equipment_type FROM Terminals_equipmentbase";
-            using (SQLiteCommand command = new SQLiteCommand(query, Connection))
-            {
-                using (SQLiteDataReader reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-
-                        string system_equipment_typeName = reader["system_equipment_type"].ToString();
-                    }
-                }
-            }
-
         }
 
         // Метод для загрузки данных SystemEquipmentTypes
@@ -201,9 +173,8 @@ namespace HVACLoadTerminals.ViewModels
             FamilyDeviceNames.Clear();
 
             // Определение таблицы в зависимости от выбранного типа системы
-            TableName = SelectedSystemEquipmentType.TableDbName;
 
-            if (TableName != null)
+            if (SelectedSystemEquipmentType.TableDbName != null)
             {
                 string query = $"SELECT DISTINCT family_device_name FROM Terminals_equipmentbase WHERE  system_equipment_type = @system_equipment_type";
 
@@ -231,17 +202,17 @@ namespace HVACLoadTerminals.ViewModels
             }
 }
 
-        // Метод для обновления данных о выбранном оборудовании
+        // Метод для получения данных Systems SystemName, SystemFlow,SelectedCalculationOptionFromDB
         private void GetSystemNameAndFlow()
         {
             // Определение таблицы в зависимости от выбранного типа системы
-
-            if (TableName != null)
+            var tableName = SelectedSystemEquipmentType.TableDbName;
+            if (tableName != null)
             {
                 // Запрос для получения family_instance_name, max_flow и calculation_options
                 string query = $"SELECT system_flow, calculation_options, Systems_systemname.system_name" +
-                    $" FROM {TableName}" +
-                    $" JOIN Systems_systemname ON {TableName}.system_name_id = Systems_systemname.id"+
+                    $" FROM {tableName}" +
+                    $" JOIN Systems_systemname ON {tableName}.system_name_id = Systems_systemname.id"+
                     $" WHERE space_id = @space_id";
                 using (SQLiteCommand command = new SQLiteCommand(query, Connection))
                 {
@@ -264,7 +235,7 @@ namespace HVACLoadTerminals.ViewModels
             }
         }
 
-        // Метод для получения всех экземпляров из базы данных по заданном типу семейства
+        // Метод для получения всех экземпляров из базы EquipmentDB  по заданном типу семейства
         private void GetSelectedFamilyEquipmentDB()
         {
             var query2 = $"SELECT family_device_name, family_instance_name, max_flow FROM Terminals_equipmentbase WHERE family_device_name = '{SelectedFamilyDeviceName}'";
@@ -286,6 +257,8 @@ namespace HVACLoadTerminals.ViewModels
                 }
             }
         }
+
+        // Метод для использования выбранного типа расчета
         private void GetMinimumTerminalFamilyInstance()
         {
             GetSelectedFamilyEquipmentDB();
@@ -341,9 +314,7 @@ namespace HVACLoadTerminals.ViewModels
             }
         }
 
-
         // Вставка терминалов
-
         private void InsertDevices()
         {
         if (SelectedDevice!=null)
@@ -363,132 +334,17 @@ namespace HVACLoadTerminals.ViewModels
                 MessageBox.Show("Выберите запись для вставки");
             }
         }
-        // Отрисовка кривых на Canvas
 
-        private void SavePolygonsCoordinatesToJson()
-        {
-            // Сериализуем данные в JSON
-            string json = JsonConvert.SerializeObject(SpaceBoundary.spaceBoundaryModel, Formatting.Indented);
-
-            // Записываем JSON в файл
-            System.IO.File.WriteAllText(RevitAPI.polygonJsonPathe, json);
-        }
-
+        // Отрисовка кривых на CustomCanvas
         private void DrawCurves()
-        {
-            Canvas = new Canvas();
+        { 
             try
             {
-                CalculateOffsetPoints();
-                // Plot the polygon
-                var spaceBoundary = SpaceBoundary.spaceBoundaryModel;
-                double scaleFactor = 10;
-                System.Windows.Shapes.Line wpfLine = CreateWpfLineFromRevitCurve(Curves[SelectedCurveIndex1], scaleFactor);
-                Canvas.Children.Add(wpfLine);
-
-                Polygon polygon = new Polygon
-                {
-                    Stroke = Brushes.Blue,
-                    StrokeThickness = 2,
-                };
-
-                // Создаем полигон из точек
-                for (int i = 0; i < spaceBoundary.px.Count; i++)
-                {
-                    // Scale coordinates using scaleFactor
-                    double scaledX = spaceBoundary.px[i] * scaleFactor;
-                    double scaledY = spaceBoundary.py[i] * scaleFactor;
-
-                    // Mirror the Y coordinate for vertical flip
-                    scaledY = -scaledY;
-
-                    polygon.Points.Add(new System.Windows.Point(scaledX, scaledY));
-                }
-                Canvas.Children.Add(polygon);
-
-                // Plot the offset points (using Rectangles as an example)
-                for (int i = 0; i < spaceBoundary.OffsetPoints.X.Count; i++)
-                {
-                    // Adjust the size of the rectangle as needed
-                    System.Windows.Shapes.Rectangle offsetPoint = new System.Windows.Shapes.Rectangle
-                    {
-                        Width = 10,
-                        Height = 10,
-                        Fill = Brushes.Red,
-                    };
-
-                    // **Set Left and Top using scaled coordinates**
-                    Canvas.SetLeft(offsetPoint, spaceBoundary.OffsetPoints.X[i] * scaleFactor);
-                    Canvas.SetTop(offsetPoint, -spaceBoundary.OffsetPoints.Y[i] * scaleFactor); // Mirror vertically
-
-                    Canvas.Children.Add(offsetPoint);
-                }
-
-                // Add line labels
-                for (int i = 0; i < spaceBoundary.px.Count - 1; i++)
-                {
-                    // Calculate midpoint of each line
-                    double midX = (spaceBoundary.px[i] + spaceBoundary.px[i + 1]) / 2 * scaleFactor;
-                    double midY = (spaceBoundary.py[i] + spaceBoundary.py[i + 1]) / 2 * scaleFactor;
-                    // Create a TextBlock for the label
-                    TextBlock label = new TextBlock
-                    {
-                        Text = (i).ToString(), // Line number
-                        FontSize = 12,
-                        Foreground = Brushes.Black,
-                        TextAlignment = TextAlignment.Center
-                    };
-                    // Position the label at the midpoint
-                    Canvas.SetLeft(label, midX);
-                    Canvas.SetTop(label, -midY); // Mirror vertically
-                    Canvas.Children.Add(label);
-                }
+                CalculateOffsetPoints();                
+                CanvasHelper canvaceHelper = new CanvasHelper(CustomCanvas, SpaceBoundary.spaceBoundaryModel, Curves[SelectedCurveIndex1]);
+                CustomCanvas = canvaceHelper.DrawCurves();
             }
             catch (Exception except) { MessageBox.Show(except.ToString()); }
-        }
-
-        private void AddCurveLable(int scaleFactor)
-        {
-            // Add line labels
-            for (int i = 0; i < Curves.Count; i++)
-            {
-                // Calculate midpoint of each line
-                double midX = (Curves[i].GetEndPoint(0).X + Curves[i].GetEndPoint(1).X) / 2 * scaleFactor;
-                double midY = (Curves[i].GetEndPoint(0).Y + Curves[i].GetEndPoint(1).Y) / 2 * scaleFactor;
-
-                // Create a TextBlock for the label
-                TextBlock label = new TextBlock
-                {
-                    Text = (i).ToString(), // Line number
-                    FontSize = 12,
-                    Foreground = Brushes.Black,
-                    TextAlignment = TextAlignment.Center
-                };
-                // Position the label at the midpoint
-                Canvas.SetLeft(label, midX);
-                Canvas.SetTop(label, midY);
-                Canvas.Children.Add(label);
-            }
-        }
-
-
-        private static System.Windows.Shapes.Line CreateWpfLineFromRevitCurve(Curve curve, double scaleFactor = 10)
-        {
-            // Get the start and end points of the Revit curve
-            XYZ startPoint = curve.GetEndPoint(0);
-            XYZ endPoint = curve.GetEndPoint(1);
-            // Convert the Revit points to WPF points and mirror vertically
-            System.Windows.Point wpfStartPoint = new System.Windows.Point(startPoint.X * scaleFactor, -startPoint.Y * scaleFactor);
-            System.Windows.Point wpfEndPoint = new System.Windows.Point(endPoint.X * scaleFactor, -endPoint.Y * scaleFactor);
-            // Create a new WPF Line object
-            System.Windows.Shapes.Line line = new System.Windows.Shapes.Line();
-            line.X1 = wpfStartPoint.X;
-            line.Y1 = wpfStartPoint.Y;
-            line.X2 = wpfEndPoint.X;
-            line.Y2 = wpfEndPoint.Y;
-            line.StrokeThickness = 5;
-            line.Stroke = Brushes.Red;
-            return line;
         }
     }
     #endregion

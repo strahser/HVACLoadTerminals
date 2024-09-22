@@ -68,9 +68,11 @@
   <ItemGroup>
     <Compile Include="Commands\ExportSpacesDataToJson.cs" />
     <Compile Include="Commands\CalculateSpaceDevice.cs" />
+    <Compile Include="DbUtility\DatabaseConfig.cs" />
     <Compile Include="DbUtility\DbQuery.cs" />
     <Compile Include="DbUtility\DbSqlliteQuery.cs" />
-    <Compile Include="DbUtility\SQLiteHelper.cs" />
+    <Compile Include="DbUtility\SQLiteEquipmentDbHelper.cs" />
+    <Compile Include="DbUtility\SqlLiteSystemFamilyDbHelper.cs" />
     <Compile Include="StaticData\CalculationOptions.cs" />
     <Compile Include="StaticData\CalculationOptionsTypes.cs" />
     <Compile Include="StaticData\CustomMepCategories.cs" />
@@ -85,7 +87,7 @@
     <Compile Include="Commands\DeviceUpdate.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils\RelayCommand.cs" />
-    <Compile Include="Utils\RevitAPI.cs" />
+    <Compile Include="Utils\RevitConfig.cs" />
     <Compile Include="Utils\ParameterDisplayConvertor.cs" />
     <Compile Include="Views\DeviceView.xaml.cs">
       <DependentUpon>DeviceView.xaml</DependentUpon>

@@ -82,24 +82,23 @@
             </Grid>
             <Button x:Name="CalculateTerminalsButton" Command="{Binding CalculateTerminalsCommand}" Content="Расчитать оборудование" Margin="5" />
             <Button Command="{Binding InsertDevicesCommand}" Content="Установить оборудование" Margin="5" />
-            <DataGrid x:Name="dataGrid" AutoGenerateColumns="False" Grid.Row="1" 
+            <DataGrid x:Name="dataGrid" AutoGenerateColumns="False" CanUserAddRows="False" Grid.Row="1" 
               ItemsSource="{Binding CalculatedDeviceInstance}" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Наименование Системы " Binding="{Binding system_name}"/>
-                    <DataGridTextColumn Header="Расход Системы " Binding="{Binding SystemFlow}"/>
-                    <DataGridTextColumn Header="Тип " Binding="{Binding family_device_name}"/>
-                    <DataGridTextColumn Header="Экземпляр" Binding="{Binding family_instance_name}"/>
-                    <DataGridTextColumn Header="Макс.расход" Binding="{Binding max_flow}"/>
-                    <DataGridTextColumn Header="Кол-во" Binding="{Binding MinDevices}"/>
-                    <DataGridTextColumn Header="K_Ef" Binding="{Binding KEf}"/>
-                    <DataGridTextColumn Header="Points" Binding="{Binding DevicePointList}"/>
+                    <DataGridTextColumn Header="Наименование Системы " Binding="{Binding system_name}" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Расход Системы " Binding="{Binding SystemFlow}" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Тип " Binding="{Binding family_device_name}" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Экземпляр" Binding="{Binding family_instance_name}" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Макс.расход" Binding="{Binding max_flow}" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Кол-во" Binding="{Binding MinDevices}" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="K_Ef" Binding="{Binding KEf}" IsReadOnly="True"/>
                 </DataGrid.Columns>
             </DataGrid>
             <TextBlock Text="Выбранный экземпляр: "/>
             <TextBlock Text="{Binding SelectedDevice }"/>
         </StackPanel>
         <StackPanel Grid.Row="2" Grid.Column="1" Margin="50">
-            <ContentControl Content="{Binding Canvas}"/>
+            <ContentControl Content="{Binding CustomCanvas}"/>
         </StackPanel>
     </Grid>
 

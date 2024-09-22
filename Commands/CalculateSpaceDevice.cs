@@ -20,12 +20,12 @@ namespace HVACLoadTerminals.Commands
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            RevitAPI.Initialize(commandData);
+            RevitConfig.Initialize(commandData);
             Element selectedElement;
             try
             {
-                Reference pickedRef = RevitAPI.UiDocument.Selection.PickObject(ObjectType.Element, "Выберите пространство");
-                selectedElement = RevitAPI.Document.GetElement(pickedRef);
+                Reference pickedRef = RevitConfig.UiDocument.Selection.PickObject(ObjectType.Element, "Выберите пространство");
+                selectedElement = RevitConfig.Document.GetElement(pickedRef);
             }
             catch
             {
@@ -39,7 +39,7 @@ namespace HVACLoadTerminals.Commands
                 SpaceBoundary spaceBoundary = new SpaceBoundary(space);
                 // Открываем диалоговое окно для выбора кривой и расстояния смещения
                 var cleanCurves = spaceBoundary.cleanCurves;
-                SQLiteConnection connection = RevitAPI.connection;
+                SQLiteConnection connection = RevitConfig.connection;
                 connection.Open();
                 OffsetDialog dialog = new OffsetDialog(connection, spaceBoundary);
                 dialog.ShowDialog();

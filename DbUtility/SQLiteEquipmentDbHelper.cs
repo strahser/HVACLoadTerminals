@@ -11,12 +11,12 @@ namespace SQLiteCRUD
 
 {
 
-    public class SQLiteHelper
+    public class SQLiteEquipmentDbHelper
     {
         private readonly string _connectionString;
         private readonly string  _tableName;
 
-        public SQLiteHelper(string connectionString,string tableName)
+        public SQLiteEquipmentDbHelper(string connectionString,string tableName)
         {
             _connectionString = connectionString;
             _tableName = tableName;
@@ -118,19 +118,5 @@ namespace SQLiteCRUD
         }
     }
 
-    public class DatabaseConfig
-    {
-        public string name { get; set; }
-        public string filePath { get; set; }
 
-        public static string ConfigConnectionString(string projectDirectory, string connectionName = "work")
-        {
-            string jsonFilePathConfig = Path.Combine(projectDirectory, "config.json");
-            string jsonString = File.ReadAllText(jsonFilePathConfig);
-            DatabaseConfig[] configs = JsonConvert.DeserializeObject<DatabaseConfig[]>(jsonString);
-            DatabaseConfig config = configs.FirstOrDefault(c => c.name == connectionName);
-            string connectionString = $"Data Source={config.filePath}";
-            return connectionString;
-        }
-    }
 }

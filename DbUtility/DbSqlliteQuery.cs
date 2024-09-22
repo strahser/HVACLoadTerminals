@@ -14,8 +14,8 @@ namespace HVACLoadTerminals.DbUtility
             // Путь к базе данных
             string tableName = "Terminals_equipmentbase";
             // Строка подключения
-            string connectionString = $"Data Source={RevitAPI.DbPath};Version=3;";
-            var helper = new SQLiteCRUD.SQLiteHelper(connectionString, tableName);
+            string connectionString = $"Data Source={RevitConfig.DbPath};Version=3;";
+            var helper = new SQLiteCRUD.SQLiteEquipmentDbHelper(connectionString, tableName);
             helper.CreateOrUpdate(equipmentModels);
             
         }

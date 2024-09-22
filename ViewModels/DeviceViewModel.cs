@@ -21,7 +21,7 @@ namespace HVACLoadTerminals.ViewModels
 
         private void GetFamilyDict()
         {
-            FamilyTypes = CollectorQuery.FindFamilyTypes(RevitAPI.Document, SelectedCategory.Value);
+            FamilyTypes = CollectorQuery.FindFamilyTypes(RevitConfig.Document, SelectedCategory.Value);
         }
         private void GetParametersList()
         {
@@ -73,7 +73,7 @@ namespace HVACLoadTerminals.ViewModels
                 _selectedCategory = value;
                 OnPropertyChanged(nameof(SelectedCategory));
                 GetFamilyDict();
-                FamilyTypesOfCategory = CollectorQuery.GetAllElementsTypeOfCategory(RevitAPI.Document, SelectedCategory.Value);
+                FamilyTypesOfCategory = CollectorQuery.GetAllElementsTypeOfCategory(RevitConfig.Document, SelectedCategory.Value);
                 OnPropertyChanged(nameof(FamilyTypesOfCategory));
                 OnPropertyChanged(nameof(FamilyTypes));
 

@@ -28,7 +28,7 @@ namespace HVACLoadTerminals.Views
             Content = canvas;
 
             // Customize the modal window (optional)
-            Title = "Canvas Details";
+            Title = "CustomCanvas Details";
             Width = 500;
             Height = 400;
         }
