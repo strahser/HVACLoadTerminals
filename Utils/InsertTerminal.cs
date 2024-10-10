@@ -16,23 +16,24 @@ namespace HVACLoadTerminals.Utils
         private Document doc;
 
         private DevicePropertyModel selectedDeviece;
-       public List<MechanicalSystemType> Mechanicaltypes { get 
+
+        private bool isVentilationSystemType { get; set; }
+        public List<MechanicalSystemType> Mechanicaltypes { get 
             { return CollectorQuery.GetSystemType(doc); } 
         }  
-        public InsertTerminal(Document _doc)
+        public InsertTerminal(Document _doc, DevicePropertyModel _selectedDeviece)
         {
             doc = _doc;
+            selectedDeviece = _selectedDeviece;
+            isVentilationSystemType = selectedDeviece.system_equipment_type == StaticSystemsTypes.Supply_system ||
+                                        selectedDeviece.system_equipment_type == StaticSystemsTypes.Exhaust_system;
         }
-        public  void InsertElementsAtPoints( FamilySymbol familySymbol, DevicePropertyModel _selectedDeviece)
+        public void InsertElementsAtPoints(FamilySymbol familySymbol, DevicePropertyModel _selectedDeviece)
         {
             selectedDeviece = _selectedDeviece;
             // Get points as XYZ coordinates
             var points = selectedDeviece.DevicePointList.GetPoints();
 
-            // Create a transaction
-            using (Transaction transaction = new Transaction(doc, "Insert Elements"))
-            {
-                transaction.Start();               
 
                 foreach (XYZ point in points)
                 {
@@ -40,36 +41,46 @@ namespace HVACLoadTerminals.Utils
                     {
                         // Create an instance of the family symbol at the point
                         FamilyInstance instance = doc.Create.NewFamilyInstance(point, familySymbol, StructuralType.NonStructural);
-                        SetFlowParameter( instance, selectedDeviece.SystemFlow/selectedDeviece.MinDevices,selectedDeviece.system_flow_parameter_name);
+                        double convertedFlow = convertFLowOrPowerData();
+                        SetFlowParameter( instance, convertedFlow, "ADSK_Расход воздуха");
                         AddToSystem(instance, selectedDeviece.system_name);
                     }
                     catch (Exception e) { Debug.Write("Ошибка при вставки семейства" + e); }
                 }
-                transaction.Commit();
-            }
-        }
 
-        private void SetFlowParameter(FamilyInstance familyInstance, double flowValue,string parameterName)
+        }
+        private double convertFLowOrPowerData()
+        {
+            var flowValue = selectedDeviece.SystemFlow / selectedDeviece.MinDevices;
+            double convertedFlow = 0;
+            if (isVentilationSystemType)
+                convertedFlow = flowValue * ParameterDisplayConvertor.meterToFeetPerHour;
+            else
+                convertedFlow = flowValue * 10.76381609;            
+            return convertedFlow;
+        }
+        private void SetFlowParameter(FamilyInstance familyInstance, double flowValue, string parameterName)
         {
 
-            // Get the built-in parameter
             try
             {
-                //Parameter flowParameter = familyInstance.get_Parameter(BuiltInParameter.RBS_DUCT_FLOW_PARAM);
+                // Get the built-in parameter
+                if (isVentilationSystemType)
+                {
+                    Parameter ventilationflowParameter = familyInstance.get_Parameter(BuiltInParameter.RBS_DUCT_FLOW_PARAM);
+                    if (ventilationflowParameter != null)
+                    {
+                        ventilationflowParameter.Set(flowValue);
+                    }
+
+                }
 
                 Parameter flowParameter = familyInstance.LookupParameter(parameterName);
-                if (flowParameter != null)
-            {   if (selectedDeviece.system_equipment_type == StaticSystemsTypes.Supply_system 
-                    || selectedDeviece.system_equipment_type == StaticSystemsTypes.Exhaust_system)
-                    {
-                        flowParameter.Set(flowValue * ParameterDisplayConvertor.meterToFeetPerHour);
-                    }
-                else { flowParameter.Set(flowValue* 10.76381609) ; }
-                
+                if (flowParameter != null){
+                    flowParameter.Set(flowValue);
+                }
             }
-            }
-            catch { TaskDialog.Show("Error", "The parameter 'RBS_DUCT_FLOW_PARAM' does not exist in this family instance."); }
-
+            catch { MessageBox.Show("Error", "The parameter 'RBS_DUCT_FLOW_PARAM' does not exist in this family instance."); }
         }
 
         private MechanicalSystem GetExistingSystem(string systemName)

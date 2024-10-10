@@ -1,4 +1,5 @@
 ﻿using Autodesk.Revit.DB;
+using HVACLoadTerminals.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,35 +43,8 @@ namespace HVACLoadTerminals
             }
             return chartDataPoints;
         }
-
-        // Added maxX and maxY properties
-
-
     }
-    public class PointsList
-    {
-        public List<double> X;
-        public List<double> Y;
-        public List<double> Z;
 
-        public PointsList(List<double> x, List<double> y, List<double> z)
-        {
-            X = x;
-            Y = y;
-            Z = z;
-        }
-
-        public override string ToString()
-        {
-            return $"Количество Точек: {X.Count}";
-        }
-
-        public List<XYZ> GetPoints()
-        {
-            return X.Select((x, i) => new XYZ(x, Y[i], Z[i])).ToList();
-        }
-
-    }
     public class ChartDataPoint
     {
         public double X { get; set; }

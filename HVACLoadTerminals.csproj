@@ -37,11 +37,11 @@
     <Reference Include="PresentationFramework" />
     <Reference Include="ReachFramework" />
     <Reference Include="RevitAPI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll</HintPath>
+      <HintPath>..\..\..\..\..\Program Files\Autodesk\Revit 2023\RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPIUI.dll</HintPath>
+      <HintPath>..\..\..\..\..\Program Files\Autodesk\Revit 2023\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
@@ -66,23 +66,30 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\DrawTerminalsFromDb.cs" />
     <Compile Include="Commands\ExportSpacesDataToJson.cs" />
     <Compile Include="Commands\CalculateSpaceDevice.cs" />
+    <Compile Include="Commands\RoomsBounding.cs" />
     <Compile Include="DbUtility\DatabaseConfig.cs" />
     <Compile Include="DbUtility\DbQuery.cs" />
-    <Compile Include="DbUtility\DbSqlliteQuery.cs" />
     <Compile Include="DbUtility\SQLiteEquipmentDbHelper.cs" />
+    <Compile Include="DbUtility\SQLiteSpaceDbHelper.cs" />
     <Compile Include="DbUtility\SqlLiteSystemFamilyDbHelper.cs" />
+    <Compile Include="Models\FaceData.cs" />
+    <Compile Include="Models\PointsList.cs" />
+    <Compile Include="Models\SpaceModel.cs" />
     <Compile Include="StaticData\CalculationOptions.cs" />
     <Compile Include="StaticData\CalculationOptionsTypes.cs" />
     <Compile Include="StaticData\CustomMepCategories.cs" />
     <Compile Include="Models\SpaceBoundaryModel.cs" />
     <Compile Include="Utils\CanvasHelper.cs" />
     <Compile Include="Utils\InsertTerminal.cs" />
+    <Compile Include="Utils\RoomBounding.cs" />
     <Compile Include="Utils\SpaceBoundary.cs" />
     <Compile Include="StaticData\SystemData.cs" />
     <Compile Include="Utils\CollectorQuery.cs" />
     <Compile Include="Models\DevicePropertyModel.cs" />
+    <Compile Include="Utils\SpaceSurfaces.cs" />
     <Compile Include="ViewModels\DeviceViewModel.cs" />
     <Compile Include="Commands\DeviceUpdate.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -93,12 +100,6 @@
       <DependentUpon>DeviceView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Utils\ViewModelBase.cs" />
-    <Compile Include="Views\MainWindow.xaml.cs">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\ModalCanvasWindow.xaml.cs">
-      <DependentUpon>ModalCanvasWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\OffsetDialog.xaml.cs">
       <DependentUpon>OffsetDialog.xaml</DependentUpon>
     </Compile>
@@ -110,14 +111,6 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\DeviceView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\MainWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\ModalCanvasWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -135,13 +128,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm">
-      <Version>8.2.2</Version>
+      <Version>8.3.2</Version>
     </PackageReference>
     <PackageReference Include="DotNetProjects.WpfToolkit.DataVisualization">
       <Version>6.1.94</Version>
-    </PackageReference>
-    <PackageReference Include="DynamoVisualProgramming.DynamoServices">
-      <Version>3.2.2.5494</Version>
     </PackageReference>
     <PackageReference Include="FilterDataGrid">
       <Version>1.2.8</Version>
@@ -152,13 +142,13 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="LiteDB">
-      <Version>5.0.19</Version>
+      <Version>5.0.21</Version>
     </PackageReference>
-    <PackageReference Include="LiveCharts.Wpf">
-      <Version>0.9.7</Version>
+    <PackageReference Include="MaterialDesignColors">
+      <Version>3.1.0</Version>
     </PackageReference>
     <PackageReference Include="MaterialDesignThemes.MahApps">
-      <Version>1.0.0</Version>
+      <Version>3.1.0</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.CodeDom.Providers.DotNetCompilerPlatform">
       <Version>4.1.0</Version>

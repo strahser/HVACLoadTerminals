@@ -47,6 +47,20 @@ namespace HVACLoadTerminals
                 .ToElements();
             return elList.ToList();
         }
+        public static List<string> GetAllParameterNames(FamilySymbol familySymbol)
+        {
+            List<string> parameterNames = new List<string>();
+
+            // Получаем список параметров для семейного символа
+            MessageBox.Show(familySymbol.Name);
+            foreach (Parameter parameter in familySymbol.GetParameters(familySymbol.Name)) // Используем пустую строку
+            {
+                // Добавляем имя параметра в список
+                parameterNames.Add(parameter.Definition.Name);
+            }
+
+            return parameterNames;
+        }
         public static List<string> GetParameters(Element element)
         {
             List<string> param_name = new List<string>();
@@ -79,8 +93,7 @@ namespace HVACLoadTerminals
             return param_name;
 
         }
-        public static dynamic GetParameterValueByName(string parameterName,
-                                           Element elem)
+        public static dynamic GetParameterValueByName(string parameterName,  Element elem)
         {
             var param = elem.LookupParameter(parameterName);
             var storeType = param.StorageType;
@@ -158,7 +171,6 @@ namespace HVACLoadTerminals
             return symbolId;
         }
 
-
         public static ElementId GetFamilyInstances(Document doc, DevicePropertyModel device)
         {
            string elementName = device.family_instance_name;
@@ -186,6 +198,8 @@ namespace HVACLoadTerminals
             List<ElementId> systemTypeIds = systemTypes.Select(system => system.Id).ToList();
             return systemTypes;
         }
+
+
     }
 
 }

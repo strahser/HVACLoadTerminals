@@ -14,21 +14,27 @@
                        SelectedValue ="{Binding SelectedCategory}" />
             <TextBlock>Тип Семейства</TextBlock>
             <ComboBox x:Name="familyTypeComboBox" ItemsSource="{Binding FamilyTypesOfCategory}"  SelectedValue="{Binding SelectedFamily}" />
-            <TextBlock>Параметр</TextBlock>
+            <TextBlock>Параметр Максимальный расход</TextBlock>
             <ComboBox x:Name="ParameterChooseComboBox" ItemsSource="{Binding ParametrList}" SelectedValue="{Binding SelectedProperty}"/>
+            <TextBlock>Имя параметра Мощность Устройства</TextBlock>
+            <TextBox Text="{Binding SelectedFlowParameterName}" />            
+            <TextBlock>Система</TextBlock>
+            <ComboBox x:Name="SystemTypesDataComboBox" ItemsSource="{Binding SystemTypesData}" SelectedValue="{Binding SelectedSystemType}"/>
             <TextBlock FontSize="16">Характеристика экземпляров семейства</TextBlock>
-            <DataGrid x:Name="EquipmentPropertyDataGrid" AutoGenerateColumns="True" 
+            <DataGrid x:Name="EquipmentPropertyDataGrid" AutoGenerateColumns="False" 
                       ItemsSource="{Binding Path= DevicePropertyList}"  
                       AlternationCount="1" AlternatingRowBackground="Bisque" IsReadOnly="True"
                       AutoGeneratingColumn="DataGrid_AutoGeneratingColumn"                      
                       >
-                <!--<DataGrid.Columns>
-                    <DataGridTextColumn Header="ID"  Binding="{Binding Id}"  />
-                    <DataGridTextColumn Header="Тип Семейства"  Binding="{Binding FamilyType}"  />
-                    <DataGridTextColumn Header="Имя Параметра"  Binding="{Binding FlowParameterName}" />
-                    <DataGridTextColumn Header="Имя Семейства"   Binding="{Binding FamilyName}"/>
-                    <DataGridTextColumn Header="Значение параметра"  Binding="{Binding Flow}"/>
-                </DataGrid.Columns>-->
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID Оборудования"  Binding="{Binding equipment_id}"  />
+                    <DataGridTextColumn Header="Тип Системы"  Binding="{Binding system_equipment_type}"  />
+                    <DataGridTextColumn Header="Тип Семейства"   Binding="{Binding family_device_name}"  />
+                    <DataGridTextColumn Header="Экземпляр Семейства"   Binding="{Binding family_instance_name}"  />
+                    <DataGridTextColumn Header="Имя парам.расхода"   Binding="{Binding system_flow_parameter_name}"  />
+                    <DataGridTextColumn Header="Расход м3/ч (кВт/ч)"   Binding="{Binding max_flow}"  />
+
+                </DataGrid.Columns>
             </DataGrid>
             <Button Command="{Binding SaveDevieDataCommand}">Сохранить данные</Button>
         </StackPanel>

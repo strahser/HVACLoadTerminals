@@ -13,6 +13,11 @@ namespace HVACLoadTerminals.Utils
         {
             return Math.Round(UnitUtils.ConvertFromInternalUnits(element.get_Parameter(parametr).AsDouble(), UnitTypeId.SquareMeters),2);
         }
+
+        public static double SquareMeters(double internalValue)
+        {
+            return Math.Round(UnitUtils.ConvertFromInternalUnits(internalValue, UnitTypeId.SquareMeters), 2);
+        }
         public static double CubicMeters(Element element, BuiltInParameter parametr)
         {
             return  Math.Round (UnitUtils.ConvertFromInternalUnits(element.get_Parameter(parametr).AsDouble(), UnitTypeId.CubicMeters),2); 

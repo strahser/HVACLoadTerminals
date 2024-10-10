@@ -24,9 +24,6 @@ namespace HVACLoadTerminals.ViewModels
     {
         public Document _Document = RevitConfig.Document;
         public SQLiteConnection Connection { get; set; }
-        public RelayCommand GetCurveCenterCommand { get; }
-        public RelayCommand CalculateTerminalsCommand { get; }
-        public RelayCommand InsertDevicesCommand { get; }
         // Конструктор
         public OffsetDialogViewModel(SQLiteConnection connection, SpaceBoundary spaceBoundary)
         {
@@ -47,6 +44,10 @@ namespace HVACLoadTerminals.ViewModels
             if (SystemEquipmentTypes.Count > 0)
             {
                 SelectedSystemEquipmentType = SystemEquipmentTypes[0];
+            }
+            else
+            {
+                MessageBox.Show("Для выбранного пространства нет систем");
             }
             // Установка выбранной кривой по умолчанию 
             if (Curves.Count > 0)
@@ -78,7 +79,12 @@ namespace HVACLoadTerminals.ViewModels
                 .Subscribe(_ => GetSystemNameAndFlow());
         }
 
+        #region Команды
 
+        public RelayCommand GetCurveCenterCommand { get; }
+        public RelayCommand CalculateTerminalsCommand { get; }
+        public RelayCommand InsertDevicesCommand { get; }
+        #endregion
         #region свойства 
 
         [Reactive] public string SpaceID { get; set; }
@@ -175,7 +181,7 @@ namespace HVACLoadTerminals.ViewModels
 
             // Определение таблицы в зависимости от выбранного типа системы
 
-            if (SelectedSystemEquipmentType.TableDbName != null)
+            if (SelectedSystemEquipmentType!=null)
             {
                 string query = $"SELECT DISTINCT family_device_name FROM Terminals_equipmentbase WHERE  system_equipment_type = @system_equipment_type";
 
@@ -207,29 +213,31 @@ namespace HVACLoadTerminals.ViewModels
         private void GetSystemNameAndFlow()
         {
             // Определение таблицы в зависимости от выбранного типа системы
-            var tableName = SelectedSystemEquipmentType.TableDbName;
-            if (tableName != null)
-            {
-                // Запрос для получения family_instance_name, max_flow и calculation_options
-                string query = $"SELECT system_flow, calculation_options, Systems_systemname.system_name" +
-                    $" FROM {tableName}" +
-                    $" JOIN Systems_systemname ON {tableName}.system_name_id = Systems_systemname.id"+
-                    $" WHERE space_id = @space_id";
-                using (SQLiteCommand command = new SQLiteCommand(query, Connection))
+            if (SelectedSystemEquipmentType != null) { 
+                var tableName = SelectedSystemEquipmentType.TableDbName;
+                if (tableName != null)
                 {
-                    command.Parameters.AddWithValue("@space_id", SpaceID);
-                    using (SQLiteDataReader reader = command.ExecuteReader())
+                    // Запрос для получения family_instance_name, max_flow и calculation_options
+                    string query = $"SELECT system_flow, calculation_options, Systems_systemname.system_name" +
+                        $" FROM {tableName}" +
+                        $" JOIN Systems_systemname ON {tableName}.system_name_id = Systems_systemname.id"+
+                        $" WHERE space_id = @space_id";
+                    using (SQLiteCommand command = new SQLiteCommand(query, Connection))
                     {
-                        if (reader.Read() && Convert.ToDouble(reader["system_flow"])>0)
+                        command.Parameters.AddWithValue("@space_id", SpaceID);
+                        using (SQLiteDataReader reader = command.ExecuteReader())
                         {
-                            // Установка свойств в ViewModel
-                            SystemFlow = Convert.ToDouble(reader["system_flow"]);
-                            SystemName = reader["system_name"].ToString();
-                            SelectedCalculationOptionFromDB = reader["calculation_options"].ToString();
-                        }
-                        else
-                        {
-                            SystemFlow = 0;
+                            if (reader.Read() && Convert.ToDouble(reader["system_flow"])>0)
+                            {
+                                // Установка свойств в ViewModel
+                                SystemFlow = Convert.ToDouble(reader["system_flow"]);
+                                SystemName = reader["system_name"].ToString();
+                                SelectedCalculationOptionFromDB = reader["calculation_options"].ToString();
+                            }
+                            else
+                            {
+                                SystemFlow = 0;
+                            }
                         }
                     }
                 }
@@ -273,7 +281,6 @@ namespace HVACLoadTerminals.ViewModels
             {
                 calculateMinimumDevices(NumberOfPoints);
             }
-
         }
 
         // // Метод для расчета минимального колличества оборудования через KEF,сортировку.
@@ -282,8 +289,7 @@ namespace HVACLoadTerminals.ViewModels
             if (SystemFlow > 0)
             {
                 try
-            {
-                
+            {                
                 DevicePropertyModel minDevicesByTerminal = EquipmentBases
                     .Select(t =>
                     {
@@ -325,12 +331,17 @@ namespace HVACLoadTerminals.ViewModels
             try {
                 ElementId _elementId = CollectorQuery.GetFamilyInstances(_Document, SelectedDevice);
 
-                FamilySymbol elementInstance = _Document.GetElement(new ElementId(_elementId.Value)) as FamilySymbol;
-                InsertTerminal terminal = new InsertTerminal(_Document);
-
-                terminal.InsertElementsAtPoints(elementInstance, SelectedDevice);                
-                MessageBox.Show($"{SelectedDevice.family_instance_name} установлено");
-            }
+                FamilySymbol elementInstance = _Document.GetElement(new ElementId(_elementId.IntegerValue)) as FamilySymbol;
+                InsertTerminal terminal = new InsertTerminal(_Document, SelectedDevice);
+                    // Create a transaction
+                    using (Transaction transaction = new Transaction(_Document, "Insert Elements"))
+                    {
+                        transaction.Start();
+                    terminal.InsertElementsAtPoints(elementInstance, SelectedDevice);
+                    MessageBox.Show($"{SelectedDevice.family_instance_name} установлено");
+                        transaction.Commit();
+                     }
+                  }
             catch (Exception e) { Debug.Write($"Ошибка вставки{ e}"); }
             else
             {
@@ -351,6 +362,5 @@ namespace HVACLoadTerminals.ViewModels
         }
     }
     #endregion
-
  
 }
