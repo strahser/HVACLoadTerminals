@@ -8,6 +8,7 @@ using Autodesk.Revit.DB.Mechanical;
 using System.Diagnostics;
 using HVACLoadTerminals.Utils;
 using System.Windows;
+using HVACLoadTerminals.Views;
 
 namespace HVACLoadTerminals.Commands
 {
@@ -18,14 +19,9 @@ namespace HVACLoadTerminals.Commands
         {
             // Получение текущего документа
             Document doc = commandData.Application.ActiveUIDocument.Document;
-            List<Element> rooms = new FilteredElementCollector(doc)
-              .OfCategory(BuiltInCategory.OST_Rooms)
-              .WhereElementIsNotElementType()
-              .ToElements()
-            .ToList();
-
-            RoomBounding roomBounding = new RoomBounding(rooms,doc);
-            roomBounding.GetRoomFaces();
+            RoomBounding roomBounding = new RoomBounding(doc);
+            Window View = new FaceDataWindow(roomBounding.FaceDataList);
+            View.ShowDialog();
             return Result.Succeeded;
         }
     }

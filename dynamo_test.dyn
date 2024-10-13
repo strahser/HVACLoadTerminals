@@ -1,0 +1,263 @@
+{
+  "Uuid": "41cb83b1-14b5-49cc-8e6f-c8a67a49b720",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "dynamo_test",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "d502e834a9174723a86171ccd392d274",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "16bcbafbceb6435fb889afa0551c80a4",
+          "Name": "doc",
+          "Description": "var",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "8612088cc6db4572baf8812dde35417c",
+          "Name": "RoomBounding",
+          "Description": "RoomBounding",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "HVACLoadTerminals.Utils.RoomBounding.RoomBounding@var",
+      "Replication": "Auto",
+      "Description": "RoomBounding.RoomBounding (doc: var): RoomBounding"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "12bd5897c7704a63aea15fa7de13a2e7",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "be8547c4f5704060a8b361b31caaaeff",
+          "Name": "roomBounding",
+          "Description": "HVACLoadTerminals.Utils.RoomBounding",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "5e31d1444da3443599639292dbdfa213",
+          "Name": "FaceData[]",
+          "Description": "FaceData[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "HVACLoadTerminals.Utils.RoomBounding.FaceDataList",
+      "Replication": "Auto",
+      "Description": "RoomBounding.FaceDataList: FaceData[]"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "import clr\r\nimport System\r\nclr.AddReference('RevitAPI')\r\nclr.AddReference(\"RevitServices\")\r\nimport RevitServices\r\nimport re \r\nfrom RevitServices.Persistence import DocumentManager\r\nfrom Autodesk.Revit.DB import *\r\nfrom System.Collections.Generic import List\r\n\r\ndoc = DocumentManager.Instance.CurrentDBDocument\r\nOUT = doc",
+      "Engine": "CPython3",
+      "EngineName": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "51210c9083684cd39b7239d07c81fb51",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "e4897ecc304a40c098b363755d40e8e6",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "56dda72fd6d941fbbc7bc1fc54b919fc",
+          "Name": "OUT",
+          "Description": "Результат сценария Python",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Выполнение встроенного сценария Python."
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "import clr\r\n\r\n# Import RevitAPI\r\nclr.AddReference(\"RevitAPI\")\r\nimport Autodesk\r\n\r\nclr.AddReference(\"RevitNodes\")\r\nimport Revit\r\n\r\n# Import DocumentManager and TransactionManager\r\nclr.AddReference(\"RevitServices\")\r\nimport RevitServices\r\nfrom RevitServices.Persistence import DocumentManager\r\nfrom RevitServices.Transactions import TransactionManager\r\n\r\n# Import geometry conversion extension methods\r\nclr.ImportExtensions(Revit.GeometryConversion)\r\n\r\n# Import Element wrapper extension methods\r\nclr.ImportExtensions(Revit.Elements)\r\n_faces =UnwrapElement(IN[0])\r\nfaces_list =[]\r\n\r\nfor face_data in _faces:\r\n    try:\r\n        geom = face_data._Face\r\n        faces_list.append(geom)\r\n    except:\r\n        pass\r\n\r\nOUT = faces_list",
+      "Engine": "CPython3",
+      "EngineName": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "5d664c21367f447a8370c9d80188b239",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "86af1e41391446f4adda620cda00d898",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "0bf9560a1619409092af9b6c6ea2455a",
+          "Name": "OUT",
+          "Description": "Результат сценария Python",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Выполнение встроенного сценария Python."
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "8612088cc6db4572baf8812dde35417c",
+      "End": "be8547c4f5704060a8b361b31caaaeff",
+      "Id": "65c43dc01a1f41378a555a56b40d5b8d",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "5e31d1444da3443599639292dbdfa213",
+      "End": "86af1e41391446f4adda620cda00d898",
+      "Id": "f4222c059cdc45b18ffc31b7f0eba8f3",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "56dda72fd6d941fbbc7bc1fc54b919fc",
+      "End": "16bcbafbceb6435fb889afa0551c80a4",
+      "Id": "47083ea311904c70a337118712e5b5be",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [
+    {
+      "Name": "HVACLoadTerminals.dll",
+      "ReferenceType": "ZeroTouch",
+      "Nodes": [
+        "d502e834a9174723a86171ccd392d274",
+        "12bd5897c7704a63aea15fa7de13a2e7"
+      ]
+    }
+  ],
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [
+    {
+      "ExtensionGuid": "28992e1d-abb9-417f-8b1b-05e053bee670",
+      "Name": "Свойства",
+      "Version": "2.18",
+      "Data": {}
+    },
+    {
+      "ExtensionGuid": "DFBD9CC0-DB40-457A-939E-8C8555555A9D",
+      "Name": "Generative Design",
+      "Version": "6.0",
+      "Data": {}
+    }
+  ],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "Нет",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.18.1.5096",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Фоновый просмотр",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "d502e834a9174723a86171ccd392d274",
+        "Name": "RoomBounding.RoomBounding",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 242.0,
+        "Y": 350.0
+      },
+      {
+        "Id": "12bd5897c7704a63aea15fa7de13a2e7",
+        "Name": "RoomBounding.FaceDataList",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 567.0,
+        "Y": 356.0
+      },
+      {
+        "Id": "51210c9083684cd39b7239d07c81fb51",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 47.09411190457331,
+        "Y": 349.61498394426746
+      },
+      {
+        "Id": "5d664c21367f447a8370c9d80188b239",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 989.07476215651673,
+        "Y": 157.92208406844352
+      }
+    ],
+    "Annotations": [],
+    "X": -340.69459242391349,
+    "Y": 56.530922726478991,
+    "Zoom": 0.98900584672738046
+  }
+}

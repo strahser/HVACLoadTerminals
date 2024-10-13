@@ -37,11 +37,11 @@
     <Reference Include="PresentationFramework" />
     <Reference Include="ReachFramework" />
     <Reference Include="RevitAPI">
-      <HintPath>..\..\..\..\..\Program Files\Autodesk\Revit 2023\RevitAPI.dll</HintPath>
+      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
-      <HintPath>..\..\..\..\..\Program Files\Autodesk\Revit 2023\RevitAPIUI.dll</HintPath>
+      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
@@ -83,23 +83,27 @@
     <Compile Include="StaticData\CustomMepCategories.cs" />
     <Compile Include="Models\SpaceBoundaryModel.cs" />
     <Compile Include="Utils\CanvasHelper.cs" />
+    <Compile Include="Utils\DrawFaceGeometry.cs" />
     <Compile Include="Utils\InsertTerminal.cs" />
     <Compile Include="Utils\RoomBounding.cs" />
     <Compile Include="Utils\SpaceBoundary.cs" />
     <Compile Include="StaticData\SystemData.cs" />
     <Compile Include="Utils\CollectorQuery.cs" />
     <Compile Include="Models\DevicePropertyModel.cs" />
-    <Compile Include="Utils\SpaceSurfaces.cs" />
     <Compile Include="ViewModels\DeviceViewModel.cs" />
     <Compile Include="Commands\DeviceUpdate.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils\RelayCommand.cs" />
     <Compile Include="Utils\RevitConfig.cs" />
     <Compile Include="Utils\ParameterDisplayConvertor.cs" />
+    <Compile Include="ViewModels\FaceDataViewModel.cs" />
     <Compile Include="Views\DeviceView.xaml.cs">
       <DependentUpon>DeviceView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Utils\ViewModelBase.cs" />
+    <Compile Include="Views\FaceDataWindow.xaml.cs">
+      <DependentUpon>FaceDataWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\OffsetDialog.xaml.cs">
       <DependentUpon>OffsetDialog.xaml</DependentUpon>
     </Compile>
@@ -111,6 +115,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\DeviceView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\FaceDataWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

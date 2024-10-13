@@ -19,7 +19,7 @@ public class SpaceModel
     public SpaceBoundaryModel geometry_data { get; set; }
 
 
-        // Конструктор для инициализации объекта из данных Space
+        // Конструктор для инициализации объекта из данных _Space
         public SpaceModel(Space space)
     {
         SpaceData = space;

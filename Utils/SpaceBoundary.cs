@@ -284,11 +284,11 @@ namespace HVACLoadTerminals
     {
         public static void DrawCurves(Document doc, Space _space, List<Curve> Curves)
         {
-            // Получаем уровень из Space
+            // Получаем уровень из _Space
             Level level = _space.Level as Level;
             if (level == null)
             {
-                TaskDialog.Show("Ошибка", "Уровень не найден для Space");
+                TaskDialog.Show("Ошибка", "Уровень не найден для _Space");
                 return;
             }
             // Получаем текущую транзакцию
@@ -321,11 +321,11 @@ namespace HVACLoadTerminals
 
         public static void DrawOffsetCurve(Document doc, Space _space,Curve ofsetCurve)
         {
-            // Получаем уровень из Space
+            // Получаем уровень из _Space
             Level level = _space.Level as Level;
             if (level == null)
             {
-                TaskDialog.Show("Ошибка", "Уровень не найден для Space");
+                TaskDialog.Show("Ошибка", "Уровень не найден для _Space");
                 return;
             }
             // Получаем текущую транзакцию
