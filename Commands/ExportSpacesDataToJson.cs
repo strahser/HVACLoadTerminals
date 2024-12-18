@@ -31,15 +31,15 @@ namespace HVACLoadTerminals.Commands
 
             // Перебираем все пространства
             foreach (Space space in spaces)
-            {
+            {if (space.Area>0)
+                try
+                {
                 SpaceModel spaceData = new SpaceModel(space);
                 spaceData.geometry_data.px = spaceData.geometry_data.px.Select(x => x * 304.8).ToList();
                 spaceData.geometry_data.py = spaceData.geometry_data.py.Select(x => x * 304.8).ToList();
                 spaceData.geometry_data.pcx = spaceData.geometry_data.pcx * 304.8;
                 spaceData.geometry_data.pcy = spaceData.geometry_data.pcy * 304.8;
                 spaceDataList.Add(spaceData);
-
-            try {
                     SQLiteSpaceDbHelper.SpaceDataUpdateOrInsert(spaceData, connection);
                 }
             catch (Exception exception) { Debug.Write(exception); }

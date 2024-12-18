@@ -33,15 +33,18 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Infiltration">
+      <HintPath>..\Infiltration\Infiltration\bin\Debug\net8.0\Infiltration.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="ReachFramework" />
     <Reference Include="RevitAPI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll</HintPath>
+      <HintPath>..\..\..\..\..\Program Files\Autodesk\Revit 2023\RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPIUI.dll</HintPath>
+      <HintPath>..\..\..\..\..\Program Files\Autodesk\Revit 2023\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
@@ -66,37 +69,53 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddPanel.cs" />
+    <Compile Include="Commands\AddParametersCommand.cs" />
     <Compile Include="Commands\DrawTerminalsFromDb.cs" />
+    <Compile Include="Commands\DrawWalls.cs" />
     <Compile Include="Commands\ExportSpacesDataToJson.cs" />
-    <Compile Include="Commands\CalculateSpaceDevice.cs" />
-    <Compile Include="Commands\RoomsBounding.cs" />
+    <Compile Include="CalculateSpaceDevice\CalculateSpaceDeviceCommand.cs" />
+    <Compile Include="Commands\RoomsBoundingCommand.cs" />
     <Compile Include="DbUtility\DatabaseConfig.cs" />
     <Compile Include="DbUtility\DbQuery.cs" />
     <Compile Include="DbUtility\SQLiteEquipmentDbHelper.cs" />
     <Compile Include="DbUtility\SQLiteSpaceDbHelper.cs" />
     <Compile Include="DbUtility\SqlLiteSystemFamilyDbHelper.cs" />
-    <Compile Include="Models\FaceData.cs" />
+    <Compile Include="Models\ConstructionSurfaceData.cs" />
+    <Compile Include="Models\ParameterFilds.cs" />
     <Compile Include="Models\PointsList.cs" />
     <Compile Include="Models\SpaceModel.cs" />
     <Compile Include="StaticData\CalculationOptions.cs" />
     <Compile Include="StaticData\CalculationOptionsTypes.cs" />
     <Compile Include="StaticData\CustomMepCategories.cs" />
-    <Compile Include="Models\SpaceBoundaryModel.cs" />
+    <Compile Include="CalculateSpaceDevice\SpaceBoundaryModel.cs" />
+    <Compile Include="Models\ParameterModel.cs" />
+    <Compile Include="StaticData\RoomBoundingOptions.cs" />
     <Compile Include="Utils\CanvasHelper.cs" />
+    <Compile Include="Utils\CollectorGeometry.cs" />
     <Compile Include="Utils\DrawFaceGeometry.cs" />
-    <Compile Include="Utils\InsertTerminal.cs" />
+    <Compile Include="Utils\DrawWallAndOpens.cs" />
+    <Compile Include="Utils\EnergyModele.cs" />
+    <Compile Include="CalculateSpaceDevice\InsertTerminal.cs" />
+    <Compile Include="Utils\InfiltrationCalculator.cs" />
+    <Compile Include="Utils\ParameterHelper.cs" />
+    <Compile Include="Utils\RevitApiUtils.cs" />
     <Compile Include="Utils\RoomBounding.cs" />
-    <Compile Include="Utils\SpaceBoundary.cs" />
+    <Compile Include="Utils\RoomAndSpaceCollectorQuery.cs" />
+    <Compile Include="Utils\RoomBoundingEmptyOpens.cs" />
+    <Compile Include="Utils\VerticalWallFaces.cs" />
+    <Compile Include="CalculateSpaceDevice\SpaceBoundary.cs" />
     <Compile Include="StaticData\SystemData.cs" />
     <Compile Include="Utils\CollectorQuery.cs" />
     <Compile Include="Models\DevicePropertyModel.cs" />
+    <Compile Include="Utils\RoomFacesAzimuth.cs" />
     <Compile Include="ViewModels\DeviceViewModel.cs" />
     <Compile Include="Commands\DeviceUpdate.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils\RelayCommand.cs" />
     <Compile Include="Utils\RevitConfig.cs" />
     <Compile Include="Utils\ParameterDisplayConvertor.cs" />
-    <Compile Include="ViewModels\FaceDataViewModel.cs" />
+    <Compile Include="ViewModels\RoomBoundingViewModel.cs" />
     <Compile Include="Views\DeviceView.xaml.cs">
       <DependentUpon>DeviceView.xaml</DependentUpon>
     </Compile>
@@ -104,14 +123,15 @@
     <Compile Include="Views\FaceDataWindow.xaml.cs">
       <DependentUpon>FaceDataWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\OffsetDialog.xaml.cs">
-      <DependentUpon>OffsetDialog.xaml</DependentUpon>
+    <Compile Include="CalculateSpaceDevice\CalculateSpaceDeviceView.xaml.cs">
+      <DependentUpon>CalculateSpaceDeviceView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ViewModels\OffsetDialogViewModel.cs" />
+    <Compile Include="CalculateSpaceDevice\CalculateSpaceDeviceViewModel.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
     <None Include="App.config" />
+    <None Include="HVACLoadTerminals.addin" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\DeviceView.xaml">
@@ -122,14 +142,16 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\OffsetDialog.xaml">
+    <Page Include="CalculateSpaceDevice\CalculateSpaceDeviceView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="39-Globe_32x32.png" />
     <Content Include="FodyWeavers.xml" />
     <Content Include="lib\System.Data.SQLite.dll" />
+    <Resource Include="Resources\39-Globe_32x32.png" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
@@ -166,6 +188,9 @@
     </PackageReference>
     <PackageReference Include="ReactiveUI.Fody">
       <Version>19.5.41</Version>
+    </PackageReference>
+    <PackageReference Include="System.Text.Json">
+      <Version>9.0.0</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup />

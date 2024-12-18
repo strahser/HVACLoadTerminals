@@ -7,22 +7,72 @@ using System.Windows;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
+
+
 namespace HVACLoadTerminals
 {
     //https://spiderinnet.typepad.com/blog/2012/10/revit-net-api-get-all-family-symbolstypes-of-specific-category-eg-builtincategoryost_windows.html
+
+
     
     public class CollectorQuery
     {
-        public static List<Element> GetAllSpaces(Document doc)
+
+        public static List<Element> GetAllRooms(Document document)
         {
-            return new FilteredElementCollector(doc)
+            return new FilteredElementCollector(document)
+                  .OfCategory(BuiltInCategory.OST_Rooms)
+                  .WhereElementIsNotElementType()
+                  .ToElements().ToList();
+        }
+
+        public static List<Element> GetAllWindows(Document document)
+        {
+            return new FilteredElementCollector(document)
+            .OfCategory(BuiltInCategory.OST_Windows)
+            .WhereElementIsNotElementType().ToList();
+        }
+        public static List<Element> GetAllDoors(Document document)
+        {
+            return new FilteredElementCollector(document)
+            .OfCategory(BuiltInCategory.OST_Doors)
+            .WhereElementIsNotElementType().ToList();
+        }
+
+        public static List<Element> GetAllWindowsFamilySymbols(Document document)
+        {
+            return new FilteredElementCollector(document).OfClass(typeof(FamilySymbol)).
+                WherePasses(new ElementCategoryFilter(BuiltInCategory.OST_Windows)).ToElements().ToList();
+        }
+        public static List<Element> GetAllDoorsFamilySymbols(Document document)
+        {
+            return new FilteredElementCollector(document).OfClass(typeof(FamilySymbol)).
+                WherePasses(new ElementCategoryFilter(BuiltInCategory.OST_Doors)).ToElements().ToList();
+        }
+        public static List<Element> GetAllWalls(Document document)
+        {
+            return new FilteredElementCollector(document)
+            .OfCategory(BuiltInCategory.OST_Walls)
+            .WhereElementIsNotElementType().ToList();
+        }
+
+        public static  List<Element> GetAllSpaces(Document HvacDoc)
+        {
+            return new FilteredElementCollector(HvacDoc)
               .OfCategory(BuiltInCategory.OST_MEPSpaces)
               .WhereElementIsNotElementType()
               .ToElements()
             .ToList();
 
         }
-
+        public static IList<RevitLinkInstance> GetLinkedDocument(Document doc) {
+            return  new FilteredElementCollector(doc) // Создаем экземпляр FilteredElementCollector
+                               .OfClass(typeof(RevitLinkInstance)) // Фильтруем по типу RevitLinkInstance
+                               .ToElements() // Получаем список элементов
+                               .Cast<RevitLinkInstance>() // Преобразуем в список RevitLinkInstance
+                               .ToList(); // Преобразуем в List
+                                          // Найти первый связанный документ
+        }
         public static List<Element> GetDevices(Document doc)
         {
             FilteredElementCollector collector = new FilteredElementCollector(doc);
@@ -167,7 +217,7 @@ namespace HVACLoadTerminals
                     .ToElements().Where(e => e.Name == elementName).ToList<Element>();
             ElementId symbolId = listOfElements.FirstOrDefault().Id;
 
-               //IList<Element> familyInstances = new FilteredElementCollector(doc).WherePasses(new FamilyInstanceFilter(doc, symbolId)).ToElements();
+               //IList<Element> familyInstances = new FilteredElementCollector(RoomDoc).WherePasses(new FamilyInstanceFilter(RoomDoc, symbolId)).ToElements();
             return symbolId;
         }
 
@@ -178,7 +228,7 @@ namespace HVACLoadTerminals
                     .ToElements().Where(e => e.Name == elementName).ToList<Element>();
             ElementId symbolId = listOfElements.FirstOrDefault().Id;
 
-            //IList<Element> familyInstances = new FilteredElementCollector(doc).WherePasses(new FamilyInstanceFilter(doc, symbolId)).ToElements();
+            //IList<Element> familyInstances = new FilteredElementCollector(RoomDoc).WherePasses(new FamilyInstanceFilter(RoomDoc, symbolId)).ToElements();
             return symbolId;
         }
 
@@ -199,7 +249,21 @@ namespace HVACLoadTerminals
             return systemTypes;
         }
 
+        public static double? GetBuildingHeightFromGroundLevel(Document doc)
+        {
+            FilteredElementCollector collector = new FilteredElementCollector(doc);
+            IList<Level> levels = collector.OfClass(typeof(Level)).Cast<Level>().ToList();
 
+            if (levels.Count == 0) return null; // Нет уровней в модели
+
+            // Находим уровень земли (уровень с минимальной высотой)
+            Level groundLevel = levels.OrderBy(l => l.Elevation).First();
+
+            // Находим самый высокий уровень
+            Level topLevel = levels.OrderByDescending(l => l.Elevation).First();
+            // Возвращаем разницу высот в м.
+            return (topLevel.Elevation - groundLevel.Elevation) ;
+        }
     }
 
 }

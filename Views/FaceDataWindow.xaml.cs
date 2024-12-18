@@ -1,4 +1,5 @@
 ﻿using HVACLoadTerminals.Models;
+using HVACLoadTerminals.Utils;
 using HVACLoadTerminals.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -18,15 +19,15 @@ using System.Windows.Shapes;
 namespace HVACLoadTerminals.Views
 {
     /// <summary>
-    /// Логика взаимодействия для FaceDataWindow.xaml
+    /// Логика взаимодействия для RoomBoundingWindow.xaml
     /// </summary>
-    public partial class FaceDataWindow : Window
+    public partial class RoomBoundingWindow : Window
     {
-        public FaceDataWindow(List<FaceData> faceDataList)
+        public RoomBoundingWindow()
         {
  
             InitializeComponent();
-            DataContext = new FaceDataViewModel(faceDataList); 
+            DataContext = new RoomBoundingViewModel(); 
         }
 
 
