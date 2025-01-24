@@ -8,9 +8,8 @@ using System.Linq;
 using System;
 using HVACLoadTerminals.Models;
 using System.Diagnostics;
-using System.Windows;
-using System.Data.SQLite;
 using HVACLoadTerminals.DbUtility;
+using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.Commands
 {
@@ -22,11 +21,11 @@ namespace HVACLoadTerminals.Commands
             RevitConfig.Initialize(commandData);
 
             // Выбираем все пространства
-            List<Element> spaces = CollectorQuery.GetAllSpaces(RevitConfig.Document);
+            var spaces = CollectorQuery.GetAllSpaces(RevitConfig.Document);
 
             // Создаем список данных о пространствах
-            List<SpaceModel> spaceDataList = new List<SpaceModel>();
-            SQLiteConnection connection = RevitConfig.connection;
+            var spaceDataList = new List<SpaceModel>();
+            var connection = RevitConfig.connection;
             connection.Open();
 
             // Перебираем все пространства
@@ -34,20 +33,20 @@ namespace HVACLoadTerminals.Commands
             {if (space.Area>0)
                 try
                 {
-                SpaceModel spaceData = new SpaceModel(space);
-                spaceData.geometry_data.px = spaceData.geometry_data.px.Select(x => x * 304.8).ToList();
-                spaceData.geometry_data.py = spaceData.geometry_data.py.Select(x => x * 304.8).ToList();
-                spaceData.geometry_data.pcx = spaceData.geometry_data.pcx * 304.8;
-                spaceData.geometry_data.pcy = spaceData.geometry_data.pcy * 304.8;
-                spaceDataList.Add(spaceData);
-                    SQLiteSpaceDbHelper.SpaceDataUpdateOrInsert(spaceData, connection);
+                    var spaceData = new SpaceModel(space);
+                    spaceData.geometry_data.px = spaceData.geometry_data.px.Select(x => x * 304.8).ToList();
+                    spaceData.geometry_data.py = spaceData.geometry_data.py.Select(x => x * 304.8).ToList();
+                    spaceData.geometry_data.pcx = spaceData.geometry_data.pcx * 304.8;
+                    spaceData.geometry_data.pcy = spaceData.geometry_data.pcy * 304.8;
+                    spaceDataList.Add(spaceData);
+                        SQLiteSpaceDbHelper.SpaceDataUpdateOrInsert(spaceData, connection);
                 }
-            catch (Exception exception) { Debug.Write(exception); }
+                catch (Exception exception) { Debug.Write(exception); }
             }
             try
             {
-                string json = JsonConvert.SerializeObject(spaceDataList, Formatting.Indented);
-                string filePath = Path.Combine(RevitConfig.projectDirectory, "space_data.json");
+                var json = JsonConvert.SerializeObject(spaceDataList, Formatting.Indented);
+                var filePath = Path.Combine(RevitConfig.projectDirectory, "space_data.json");
                 File.WriteAllText(filePath, json);
                 TaskDialog.Show("Экспорт данных", "Данные о пространствах экспортированы в файл"+ filePath);
             }

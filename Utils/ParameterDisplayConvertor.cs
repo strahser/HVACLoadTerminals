@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
+
 namespace HVACLoadTerminals.Utils
 {
     public static class ParameterDisplayConvertor
@@ -41,13 +37,13 @@ namespace HVACLoadTerminals.Utils
         public static double ConvertCubicMetersPerHourToCubicFeet(double cubicMetersPerHour)
         {
             // Get the conversion factor from cubic meters per hour to cubic feet per minute
-            double conversionFactor = UnitUtils.ConvertFromInternalUnits( cubicMetersPerHour, UnitTypeId.CubicFeetPerMinute);
+            var conversionFactor = UnitUtils.ConvertFromInternalUnits( cubicMetersPerHour, UnitTypeId.CubicFeetPerMinute);
 
             // Convert cubic meters per hour to cubic feet per minute
-            double cubicFeetPerMinute = cubicMetersPerHour * conversionFactor;
+            var cubicFeetPerMinute = cubicMetersPerHour * conversionFactor;
 
             // Convert cubic feet per minute to cubic feet
-            double cubicFeet = cubicFeetPerMinute * 60;
+            var cubicFeet = cubicFeetPerMinute * 60;
 
             return cubicFeet;
         }

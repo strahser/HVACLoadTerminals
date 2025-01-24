@@ -1,13 +1,11 @@
 ﻿using Autodesk.Revit.DB;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows;
 using System.Windows.Shapes;
+using HVACLoadTerminals.CalculateSpaceDevice;
 using Newtonsoft.Json;
 
 namespace HVACLoadTerminals.Utils
@@ -16,10 +14,10 @@ namespace HVACLoadTerminals.Utils
     {
         private Canvas CustomCanvas { get; set; }
 
-        private SpaceBoundaryModel SpaceBoundaryModel { get; set; }
+        private SpaceBoundaryCurveModel SpaceBoundaryModel { get; set; }
         private Curve Curve { get; set; }
         IList<Curve> Curves;
-        public CanvasHelper(Canvas _CustomCanvas,SpaceBoundaryModel _SpaceBoundaryModel, Curve _Curve)
+        public CanvasHelper(Canvas _CustomCanvas,SpaceBoundaryCurveModel _SpaceBoundaryModel, Curve _Curve)
         {
             CustomCanvas = _CustomCanvas;
             SpaceBoundaryModel = _SpaceBoundaryModel;
@@ -33,21 +31,21 @@ namespace HVACLoadTerminals.Utils
                 // Plot the polygon
                 var spaceBoundary = SpaceBoundaryModel;
                 double scaleFactor = 10;
-                System.Windows.Shapes.Line wpfLine = CreateWpfLineFromRevitCurve(Curve, scaleFactor);
+                var wpfLine = CreateWpfLineFromRevitCurve(Curve, scaleFactor);
                 CustomCanvas.Children.Add(wpfLine);
 
-                Polygon polygon = new Polygon
+                var polygon = new Polygon
                 {
                     Stroke = Brushes.Blue,
                     StrokeThickness = 2,
                 };
 
                 // Создаем полигон из точек
-                for (int i = 0; i < spaceBoundary.px.Count; i++)
+                for (var i = 0; i < spaceBoundary.px.Count; i++)
                 {
                     // Scale coordinates using scaleFactor
-                    double scaledX = spaceBoundary.px[i] * scaleFactor;
-                    double scaledY = spaceBoundary.py[i] * scaleFactor;
+                    var scaledX = spaceBoundary.px[i] * scaleFactor;
+                    var scaledY = spaceBoundary.py[i] * scaleFactor;
 
                     // Mirror the Y coordinate for vertical flip
                     scaledY = -scaledY;
@@ -57,10 +55,10 @@ namespace HVACLoadTerminals.Utils
                 CustomCanvas.Children.Add(polygon);
 
                 // Plot the offset points (using Rectangles as an example)
-                for (int i = 0; i < spaceBoundary.OffsetPoints.X.Count; i++)
+                for (var i = 0; i < spaceBoundary.OffsetPoints.X.Count; i++)
                 {
                     // Adjust the size of the rectangle as needed
-                    System.Windows.Shapes.Rectangle offsetPoint = new System.Windows.Shapes.Rectangle
+                    var offsetPoint = new System.Windows.Shapes.Rectangle
                     {
                         Width = 10,
                         Height = 10,
@@ -75,13 +73,13 @@ namespace HVACLoadTerminals.Utils
                 }
 
                 // Add line labels
-                for (int i = 0; i < spaceBoundary.px.Count - 1; i++)
+                for (var i = 0; i < spaceBoundary.px.Count - 1; i++)
                 {
                     // Calculate midpoint of each line
-                    double midX = (spaceBoundary.px[i] + spaceBoundary.px[i + 1]) / 2 * scaleFactor;
-                    double midY = (spaceBoundary.py[i] + spaceBoundary.py[i + 1]) / 2 * scaleFactor;
+                    var midX = (spaceBoundary.px[i] + spaceBoundary.px[i + 1]) / 2 * scaleFactor;
+                    var midY = (spaceBoundary.py[i] + spaceBoundary.py[i + 1]) / 2 * scaleFactor;
                     // Create a TextBlock for the label
-                    TextBlock label = new TextBlock
+                    var label = new TextBlock
                     {
                         Text = (i).ToString(), // Line number
                         FontSize = 12,
@@ -103,14 +101,14 @@ namespace HVACLoadTerminals.Utils
         private void AddCurveLable(int scaleFactor)
         {
             // Add line labels
-            for (int i = 0; i < Curves.Count; i++)
+            for (var i = 0; i < Curves.Count; i++)
             {
                 // Calculate midpoint of each line
-                double midX = (Curves[i].GetEndPoint(0).X + Curves[i].GetEndPoint(1).X) / 2 * scaleFactor;
-                double midY = (Curves[i].GetEndPoint(0).Y + Curves[i].GetEndPoint(1).Y) / 2 * scaleFactor;
+                var midX = (Curves[i].GetEndPoint(0).X + Curves[i].GetEndPoint(1).X) / 2 * scaleFactor;
+                var midY = (Curves[i].GetEndPoint(0).Y + Curves[i].GetEndPoint(1).Y) / 2 * scaleFactor;
 
                 // Create a TextBlock for the label
-                TextBlock label = new TextBlock
+                var label = new TextBlock
                 {
                     Text = (i).ToString(), // Line number
                     FontSize = 12,
@@ -126,13 +124,13 @@ namespace HVACLoadTerminals.Utils
         private static System.Windows.Shapes.Line CreateWpfLineFromRevitCurve(Curve curve, double scaleFactor = 10)
         {
             // Get the start and end points of the Revit curve
-            XYZ startPoint = curve.GetEndPoint(0);
-            XYZ endPoint = curve.GetEndPoint(1);
+            var startPoint = curve.GetEndPoint(0);
+            var endPoint = curve.GetEndPoint(1);
             // Convert the Revit points to WPF points and mirror vertically
-            System.Windows.Point wpfStartPoint = new System.Windows.Point(startPoint.X * scaleFactor, -startPoint.Y * scaleFactor);
-            System.Windows.Point wpfEndPoint = new System.Windows.Point(endPoint.X * scaleFactor, -endPoint.Y * scaleFactor);
+            var wpfStartPoint = new System.Windows.Point(startPoint.X * scaleFactor, -startPoint.Y * scaleFactor);
+            var wpfEndPoint = new System.Windows.Point(endPoint.X * scaleFactor, -endPoint.Y * scaleFactor);
             // Create a new WPF Line object
-            System.Windows.Shapes.Line line = new System.Windows.Shapes.Line();
+            var line = new System.Windows.Shapes.Line();
             line.X1 = wpfStartPoint.X;
             line.Y1 = wpfStartPoint.Y;
             line.X2 = wpfEndPoint.X;
@@ -145,7 +143,7 @@ namespace HVACLoadTerminals.Utils
         private void SavePolygonsCoordinatesToJson()
         {
             // Сериализуем данные в JSON
-            string json = JsonConvert.SerializeObject(SpaceBoundaryModel, Formatting.Indented);
+            var json = JsonConvert.SerializeObject(SpaceBoundaryModel, Formatting.Indented);
 
             // Записываем JSON в файл
             System.IO.File.WriteAllText(RevitConfig.polygonJsonPathe, json);

@@ -3,7 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:HVACLoadTerminals.Views" xmlns:viewmodels="clr-namespace:HVACLoadTerminals.ViewModels" d:DataContext="{d:DesignInstance Type=viewmodels:RoomBoundingViewModel}"
+             xmlns:local="clr-namespace:HVACLoadTerminals.Views" xmlns:viewmodels="clr-namespace:HVACLoadTerminals.ViewModels"
+             xmlns:drawNewSpaceFaces="clr-namespace:HVACLoadTerminals.DrawNewSpaceFaces"
+             d:DataContext="{d:DesignInstance Type=drawNewSpaceFaces:RoomBoundingViewModel}"
         mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     
@@ -22,7 +24,7 @@
                 <Button Command="{Binding CreateFacesCommand}">Показть Данные</Button>
         </StackPanel>
             <ScrollViewer>
-                <DataGrid ItemsSource="{Binding faceDataList}" AutoGenerateColumns="False" IsReadOnly="True">
+                <DataGrid ItemsSource="{Binding FaceDataList}" AutoGenerateColumns="False" IsReadOnly="True">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID Пространства" Binding="{Binding SpaceId}"/>
                         <DataGridTextColumn Header="Номер Помещения" Binding="{Binding RoomNumber}"/>

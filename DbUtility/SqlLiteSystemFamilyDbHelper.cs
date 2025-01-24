@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.SQLite;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Data.SQLite;
 
 namespace HVACLoadTerminals.DbUtility
 {
@@ -16,15 +11,15 @@ namespace HVACLoadTerminals.DbUtility
         private  void GetDistinctSystemEquipmentTypeFromDb()
 
         {
-            string query = "SELECT DISTINCT system_equipment_type FROM Terminals_equipmentbase";
-            using (SQLiteCommand command = new SQLiteCommand(query, Connection))
+            var query = "SELECT DISTINCT system_equipment_type FROM Terminals_equipmentbase";
+            using (var command = new SQLiteCommand(query, Connection))
             {
-                using (SQLiteDataReader reader = command.ExecuteReader())
+                using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
 
-                        string system_equipment_typeName = reader["system_equipment_type"].ToString();
+                        var system_equipment_typeName = reader["system_equipment_type"].ToString();
                     }
                 }
             }

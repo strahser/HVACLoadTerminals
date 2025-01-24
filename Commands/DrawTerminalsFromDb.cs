@@ -9,6 +9,7 @@ using HVACLoadTerminals.Models;
 using System.Diagnostics;
 using System.Windows;
 using System.Linq;
+using HVACLoadTerminals.CalculateSpaceDevice;
 using Newtonsoft.Json.Linq;
 using HVACLoadTerminals.Utils;
 
@@ -32,21 +33,21 @@ namespace HVACLoadTerminals.Commands
         private List<DevicePropertyModel> GetSelectedFamilyEquipmentDB()
         {
             var query = "SELECT calculation_result, system_type FROM Systems_supplysystem";
-            List<DevicePropertyModel> results = new List<DevicePropertyModel>();
-            using (Transaction transaction = new Transaction(_Document, "Insert many Elements"))
+            var results = new List<DevicePropertyModel>();
+            using (var transaction = new Transaction(_Document, "Insert many Elements"))
             {
                 transaction.Start();
                 using (var command = new SQLiteCommand(query, connection))
                 {
-                    using (SQLiteDataReader reader = command.ExecuteReader())
+                    using (var reader = command.ExecuteReader())
                     {
                         while (reader.Read())
                         {
                             try
                             {
-                                string json = reader.GetString(0);
-                                Dictionary<string, object> calculationResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
-                                DevicePropertyModel model = new DevicePropertyModel();
+                                var json = reader.GetString(0);
+                                var calculationResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+                                var model = new DevicePropertyModel();
                                 model.SystemFlow = Convert.ToDouble(calculationResult["system_flow"]);
                                 model.system_name = calculationResult["system_name"].ToString();
                                 model.family_instance_name = calculationResult["family_instance_name"].ToString();
@@ -58,26 +59,26 @@ namespace HVACLoadTerminals.Commands
                                 {
 
                                     // Извлечение значений из JObject
-                                    JArray xCoords = pointsListObject["X"].ToObject<JArray>();
-                                    JArray yCoords = pointsListObject["Y"].ToObject<JArray>();
-                                    JArray zCoords = pointsListObject["Z"].ToObject<JArray>();
+                                    var xCoords = pointsListObject["X"].ToObject<JArray>();
+                                    var yCoords = pointsListObject["Y"].ToObject<JArray>();
+                                    var zCoords = pointsListObject["Z"].ToObject<JArray>();
 
                                     // Преобразование JArray в List<double>
-                                    List<double> xList = xCoords.Select(x => Convert.ToDouble(x)).ToList();
-                                    List<double> yList = yCoords.Select(y => Convert.ToDouble(y)).ToList();
-                                    List<double> zList = zCoords.Select(z => Convert.ToDouble(z)).ToList();
+                                    var xList = xCoords.Select(x => Convert.ToDouble(x)).ToList();
+                                    var yList = yCoords.Select(y => Convert.ToDouble(y)).ToList();
+                                    var zList = zCoords.Select(z => Convert.ToDouble(z)).ToList();
 
                                     // Создание объекта PointsList
-                                    PointsList pointsList = new PointsList(xList, yList, zList);
+                                    var pointsList = new PointsList(xList, yList, zList);
 
                                     // Добавление PointsList в DevicePropertyModel
                                     model.DevicePointList = pointsList;
                                 }
                                 try
                                 {
-                                    ElementId _elementId = CollectorQuery.GetFamilyInstances(_Document, model);
-                                    FamilySymbol elementInstance = _Document.GetElement(new ElementId(_elementId.IntegerValue)) as FamilySymbol;
-                                    InsertTerminal terminal = new InsertTerminal(_Document, model);
+                                    var _elementId = CollectorQuery.GetFamilyInstances(_Document, model);
+                                    var elementInstance = _Document.GetElement(new ElementId(_elementId.IntegerValue)) as FamilySymbol;
+                                    var terminal = new InsertTerminal(_Document, model);
 
                                     terminal.InsertElementsAtPoints(elementInstance, model);
 

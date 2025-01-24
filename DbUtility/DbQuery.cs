@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows;
+using HVACLoadTerminals.Models;
+
 namespace HVACLoadTerminals.DbUtility
 {
     public class DbQuery
@@ -20,7 +22,7 @@ namespace HVACLoadTerminals.DbUtility
                 {
                     var col = db.GetCollection<DevicePropertyModel >("DeviceProperty");
 
-                    foreach (DevicePropertyModel  property in DeviceList)
+                    foreach (var  property in DeviceList)
                     {
 
                         if (col.FindOne(x => x.equipment_id == property.equipment_id) == null)
@@ -41,11 +43,11 @@ namespace HVACLoadTerminals.DbUtility
 
         public static IList<DevicePropertyModel > GetDevicePropertyListFromDb()
         {
-            List<DevicePropertyModel > resList = new List<DevicePropertyModel >();
+            var resList = new List<DevicePropertyModel >();
             using (var db = new LiteDatabase(_dbPath))
             {
                 var collections = db.GetCollection<DevicePropertyModel >("DeviceProperty");
-                foreach (DevicePropertyModel  property in collections.FindAll())
+                foreach (var  property in collections.FindAll())
                 {
                     resList.Add(property);
                 }

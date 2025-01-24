@@ -1,19 +1,15 @@
 ﻿using Autodesk.Revit.DB.Mechanical;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Data.SQLite;
 using System.Collections.ObjectModel;
-using System.Windows;
 
 namespace HVACLoadTerminals.StaticData
 
 {
     public static class StaticSystemsTypes
     {
-        public static  string Supply_system = "Supply_system";
+        public const string Supply_system = "Supply_system";
         public static string Exhaust_system = "Exhaust_system";
         public static string Fan_coil_system = "Fan_coil_system";
     }
@@ -50,8 +46,8 @@ namespace HVACLoadTerminals.StaticData
 
         public static ObservableCollection<SystemsTypes> GetSystemEquipmentTypes( string spaceId, SQLiteConnection connection)
         {
-            ObservableCollection<SystemsTypes> _systemTyepes = new ObservableCollection<SystemsTypes>();
-            foreach (SystemsTypes systemType in AllSystems)
+            var _systemTyepes = new ObservableCollection<SystemsTypes>();
+            foreach (var systemType in AllSystems)
             {
                 // Проверяем наличие данных в базе данных
                 if (CheckDataExists(systemType.TableDbName, spaceId, connection))
@@ -65,10 +61,10 @@ namespace HVACLoadTerminals.StaticData
 
         private static bool CheckDataExists(string dbTableName, string spaceId, SQLiteConnection connection)
         {
-            string query = $"SELECT 1 FROM {dbTableName} WHERE space_id = '{spaceId}'";
-            using (SQLiteCommand command = new SQLiteCommand(query,  connection))
+            var query = $"SELECT 1 FROM {dbTableName} WHERE space_id = '{spaceId}'";
+            using (var command = new SQLiteCommand(query,  connection))
             {
-                using (SQLiteDataReader reader = command.ExecuteReader())
+                using (var reader = command.ExecuteReader())
                 {
                     return reader.HasRows;
                 }

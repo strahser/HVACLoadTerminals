@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
+using HVACLoadTerminals.Models;
 
-
-namespace HVACLoadTerminals
+namespace HVACLoadTerminals.Utils
 {
     //https://spiderinnet.typepad.com/blog/2012/10/revit-net-api-get-all-family-symbolstypes-of-specific-category-eg-builtincategoryost_windows.html
 
@@ -75,14 +73,14 @@ namespace HVACLoadTerminals
         }
         public static List<Element> GetDevices(Document doc)
         {
-            FilteredElementCollector collector = new FilteredElementCollector(doc);
+            var collector = new FilteredElementCollector(doc);
 
-            ElementCategoryFilter filter = new ElementCategoryFilter(BuiltInCategory.OST_DuctTerminal);
+            var filter = new ElementCategoryFilter(BuiltInCategory.OST_DuctTerminal);
 
             //Applying Filter
 
             //IList<Element> elList = collector.WherePasses(filter).ToElements();
-            IList<Element> elList = new FilteredElementCollector(doc)
+            var elList = new FilteredElementCollector(doc)
                 .OfClass(typeof(Family))
 
                 //.WherePasses(filter)
@@ -91,7 +89,7 @@ namespace HVACLoadTerminals
         }
         public static List<Element> FilterElementByNameFamily(Document doc)
         {
-            IList<Element> elList = new FilteredElementCollector(doc)
+            var elList = new FilteredElementCollector(doc)
                 .OfCategory(BuiltInCategory.OST_DuctTerminal)
                 .WhereElementIsElementType()
                 .ToElements();
@@ -99,11 +97,11 @@ namespace HVACLoadTerminals
         }
         public static List<string> GetAllParameterNames(FamilySymbol familySymbol)
         {
-            List<string> parameterNames = new List<string>();
+            var parameterNames = new List<string>();
 
             // Получаем список параметров для семейного символа
             MessageBox.Show(familySymbol.Name);
-            foreach (Parameter parameter in familySymbol.GetParameters(familySymbol.Name)) // Используем пустую строку
+            foreach (var parameter in familySymbol.GetParameters(familySymbol.Name)) // Используем пустую строку
             {
                 // Добавляем имя параметра в список
                 parameterNames.Add(parameter.Definition.Name);
@@ -113,8 +111,8 @@ namespace HVACLoadTerminals
         }
         public static List<string> GetParameters(Element element)
         {
-            List<string> param_name = new List<string>();
-            ParameterSet pSet = element.Parameters;
+            var param_name = new List<string>();
+            var pSet = element.Parameters;
             foreach (Parameter p in pSet)
             {
                 element.GetParameters(element.Name);
@@ -126,11 +124,11 @@ namespace HVACLoadTerminals
         public static List<string> GetParameters(List<Element> elList)
         {
 
-            List<string> param_name = new List<string>();
+            var param_name = new List<string>();
 
-            foreach (Element el in elList)
+            foreach (var el in elList)
             {
-                ParameterSet pSet = el.Parameters;
+                var pSet = el.Parameters;
                 foreach (Parameter p in pSet)
                 {
                     el.GetParameters(el.Name);
@@ -168,14 +166,14 @@ namespace HVACLoadTerminals
         }
         public static List<string> GetParametersByName(string parameterName, List<Element> elList)
         {
-            List<string> param_list = new List<string>();
+            var param_list = new List<string>();
 
-            foreach (Element el in elList)
+            foreach (var el in elList)
             {
                 try
                 {
 
-                    string elPar = el.LookupParameter(parameterName).AsValueString();
+                    var elPar = el.LookupParameter(parameterName).AsValueString();
                     param_list.Add(elPar);
                 }
                 catch (Exception ex)
@@ -213,9 +211,9 @@ namespace HVACLoadTerminals
         public static ElementId GetFamilyInstances(Document doc, string elementName)
         {
 
-            List<Element> listOfElements = new FilteredElementCollector(doc).OfClass(typeof(FamilySymbol)).WhereElementIsElementType()
+            var listOfElements = new FilteredElementCollector(doc).OfClass(typeof(FamilySymbol)).WhereElementIsElementType()
                     .ToElements().Where(e => e.Name == elementName).ToList<Element>();
-            ElementId symbolId = listOfElements.FirstOrDefault().Id;
+            var symbolId = listOfElements.FirstOrDefault().Id;
 
                //IList<Element> familyInstances = new FilteredElementCollector(RoomDoc).WherePasses(new FamilyInstanceFilter(RoomDoc, symbolId)).ToElements();
             return symbolId;
@@ -223,10 +221,10 @@ namespace HVACLoadTerminals
 
         public static ElementId GetFamilyInstances(Document doc, DevicePropertyModel device)
         {
-           string elementName = device.family_instance_name;
-            List<Element> listOfElements = new FilteredElementCollector(doc).OfClass(typeof(FamilySymbol)).WhereElementIsElementType()
+           var elementName = device.family_instance_name;
+            var listOfElements = new FilteredElementCollector(doc).OfClass(typeof(FamilySymbol)).WhereElementIsElementType()
                     .ToElements().Where(e => e.Name == elementName).ToList<Element>();
-            ElementId symbolId = listOfElements.FirstOrDefault().Id;
+            var symbolId = listOfElements.FirstOrDefault().Id;
 
             //IList<Element> familyInstances = new FilteredElementCollector(RoomDoc).WherePasses(new FamilyInstanceFilter(RoomDoc, symbolId)).ToElements();
             return symbolId;
@@ -243,24 +241,24 @@ namespace HVACLoadTerminals
 
         public static List<MechanicalSystemType> GetSystemType(Document doc)
         {
-            FilteredElementCollector collector = new FilteredElementCollector(doc);
-            List<MechanicalSystemType> systemTypes = collector.OfClass(typeof(MechanicalSystemType)).Cast<MechanicalSystemType>().ToList();
-            List<ElementId> systemTypeIds = systemTypes.Select(system => system.Id).ToList();
+            var collector = new FilteredElementCollector(doc);
+            var systemTypes = collector.OfClass(typeof(MechanicalSystemType)).Cast<MechanicalSystemType>().ToList();
+            var systemTypeIds = systemTypes.Select(system => system.Id).ToList();
             return systemTypes;
         }
 
         public static double? GetBuildingHeightFromGroundLevel(Document doc)
         {
-            FilteredElementCollector collector = new FilteredElementCollector(doc);
+            var collector = new FilteredElementCollector(doc);
             IList<Level> levels = collector.OfClass(typeof(Level)).Cast<Level>().ToList();
 
             if (levels.Count == 0) return null; // Нет уровней в модели
 
             // Находим уровень земли (уровень с минимальной высотой)
-            Level groundLevel = levels.OrderBy(l => l.Elevation).First();
+            var groundLevel = levels.OrderBy(l => l.Elevation).First();
 
             // Находим самый высокий уровень
-            Level topLevel = levels.OrderByDescending(l => l.Elevation).First();
+            var topLevel = levels.OrderByDescending(l => l.Elevation).First();
             // Возвращаем разницу высот в м.
             return (topLevel.Elevation - groundLevel.Elevation) ;
         }

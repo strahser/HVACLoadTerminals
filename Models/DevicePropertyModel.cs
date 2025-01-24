@@ -1,9 +1,7 @@
-﻿using HVACLoadTerminals.Models;
-using System;
+﻿using System;
 using System.ComponentModel;
 
-
-namespace HVACLoadTerminals
+namespace HVACLoadTerminals.Models
 
 
 {
@@ -27,10 +25,12 @@ namespace HVACLoadTerminals
 
         [DisplayName("Реал. расход")] public double real_flow { get; set; }
 
+        
         [DisplayName("Нормальная скорость")] public string Manufacture { get; set; }
 
         [DisplayName("Наим. парам. расход")] public string system_flow_parameter_name { get; set; }
 
+        
         [DisplayName(" Наим. парам.имя системы")] public string system_name_parameter { get; set; }
 
         [DisplayName("Расчет. кол-во ")] public int MinDevices { get; set; }
@@ -39,8 +39,10 @@ namespace HVACLoadTerminals
 
         [DisplayName("Точки установки")] public PointsList DevicePointList { get; set; }
 
+        
         [DisplayName("Дата создания")] public DateTime creation_stamp { get; set; } = DateTime.Now;
 
+        
         [DisplayName("Дата обновления")] public DateTime update_stamp { get; set; } = DateTime.Now;
 
         public override string ToString(){        

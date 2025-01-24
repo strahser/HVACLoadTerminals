@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using Newtonsoft.Json;
-using System.Windows.Forms;
+﻿using System.IO;
 
 namespace HVACLoadTerminals.DbUtility
 {
@@ -16,11 +9,11 @@ namespace HVACLoadTerminals.DbUtility
 
         public static string ConfigConnectionString(string projectDirectory, string connectionName = "work")
         {
-            string jsonFilePathConfig = Path.Combine(projectDirectory, "HVACData", "db.sqlite3");
+            var jsonFilePathConfig = Path.Combine(projectDirectory, "HVACData", "db.sqlite3");
            // string jsonString = File.ReadAllText(jsonFilePathConfig);
            // DatabaseConfig[] configs = JsonConvert.DeserializeObject<DatabaseConfig[]>(jsonString);
             //DatabaseConfig config = configs.FirstOrDefault(c => c.name == connectionName);
-            string connectionString = $"Data Source={jsonFilePathConfig}";
+            var connectionString = $"Data Source={jsonFilePathConfig}";
             return connectionString;
         }
     }

@@ -21,7 +21,7 @@ namespace HVACLoadTerminals
             // public, instance property on this object.
             if (TypeDescriptor.GetProperties(this)[propertyName] == null)
             {
-                string msg = "Invalid property name: " + propertyName;
+                var msg = "Invalid property name: " + propertyName;
 
                 if (this.ThrowOnInvalidPropertyName)
                     throw new Exception(msg);
@@ -65,7 +65,7 @@ namespace HVACLoadTerminals
         {
             this.VerifyPropertyName(propertyName);
 
-            PropertyChangedEventHandler handler = this.PropertyChanged;
+            var handler = this.PropertyChanged;
             if (handler != null)
             {
                 var e = new PropertyChangedEventArgs(propertyName);

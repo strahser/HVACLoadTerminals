@@ -1,5 +1,6 @@
 ﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
+using HVACLoadTerminals.CalculateSpaceDevice;
 using HVACLoadTerminals.Utils;
 
 
@@ -16,11 +17,11 @@ public class SpaceModel
     public double S_area { get; set; }
     public double S_Volume { get; set; }
     public string S_level { get; set; }
-    public SpaceBoundaryModel geometry_data { get; set; }
+    public SpaceBoundaryCurveModel geometry_data { get; set; }
 
 
         // Конструктор для инициализации объекта из данных _Space
-        public SpaceModel(Space space)
+    public SpaceModel(Space space)
     {
         SpaceData = space;
         S_ID = space.Id.ToString();
@@ -33,13 +34,11 @@ public class SpaceModel
         geometry_data = GetGeometryData();
 }
 
-        public SpaceBoundaryModel GetGeometryData() 
+    private SpaceBoundaryCurveModel GetGeometryData() 
         {
-
-                SpaceBoundary spaceBoundary = new SpaceBoundary(SpaceData);
-                SpaceBoundaryModel spaceData = spaceBoundary.GetSpaceBoundaryModel(spaceBoundary.cleanCurves);
-            return spaceData;
-
+        var spaceBoundary = new SpaceBoundaryCurve(SpaceData);
+        var spaceData = spaceBoundary.GetSpaceBoundaryModel(spaceBoundary.CleanCurves);
+        return spaceData;
         }
     }
         

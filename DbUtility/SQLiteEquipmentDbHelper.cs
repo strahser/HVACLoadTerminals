@@ -2,10 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
-using System.IO;
 using System.Windows;
-using System.Linq;
-using Newtonsoft.Json;
+using HVACLoadTerminals.Models;
 
 namespace SQLiteCRUD
 
@@ -36,14 +34,14 @@ namespace SQLiteCRUD
         // Метод для добавления или обновления записи в базе данных
         public void CreateOrUpdate(List<DevicePropertyModel> devicePropertyModels)
         {
-            List <string> updatedList = new List<string>();
-            List<string> newList = new List<string>();
+            var updatedList = new List<string>();
+            var newList = new List<string>();
 
                 using (var transaction = connection.BeginTransaction())
                 {                    
                     try
                     {
-                        foreach (DevicePropertyModel model in devicePropertyModels)
+                        foreach (var model in devicePropertyModels)
                         {
                             if (RecordExists(model.equipment_id))
                             {

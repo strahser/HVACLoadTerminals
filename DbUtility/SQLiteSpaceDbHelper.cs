@@ -1,11 +1,7 @@
 ﻿using HVACLoadTerminals.Models;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Data.SQLite;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HVACLoadTerminals.DbUtility
 {
@@ -14,7 +10,7 @@ namespace HVACLoadTerminals.DbUtility
 
         public static void ExecuteSpaceDataParametersCommand(string insertSql, SpaceModel spaceData, SQLiteConnection connection)
         {
-            using (SQLiteCommand command = new SQLiteCommand(insertSql, connection))
+            using (var command = new SQLiteCommand(insertSql, connection))
             {
                 command.Parameters.AddWithValue("@S_ID", spaceData.S_ID);
                 command.Parameters.AddWithValue("@S_Number", spaceData.S_Number);
@@ -38,11 +34,11 @@ namespace HVACLoadTerminals.DbUtility
         public static void SpaceDataUpdateOrInsert(SpaceModel spaceData, SQLiteConnection connection)
         {
 
-            string checkSql = "SELECT 1 FROM Spaces_SpaceData WHERE S_ID = @S_ID";
-            using (SQLiteCommand checkCommand = new SQLiteCommand(checkSql, connection))
+            var checkSql = "SELECT 1 FROM Spaces_SpaceData WHERE S_ID = @S_ID";
+            using (var checkCommand = new SQLiteCommand(checkSql, connection))
             {
                 checkCommand.Parameters.AddWithValue("@S_ID", spaceData.S_ID);
-                object result = checkCommand.ExecuteScalar();
+                var result = checkCommand.ExecuteScalar();
 
                 if (result != null) // Запись найдена
                 {
@@ -58,7 +54,7 @@ namespace HVACLoadTerminals.DbUtility
         public static void SpaceDataUpdate(SpaceModel spaceData, SQLiteConnection connection)
         {
 
-            string updateSql = @"
+            var updateSql = @"
                 UPDATE Spaces_SpaceData
                 SET S_Number = @S_Number,
                     S_Name = @S_Name,
@@ -73,7 +69,7 @@ namespace HVACLoadTerminals.DbUtility
         }
         public static void SpaceDataInsertOrReplace(SpaceModel spaceData, SQLiteConnection connection)
         {
-            string insertSql = @"
+            var insertSql = @"
                     INSERT OR REPLACE INTO Spaces_SpaceData (S_ID, S_Number, S_Name, S_height, S_area, S_Volume, S_level,  geometry_data) VALUES (
                         @S_ID, @S_Number, @S_Name, @S_height, @S_area, @S_Volume, @S_level, @geometry_data);
                 ";

@@ -1,10 +1,9 @@
-﻿
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Autodesk.Revit.DB;
 
-
-namespace HVACLoadTerminals.Models
+namespace HVACLoadTerminals.ModelsStatic
 {
+    
     public class CustomMepCategories
     {
         public string Name { get; set; }

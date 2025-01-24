@@ -4,15 +4,14 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using ReactiveUI;
-using System.Reactive.Linq;
 using ReactiveUI.Fody.Helpers;
 using System.Data.SQLite;
 using Autodesk.Revit.DB;
 using HVACLoadTerminals.Models;
+using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.StaticData;
 using HVACLoadTerminals.Utils;
 using SQLiteCRUD;
-using System.Diagnostics;
 
 namespace HVACLoadTerminals.ViewModels
 {
@@ -76,7 +75,7 @@ namespace HVACLoadTerminals.ViewModels
 
         private void UpdateTerminalDb() {
 
-            SQLiteEquipmentDbHelper sqlHelper = new SQLiteEquipmentDbHelper(connection);
+            var sqlHelper = new SQLiteEquipmentDbHelper(connection);
             sqlHelper.CreateOrUpdate(DevicePropertyList.ToList());
         }
 
@@ -90,8 +89,8 @@ namespace HVACLoadTerminals.ViewModels
         {
             if (SelectedCategory != null && SelectedFamily != null)
             {
-                List<Element> familylist = FamilyTypes[SelectedFamily].ToList<Element>();
-                Element elementOfType = familylist.FirstOrDefault();
+                var familylist = FamilyTypes[SelectedFamily].ToList<Element>();
+                var elementOfType = familylist.FirstOrDefault();
                 ParametrList = CollectorQuery.GetParameters(elementOfType)
                 .Where(p => elementOfType.LookupParameter(p).StorageType == StorageType.Double).ToList();
             }
@@ -102,11 +101,11 @@ namespace HVACLoadTerminals.ViewModels
 
             if (SelectedProperty != null && SelectedFamily != null && SelectedCategory != null && SelectedProperty != null && SelectedSystemType != null)
                 
-                foreach (Element el in FamilyTypes[SelectedFamily].ToList<Element>())
+                foreach (var el in FamilyTypes[SelectedFamily].ToList<Element>())
             {
                     try
                     {
-                        DevicePropertyModel device = new DevicePropertyModel()
+                        var device = new DevicePropertyModel()
                         {
                             equipment_id = el.Id.ToString(),
                             family_device_name = SelectedFamily,
@@ -122,7 +121,7 @@ namespace HVACLoadTerminals.ViewModels
         }
         private double CheckFlowSystemConvertor(Element el)
         {
-            bool isFan_coil_system = SelectedSystemType.Value != StaticSystemsTypes.Fan_coil_system;
+            var isFan_coil_system = SelectedSystemType.Value != StaticSystemsTypes.Fan_coil_system;
             return isFan_coil_system
                 ? ParameterDisplayConvertor.CubicMetersPerHour(el, SelectedProperty)
                 : ParameterDisplayConvertor.Watts(el, SelectedProperty);
