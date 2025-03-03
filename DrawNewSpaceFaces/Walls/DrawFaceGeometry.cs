@@ -1,10 +1,13 @@
 ﻿using System.Collections.Generic;
 using Autodesk.Revit.DB;
 
-namespace HVACLoadTerminals.DrawNewSpaceFaces
+namespace HVACLoadTerminals.DrawNewSpaceFaces.Walls
 {
     internal class DrawFaceGeometry
     {
+        /// <summary>
+        /// Вспомогательный класс для отрисовки толщины грани
+        /// </summary>
         private Document doc;
         public DrawFaceGeometry(Document _doc)
         {
@@ -15,37 +18,37 @@ namespace HVACLoadTerminals.DrawNewSpaceFaces
         private Solid CreateSolidFromFace(Face face)
         {
             // Константа для толщины
-            const double Thickness = 100; // 100 мм
+            const double thickness = 100; // 100 мм
 
             // Получаем нормаль поверхности Face
-            var FaceOrientation = face.ComputeNormal(new UV(.5, .5));
+            var faceOrientation = face.ComputeNormal(new UV(.5, .5));
 
             // Получаем контуры Face
             var loops = face.GetEdgesAsCurveLoops();
 
             // Создаем список для смещенных контуров
-            var Offsetloopssss = new List<CurveLoop>();
+            var offsetloops = new List<CurveLoop>();
 
             // Вычисляем смещение для контура
-            var HH = FaceOrientation.Multiply(Thickness);
+            var HH = faceOrientation.Multiply(thickness);
 
             // Создаем смещенные контуры
             foreach (var L in loops)
             {
                 // Создаем смещение для контура
-                var Offsetloop = CurveLoop.CreateViaTransform(L, Transform.CreateTranslation(HH));
+                var offsetloop = CurveLoop.CreateViaTransform(L, Transform.CreateTranslation(HH));
 
                 // Добавляем исходный контур и смещенный контур
-                Offsetloopssss.Add(L);
-                Offsetloopssss.Add(Offsetloop);
+                offsetloops.Add(L);
+                offsetloops.Add(offsetloop);
             }
 
             // Создаем Solid с помощью lofting
             var options = new SolidOptions(ElementId.InvalidElementId, ElementId.InvalidElementId);
-            var FaceSolid = GeometryCreationUtilities.CreateLoftGeometry(Offsetloopssss, options);
+            var faceSolid = GeometryCreationUtilities.CreateLoftGeometry(offsetloops, options);
 
             // Возвращаем Solid
-            return FaceSolid;
+            return faceSolid;
         }
 
 

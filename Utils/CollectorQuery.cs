@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using Autodesk.Revit.DB;
@@ -15,6 +16,42 @@ namespace HVACLoadTerminals.Utils
     
     public class CollectorQuery
     {
+        public static List<SpatialElement> GetSpacesOnLowestLevel(Document doc)
+        {
+            if (doc == null)
+            {
+                TaskDialog.Show("Error", "Invalid document");
+                return null;
+            }
+            // Получаем все уровни, отсортированные по elevation
+            FilteredElementCollector levelCollector = new FilteredElementCollector(doc);
+            List<Level> levels = levelCollector.OfClass(typeof(Level)).Cast<Level>().OrderBy(l => l.Elevation).ToList();
+
+            if (levels.Count == 0)
+            {
+                TaskDialog.Show("Error", "No levels found in the document");
+                return null;
+            }
+            // Берем самый первый уровень (с наименьшей высотой)
+            Level lowestLevel = levels.First();
+
+            // Получаем все пространства в документе
+            FilteredElementCollector spaceCollector = new FilteredElementCollector(doc);
+            List<SpatialElement> allSpaces = spaceCollector.OfClass(typeof(SpatialElement)).Cast<SpatialElement>().ToList();
+
+            if (allSpaces.Count == 0)
+            {
+                TaskDialog.Show("Error", "No spaces found in the document");
+                return null;
+            }
+
+            // Фильтруем пространства по уровню.
+            List<SpatialElement> spacesOnLowestLevel = allSpaces
+                .Where(space => space.LevelId == lowestLevel.Id)
+                .ToList();
+
+            return spacesOnLowestLevel;
+        }
 
         public static List<Element> GetAllRooms(Document document)
         {
@@ -30,11 +67,19 @@ namespace HVACLoadTerminals.Utils
             .OfCategory(BuiltInCategory.OST_Windows)
             .WhereElementIsNotElementType().ToList();
         }
+        
         public static List<Element> GetAllDoors(Document document)
         {
             return new FilteredElementCollector(document)
             .OfCategory(BuiltInCategory.OST_Doors)
             .WhereElementIsNotElementType().ToList();
+        }
+        
+        public static List<Element> GetAllFloors(Document document)
+        {
+            return new FilteredElementCollector(document)
+                .OfCategory(BuiltInCategory.OST_Floors)
+                .WhereElementIsNotElementType().ToList();
         }
 
         public static List<Element> GetAllWindowsFamilySymbols(Document document)
@@ -42,11 +87,13 @@ namespace HVACLoadTerminals.Utils
             return new FilteredElementCollector(document).OfClass(typeof(FamilySymbol)).
                 WherePasses(new ElementCategoryFilter(BuiltInCategory.OST_Windows)).ToElements().ToList();
         }
+        
         public static List<Element> GetAllDoorsFamilySymbols(Document document)
         {
             return new FilteredElementCollector(document).OfClass(typeof(FamilySymbol)).
                 WherePasses(new ElementCategoryFilter(BuiltInCategory.OST_Doors)).ToElements().ToList();
         }
+        
         public static List<Element> GetAllWalls(Document document)
         {
             return new FilteredElementCollector(document)
@@ -63,14 +110,40 @@ namespace HVACLoadTerminals.Utils
             .ToList();
 
         }
-        public static IList<RevitLinkInstance> GetLinkedDocument(Document doc) {
-            return  new FilteredElementCollector(doc) // Создаем экземпляр FilteredElementCollector
-                               .OfClass(typeof(RevitLinkInstance)) // Фильтруем по типу RevitLinkInstance
-                               .ToElements() // Получаем список элементов
-                               .Cast<RevitLinkInstance>() // Преобразуем в список RevitLinkInstance
-                               .ToList(); // Преобразуем в List
-                                          // Найти первый связанный документ
+        /// <summary>
+        /// Возвращает список всех связанных документов.
+        /// </summary>
+        /// <param name="doc">Текущий документ Revit.</param>
+        /// <returns>Список объектов RevitLinkInstance.</returns>
+        public static IList<RevitLinkInstance> GetLinkedDocument(Document doc)
+        {
+            return new FilteredElementCollector(doc) // Создаем экземпляр FilteredElementCollector
+                .OfClass(typeof(RevitLinkInstance)) // Фильтруем по типу RevitLinkInstance
+                .ToElements() // Получаем список элементов
+                .Cast<RevitLinkInstance>() // Преобразуем в список RevitLinkInstance
+                .ToList(); // Преобразуем в List
         }
+        
+        /// <summary>
+        /// Получает первый связанный документ из текущего документа.
+        /// </summary>
+        /// <param name="doc">Текущий документ Revit.</param>
+        /// <returns>Первый найденный связанный документ или null, если связанных документов нет.</returns>
+        public static Document GetFirstLinkedDocument(Document doc)
+        {
+            IList<RevitLinkInstance> linkedInstances = GetLinkedDocument(doc);
+
+            if (linkedInstances.Count > 0)
+            {
+                return linkedInstances[0].GetLinkDocument();
+            }
+            else
+            {
+                return null; // Нет связанных документов
+            }
+        }
+        
+        
         public static List<Element> GetDevices(Document doc)
         {
             var collector = new FilteredElementCollector(doc);
@@ -260,7 +333,7 @@ namespace HVACLoadTerminals.Utils
             // Находим самый высокий уровень
             var topLevel = levels.OrderByDescending(l => l.Elevation).First();
             // Возвращаем разницу высот в м.
-            return (topLevel.Elevation - groundLevel.Elevation) ;
+            return (topLevel.Elevation - groundLevel.Elevation);
         }
     }
 

@@ -1,8 +1,11 @@
 ﻿using System;
-using System.ComponentModel; // INotifyPropertyChanged
-using System.Diagnostics; // [Conditional()], [DebuggerStepThrough]
+using System.ComponentModel;
+using System.Diagnostics;
+// INotifyPropertyChanged
 
-namespace HVACLoadTerminals
+// [Conditional()], [DebuggerStepThrough]
+
+namespace HVACLoadTerminals.Utils
 {
     public abstract class ViewModelBase : INotifyPropertyChanged
     {

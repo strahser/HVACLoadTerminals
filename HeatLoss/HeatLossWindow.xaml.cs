@@ -1,21 +1,17 @@
-﻿using HVACLoadTerminals.ViewModels;
-using System.Windows;
-using HVACLoadTerminals.DrawNewSpaceFaces;
+﻿using System.Windows;
 
-namespace HVACLoadTerminals.Views
+namespace HVACLoadTerminals.HeatLoss
 {
     /// <summary>
     /// Логика взаимодействия для RoomBoundingWindow.xaml
     /// </summary>
     public partial class RoomBoundingWindow : Window
     {
-        public RoomBoundingWindow()
+        public RoomBoundingWindow(double tout)
         {
  
             InitializeComponent();
-            DataContext = new RoomBoundingViewModel(); 
+            DataContext = new HeatLossTableViewModel(tout); 
         }
-
-
     }
 }

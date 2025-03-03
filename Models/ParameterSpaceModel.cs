@@ -6,10 +6,12 @@ namespace HVACLoadTerminals.Models
 {
     public static class ParameterSpaceModel
     {
+        
         //Общие параметры
         private static readonly string GroupName = "Общие";
         private static readonly BuiltInCategory Category = BuiltInCategory.OST_MEPSpaces;
         private static readonly BuiltInParameterGroup BuiltInParameterGroup = BuiltInParameterGroup.PG_DATA;
+        
         //Экземпляры
         public static readonly ParameterFields HeatLoss = new ParameterFields() {
             ParameterName = "HeatLoss",
@@ -28,12 +30,20 @@ namespace HVACLoadTerminals.Models
             BuiltInParameterGroup = BuiltInParameterGroup,
             IsInstanceParameter = true
         };
+        private static readonly ParameterFields ProjectInfo = new ParameterFields() {
+            ParameterName = "City",
+            ParameterType = SpecTypeId.String.Text,
+            GroupName = "Теплотехника",
+            BuiltInCategory = BuiltInCategory.OST_ProjectInformation,
+            BuiltInParameterGroup = BuiltInParameterGroup,
+            IsInstanceParameter = true
+        };
 
         public static void CreateParameterBindings()
         {
             var parameterList = new List<ParameterFields>()
             {
-                HeatLoss, HeatLoad
+                HeatLoss, HeatLoad,ProjectInfo
             };
             parameterList.ForEach(x => SharedParameterUtils.CreateParameterBinding(RevitConfig.Document, x));
         }

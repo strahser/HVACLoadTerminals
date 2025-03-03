@@ -3,7 +3,7 @@ using Autodesk.Revit.DB;
 
 namespace HVACLoadTerminals.Utils
 {
-    public static class ParametersUtilty
+    public static class ParametersUtility
     {
         public static void SetParameterByValue<T>(Element element, string parameterName, T value)
         {

@@ -1,8 +1,9 @@
 ﻿using System;
-using System.Diagnostics; // [DebuggerStepThrough]
+using System.Diagnostics;
 using System.Windows.Input;
+// [DebuggerStepThrough]
 
-namespace HVACLoadTerminals
+namespace HVACLoadTerminals.Utils
 {
     public class RelayCommand : ICommand
     {

@@ -13,6 +13,7 @@ using HVACLoadTerminals.StaticData;
 using HVACLoadTerminals.Utils;
 using SQLiteCRUD;
 
+
 namespace HVACLoadTerminals.ViewModels
 {
     public class DeviceViewModel :  ReactiveObject

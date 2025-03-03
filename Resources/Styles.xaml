@@ -1,0 +1,67 @@
+<!-- Styles.xaml -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Общий стиль для меток -->
+    <Style TargetType="Label">
+        <Setter Property="Margin" Value="0,0,0,5"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+    </Style>
+
+    <!-- Общий стиль для ComboBox -->
+    <Style TargetType="ComboBox">
+        <Setter Property="Margin" Value="0,25,0,10"/>
+        <Setter Property="Padding" Value="5"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="BorderBrush" Value="#CCCCCC"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <!-- Общий стиль для кнопок -->
+    <Style TargetType="Button">
+        <Setter Property="Padding" Value="10,5"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Background" Value="#2196F3"/>  <!-- Default blue background -->
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#1976D2"/> <!-- Darker blue on hover -->
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="#1565C0"/>  <!-- Even darker blue when pressed -->
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Специальные стили для кнопок -->
+    <Style x:Key="DrawFloorsButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="#4CAF50"/>
+         <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#43A047"/> <!-- Darker Green on Hover -->
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="#388E3C"/>  <!-- Even Darker Green on Press -->
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="DrawRoofsButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="#E91E63"/>
+         <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#D81B60"/> <!-- Darker red on Hover -->
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="#C2185B"/>  <!-- Even Darker red on Press -->
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="TextBlock">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+</ResourceDictionary>
