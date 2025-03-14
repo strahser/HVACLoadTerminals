@@ -13,10 +13,10 @@ namespace HVACLoadTerminals.ModelsStatic
 
     static class MepCategories
     {
-        public static List<CustomMepCategories> AllCategories = new List<CustomMepCategories>
-        {
-            new CustomMepCategories{Name="OST_DuctTerminal",Value =BuiltInCategory.OST_DuctTerminal},
-            new CustomMepCategories{Name="OST_MechanicalEquipment",Value =BuiltInCategory.OST_MechanicalEquipment},
-        };
+        public static readonly List<CustomMepCategories> AllCategories =
+        [
+            new() { Name = "OST_DuctTerminal", Value = BuiltInCategory.OST_DuctTerminal },
+            new() { Name = "OST_MechanicalEquipment", Value = BuiltInCategory.OST_MechanicalEquipment }
+        ];
     }
 }

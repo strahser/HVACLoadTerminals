@@ -12,7 +12,6 @@ namespace HVACLoadTerminals.Utils
 {
     //https://spiderinnet.typepad.com/blog/2012/10/revit-net-api-get-all-family-symbolstypes-of-specific-category-eg-builtincategoryost_windows.html
 
-
     
     public class CollectorQuery
     {
@@ -110,12 +109,12 @@ namespace HVACLoadTerminals.Utils
             .ToList();
 
         }
-        /// <summary>
-        /// Возвращает список всех связанных документов.
-        /// </summary>
-        /// <param name="doc">Текущий документ Revit.</param>
-        /// <returns>Список объектов RevitLinkInstance.</returns>
-        public static IList<RevitLinkInstance> GetLinkedDocument(Document doc)
+            /// <summary>
+            /// Возвращает список всех связанных документов.
+            /// </summary>
+            /// <param name="doc">Текущий документ Revit.</param>
+            /// <returns>Список объектов RevitLinkInstance.</returns>
+            public static IList<RevitLinkInstance> GetLinkedDocument(Document doc)
         {
             return new FilteredElementCollector(doc) // Создаем экземпляр FilteredElementCollector
                 .OfClass(typeof(RevitLinkInstance)) // Фильтруем по типу RevitLinkInstance
@@ -303,13 +302,13 @@ namespace HVACLoadTerminals.Utils
             return symbolId;
         }
 
-        public static IList<Element> GetElementListTypeOfCategory(Document doc, BuiltInCategory _selectedCategory)
+        public static IList<Element> GetElementListTypeOfCategory(Document doc, BuiltInCategory selectedCategory)
         {
-            IList<Element> _familyElementList = new FilteredElementCollector(doc)
-            .WherePasses(new ElementCategoryFilter(_selectedCategory))
+            IList<Element> familyElementList = new FilteredElementCollector(doc)
+            .WherePasses(new ElementCategoryFilter(selectedCategory))
             .WhereElementIsElementType()
             .ToList();
-            return _familyElementList;
+            return familyElementList;
         }
 
         public static List<MechanicalSystemType> GetSystemType(Document doc)
@@ -335,7 +334,22 @@ namespace HVACLoadTerminals.Utils
             // Возвращаем разницу высот в м.
             return (topLevel.Elevation - groundLevel.Elevation);
         }
-    }
 
+        public static IList<Element> GetDirectShapeElements(Document doc)
+        {
+            return new FilteredElementCollector(doc)
+                .OfCategory(BuiltInCategory.OST_GenericModel)
+                .Where(e => e.GetType() == typeof(Autodesk.Revit.DB.DirectShape))
+                .ToList();
+        }
+
+        public static Element GetProjectInfo()
+        {
+            var doc = RevitConfig.Document;
+            var collector = new FilteredElementCollector(doc)
+                .OfCategory(BuiltInCategory.OST_ProjectInformation);
+            return collector.FirstElement();
+        }
+    }
 }
 

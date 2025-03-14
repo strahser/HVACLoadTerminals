@@ -6,18 +6,18 @@ namespace HVACLoadTerminals.ModelsStatic
 {
     public static class OrientationNames
     {
-        public const string North = "С";
-        public const string Northeast = "СВ";
-        public const string East = "В";
-        public const string Southeast = "ЮВ";
-        public const string South = "Ю";
-        public const string Southwest = "ЮЗ";
-        public const string West = "З";
-        public const string Northwest = "СЗ";
+        private const string North = "С";
+        private const string Northeast = "СВ";
+        private const string East = "В";
+        private const string Southeast = "ЮВ";
+        private const string South = "Ю";
+        private const string Southwest = "ЮЗ";
+        private const string West = "З";
+        private const string Northwest = "СЗ";
         public const string Horizontal = "Горизонтальная";
         public const string NoData = "Нет данных";
-        
-        public static readonly Dictionary<string, double> OrientationValues = new Dictionary<string, double>()
+
+        private static readonly Dictionary<string, double> OrientationValues = new ()
         {
             {North, 1.1 },
             {Northeast, 1.05 },

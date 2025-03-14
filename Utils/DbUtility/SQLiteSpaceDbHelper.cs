@@ -1,11 +1,11 @@
-﻿using HVACLoadTerminals.Models;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Data.SQLite;
+using HVACLoadTerminals.Models;
+using Newtonsoft.Json;
 
-namespace HVACLoadTerminals.DbUtility
+namespace HVACLoadTerminals.Utils.DbUtility
 {
-    public static class SQLiteSpaceDbHelper
+    public static class SqLiteSpaceDbHelper
     {
 
         public static void ExecuteSpaceDataParametersCommand(string insertSql, SpaceModel spaceData, SQLiteConnection connection)
@@ -34,7 +34,7 @@ namespace HVACLoadTerminals.DbUtility
         public static void SpaceDataUpdateOrInsert(SpaceModel spaceData, SQLiteConnection connection)
         {
 
-            var checkSql = "SELECT 1 FROM Spaces_SpaceData WHERE S_ID = @S_ID";
+            var checkSql = "SELECT 1 FROM Spaces_spacedata WHERE S_ID = @S_ID";
             using (var checkCommand = new SQLiteCommand(checkSql, connection))
             {
                 checkCommand.Parameters.AddWithValue("@S_ID", spaceData.S_ID);
@@ -53,28 +53,30 @@ namespace HVACLoadTerminals.DbUtility
         }
         public static void SpaceDataUpdate(SpaceModel spaceData, SQLiteConnection connection)
         {
-
-            var updateSql = @"
-                UPDATE Spaces_SpaceData
-                SET S_Number = @S_Number,
-                    S_Name = @S_Name,
-                    S_height = @S_height,
-                    S_area = @S_area,
-                    S_Volume = @S_Volume,
-                    S_level = @S_level,
-                    geometry_data = @geometry_data
-                WHERE S_ID = @S_ID;
-            ";
+            var updateSql = """
+            
+                            UPDATE Spaces_spacedata
+                            SET S_Number = @S_Number,
+                                S_Name = @S_Name,
+                                S_height = @S_height,
+                                S_area = @S_area,
+                                S_Volume = @S_Volume,
+                                S_level = @S_level,
+                                geometry_data = @geometry_data
+                            WHERE S_ID = @S_ID;
+                                        
+                            """;
             ExecuteSpaceDataParametersCommand(updateSql, spaceData, connection);
         }
         public static void SpaceDataInsertOrReplace(SpaceModel spaceData, SQLiteConnection connection)
         {
-            var insertSql = @"
-                    INSERT OR REPLACE INTO Spaces_SpaceData (S_ID, S_Number, S_Name, S_height, S_area, S_Volume, S_level,  geometry_data) VALUES (
-                        @S_ID, @S_Number, @S_Name, @S_height, @S_area, @S_Volume, @S_level, @geometry_data);
-                ";
+            var insertSql = """
+                            
+                            INSERT OR REPLACE INTO Spaces_spacedata (S_ID, S_Number, S_Name, S_height, S_area, S_Volume, S_level,  geometry_data) VALUES (
+                                @S_ID, @S_Number, @S_Name, @S_height, @S_area, @S_Volume, @S_level, @geometry_data);
+                                            
+                            """;
             ExecuteSpaceDataParametersCommand(insertSql, spaceData, connection);
-
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System.Data.SQLite;
 
-namespace HVACLoadTerminals.DbUtility
+namespace HVACLoadTerminals.Utils.DbUtility
 {
     public  class SqlLiteSystemFamilyDbHelper
     {
@@ -11,7 +11,7 @@ namespace HVACLoadTerminals.DbUtility
         private  void GetDistinctSystemEquipmentTypeFromDb()
 
         {
-            var query = "SELECT DISTINCT system_equipment_type FROM Terminals_equipmentbase";
+            var query = $"SELECT DISTINCT system_equipment_type FROM Terminals_equipmentbase";
             using (var command = new SQLiteCommand(query, Connection))
             {
                 using (var reader = command.ExecuteReader())

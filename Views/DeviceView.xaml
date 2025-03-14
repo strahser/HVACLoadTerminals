@@ -5,6 +5,33 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:viewmodels="clr-namespace:HVACLoadTerminals.ViewModels" d:DataContext="{d:DesignInstance Type=viewmodels:DeviceViewModel}"
         mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/HVACLoadTerminals;component/Resources/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <!-- DataGrid Styles -->
+            <Style TargetType="DataGrid">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="BorderBrush" Value="#CCCCCC"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="RowHeight" Value="30"/>
+                <Setter Property="HeadersVisibility" Value="Column"/>
+                <Setter Property="AlternatingRowBackground" Value="#F9F9F9"/>
+            </Style>
+            <Style TargetType="DataGridColumnHeader">
+                <Setter Property="Background" Value="#E0E0E0"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="Padding" Value="5"/>
+            </Style>
+            <Style TargetType="DataGridCell">
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="5"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid>
         <StackPanel>
             <TextBlock>Категория</TextBlock>
@@ -13,13 +40,21 @@
                        DisplayMemberPath="Name" 
                        SelectedValue ="{Binding SelectedCategory}" />
             <TextBlock>Тип Семейства</TextBlock>
-            <ComboBox x:Name="familyTypeComboBox" ItemsSource="{Binding FamilyTypesOfCategory}"  SelectedValue="{Binding SelectedFamily}" />
+            <ComboBox x:Name="FamilyTypeComboBox" 
+                      ItemsSource="{Binding FamilyTypesOfCategory}"  
+                      SelectedValue="{Binding SelectedFamily}" />
+            
             <TextBlock>Параметр Максимальный расход</TextBlock>
-            <ComboBox x:Name="ParameterChooseComboBox" ItemsSource="{Binding ParametrList}" SelectedValue="{Binding SelectedProperty}"/>
+            <ComboBox x:Name="ParameterChooseComboBox" 
+                      ItemsSource="{Binding ParameterList}" 
+                      SelectedValue="{Binding SelectedProperty}"/>
+            
             <TextBlock>Имя параметра Мощность Устройства</TextBlock>
             <TextBox Text="{Binding SelectedFlowParameterName}" />            
+            
             <TextBlock>Система</TextBlock>
             <ComboBox x:Name="SystemTypesDataComboBox" ItemsSource="{Binding SystemTypesData}" SelectedValue="{Binding SelectedSystemType}"/>
+            
             <TextBlock FontSize="16">Характеристика экземпляров семейства</TextBlock>
             <DataGrid x:Name="EquipmentPropertyDataGrid" AutoGenerateColumns="False" 
                       ItemsSource="{Binding Path= DevicePropertyList}"  
@@ -33,10 +68,9 @@
                     <DataGridTextColumn Header="Экземпляр Семейства"   Binding="{Binding family_instance_name}"  />
                     <DataGridTextColumn Header="Имя парам.расхода"   Binding="{Binding system_flow_parameter_name}"  />
                     <DataGridTextColumn Header="Расход м3/ч (кВт/ч)"   Binding="{Binding max_flow}"  />
-
                 </DataGrid.Columns>
             </DataGrid>
-            <Button Command="{Binding SaveDevieDataCommand}">Сохранить данные</Button>
+            <Button Command="{Binding SaveDeviceDataCommand}">Сохранить данные</Button>
         </StackPanel>
     </Grid>
 </Window>

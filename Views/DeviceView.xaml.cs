@@ -15,8 +15,8 @@ namespace HVACLoadTerminals.Views
         public DeviceView(SQLiteConnection connection)
         {
             InitializeComponent();
-            var DeviceVm = new DeviceViewModel(connection);
-            DataContext = DeviceVm;            
+            var deviceVm = new DeviceViewModel(connection);
+            DataContext = deviceVm;            
         }
         private void DataGrid_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
     => e.Column.Header = ((PropertyDescriptor)e.PropertyDescriptor)?.DisplayName ?? e.Column.Header;

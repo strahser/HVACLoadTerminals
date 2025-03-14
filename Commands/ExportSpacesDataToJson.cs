@@ -8,8 +8,8 @@ using System.Linq;
 using System;
 using HVACLoadTerminals.Models;
 using System.Diagnostics;
-using HVACLoadTerminals.DbUtility;
 using HVACLoadTerminals.Utils;
+using HVACLoadTerminals.Utils.DbUtility;
 
 
 namespace HVACLoadTerminals.Commands
@@ -26,7 +26,7 @@ namespace HVACLoadTerminals.Commands
 
             // Создаем список данных о пространствах
             var spaceDataList = new List<SpaceModel>();
-            var connection = RevitConfig.connection;
+            var connection = RevitConfig.Connection;
             connection.Open();
 
             // Перебираем все пространства
@@ -40,19 +40,18 @@ namespace HVACLoadTerminals.Commands
                     spaceData.geometry_data.pcx = spaceData.geometry_data.pcx * 304.8;
                     spaceData.geometry_data.pcy = spaceData.geometry_data.pcy * 304.8;
                     spaceDataList.Add(spaceData);
-                        SQLiteSpaceDbHelper.SpaceDataUpdateOrInsert(spaceData, connection);
+                    SqLiteSpaceDbHelper.SpaceDataUpdateOrInsert(spaceData, connection);
                 }
                 catch (Exception exception) { Debug.Write(exception); }
             }
             try
             {
                 var json = JsonConvert.SerializeObject(spaceDataList, Formatting.Indented);
-                var filePath = Path.Combine(RevitConfig.projectDirectory, "space_data.json");
+                var filePath = Path.Combine(RevitConfig.ProjectDirectory, "space_data.json");
                 File.WriteAllText(filePath, json);
                 TaskDialog.Show("Экспорт данных", "Данные о пространствах экспортированы в файл"+ filePath);
             }
             catch (Exception exception) { Debug.Write(exception); TaskDialog.Show("Экспорт данных", "Данные экспортируются с ошибками."); }
-
             return Result.Succeeded;
         }
     }

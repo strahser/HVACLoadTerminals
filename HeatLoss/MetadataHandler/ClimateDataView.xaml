@@ -1,0 +1,81 @@
+<Window x:Class="HVACLoadTerminals.HeatLoss.MetadataHandler.ClimateDataView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Climate Data Selection"
+        Height="600" Width="1000"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/HVACLoadTerminals;component/Resources/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- Добавленная строка для TextBlock -->
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Information TextBlock -->
+        <TextBlock Grid.Row="0" 
+                   Text="Выберите область и город для получения данных согласно СП 131.13330.2020 таблица 3.1"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,10"/>
+
+        <!-- Region Selection -->
+        <Label Grid.Row="1" Content="Region:"/>
+        <ComboBox x:Name="RegionComboBox"
+                  ItemsSource="{Binding Regions}"
+                  SelectedItem="{Binding SelectedRegion}"
+                  Grid.Row="1"
+                  Margin="0,5,0,15"
+                  HorizontalAlignment="Stretch"
+                  DisplayMemberPath="."
+                  SelectedIndex="0"/>
+
+        <!-- City Selection -->
+        <Label Grid.Row="2" Content="City:"/>
+        <ComboBox x:Name="CityComboBox"
+                  ItemsSource="{Binding Cities}"
+                  SelectedItem="{Binding SelectedCity}"
+                  Grid.Row="2"
+                  Margin="0,5,0,15"
+                  HorizontalAlignment="Stretch"
+                  DisplayMemberPath="."
+                  SelectedIndex="0"/>
+        <ScrollViewer Grid.Row="3">
+            <DataGrid ItemsSource="{Binding ClimateDataRows}" AutoGenerateColumns="False" IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Свойство" Binding="{Binding PropertyName}" Width="Auto"/>
+                    <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="*"/>
+                    <DataGridTextColumn Header="Значение" Binding="{Binding Value}" Width="Auto"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </ScrollViewer>
+        
+
+        <!-- Buttons -->
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            
+            <Button x:Name="OkButton"
+                    Command="{Binding OnConfirmCommand}"
+                    Content="OK"
+                    Width="75"
+                    Margin="0,0,10,0"/>
+
+            <Button Content="Cancel"
+                    Width="75"
+                    Click="CancelButton_Click"/>
+        </StackPanel>
+        
+    </Grid>
+</Window>

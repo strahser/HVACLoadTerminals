@@ -30,7 +30,7 @@ namespace HVACLoadTerminals.Utils
             {
                 // Plot the polygon
                 var spaceBoundary = SpaceBoundaryModel;
-                double scaleFactor = 10;
+                double scaleFactor = 5;
                 var wpfLine = CreateWpfLineFromRevitCurve(Curve, scaleFactor);
                 CustomCanvas.Children.Add(wpfLine);
 
@@ -146,7 +146,7 @@ namespace HVACLoadTerminals.Utils
             var json = JsonConvert.SerializeObject(SpaceBoundaryModel, Formatting.Indented);
 
             // Записываем JSON в файл
-            System.IO.File.WriteAllText(RevitConfig.polygonJsonPathe, json);
+            System.IO.File.WriteAllText(RevitConfig.PolygonJsonPathe, json);
         }
     }
 }

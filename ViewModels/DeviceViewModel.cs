@@ -4,14 +4,15 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
 using System.Data.SQLite;
 using Autodesk.Revit.DB;
+using ReactiveUI.Fody.Helpers;
+using Autodesk.Revit.UI;
 using HVACLoadTerminals.Models;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.StaticData;
 using HVACLoadTerminals.Utils;
-using SQLiteCRUD;
+using HVACLoadTerminals.Utils.DbUtility;
 
 
 namespace HVACLoadTerminals.ViewModels
@@ -34,23 +35,23 @@ namespace HVACLoadTerminals.ViewModels
                 x => x.SelectedProperty,
                 x => x.SelectedSystemType
                 )
-                .Subscribe(_ => GetDevieceList());
+                .Subscribe(_ => GetDeviceList());
         }
 
         #region Свойства
 
         readonly SQLiteConnection connection;
-        public List<CustomMepCategories> CategoriesList { get { return MepCategories.AllCategories; } }
+        public List<CustomMepCategories> CategoriesList => MepCategories.AllCategories;
 
         [Reactive] public ObservableCollection<Element> FamilyNames { get; set; } = new ObservableCollection<Element>();
 
-        [Reactive] public ObservableCollection<SystemsTypes> SystemTypesData { get; set; } = new ObservableCollection<SystemsTypes>(SystemData.AllSystems);
+        [Reactive] public ObservableCollection<SystemsTypes> SystemTypesData { get; set; } = new ObservableCollection<SystemsTypes>(HvacSystemData.AllSystems);
                    
         [Reactive] public Dictionary<string, List<FamilySymbol>> FamilyTypes { get; set; } = new Dictionary<string, List<FamilySymbol>>();
                    
         [Reactive] public List<string> FamilyTypesOfCategory { get; set; } = new List<string>();
                    
-        [Reactive] public List<string> ParametrList { get; set; } = new List<string>();
+        [Reactive] public List<string> ParameterList { get; set; } = new List<string>();
                    
         [Reactive] public ObservableCollection<DevicePropertyModel> DevicePropertyList { get; set; } = new ObservableCollection<DevicePropertyModel>();
 
@@ -58,52 +59,57 @@ namespace HVACLoadTerminals.ViewModels
         [Reactive] public string SelectedFamily { get; set; }
 
         [Reactive] public string SelectedProperty { get; set; }
+        
         [Reactive] public string SelectedFlowParameterName { get; set; } = "";
 
         [Reactive] public SystemsTypes SelectedSystemType { get; set; }
 
         #endregion
 
-        private RelayCommand _SaveDevieDataCommand;
-        public RelayCommand SaveDevieDataCommand
+        private RelayCommand _saveDeviceDataCommand;
+        
+        public RelayCommand SaveDeviceDataCommand
         {
             get
             {
-                return _SaveDevieDataCommand ??
-                (_SaveDevieDataCommand = new RelayCommand(obj => UpdateTerminalDb()));
+                return _saveDeviceDataCommand ??= new RelayCommand(obj => UpdateTerminalDb());
             }
         }
 
         private void UpdateTerminalDb() {
 
-            var sqlHelper = new SQLiteEquipmentDbHelper(connection);
+            var sqlHelper = new SqLiteEquipmentDbHelper(connection);
             sqlHelper.CreateOrUpdate(DevicePropertyList.ToList());
         }
-
         private void GetFamilyDict()
         {
-            if(SelectedCategory != null)
-            FamilyTypes = CollectorQuery.FindFamilyTypes(RevitConfig.Document, SelectedCategory.Value);
-            FamilyTypesOfCategory = CollectorQuery.GetAllElementsTypeOfCategory(RevitConfig.Document, SelectedCategory.Value);
+            if (SelectedCategory != null)
+            {
+                
+                FamilyTypes = CollectorQuery.FindFamilyTypes(RevitConfig.Document, SelectedCategory.Value);
+            
+                FamilyTypesOfCategory = CollectorQuery.GetAllElementsTypeOfCategory(RevitConfig.Document, SelectedCategory.Value);
+                
+            }
         }
         private void GetParametersList()
         {
             if (SelectedCategory != null && SelectedFamily != null)
             {
-                var familylist = FamilyTypes[SelectedFamily].ToList<Element>();
-                var elementOfType = familylist.FirstOrDefault();
-                ParametrList = CollectorQuery.GetParameters(elementOfType)
-                .Where(p => elementOfType.LookupParameter(p).StorageType == StorageType.Double).ToList();
+                var familyList = FamilyTypes[SelectedFamily].ToList<Element>();
+                var elementOfType = familyList.FirstOrDefault();
+                ParameterList = CollectorQuery.GetParameters(elementOfType)
+                .Where(p => elementOfType != null && elementOfType.LookupParameter(p).StorageType == StorageType.Double).ToList();
             }
         }
-        private void GetDevieceList()
+        private void GetDeviceList()
         {
             DevicePropertyList.Clear();
 
-            if (SelectedProperty != null && SelectedFamily != null && SelectedCategory != null && SelectedProperty != null && SelectedSystemType != null)
+            if (SelectedProperty != null && SelectedFamily != null && SelectedCategory != null  && SelectedSystemType != null)
                 
                 foreach (var el in FamilyTypes[SelectedFamily].ToList<Element>())
-            {
+                {
                     try
                     {
                         var device = new DevicePropertyModel()
@@ -118,12 +124,12 @@ namespace HVACLoadTerminals.ViewModels
                         DevicePropertyList.Add(device);
                     }
                     catch (Exception e) { MessageBox.Show(e.ToString()); }
-            }
+                }
         }
         private double CheckFlowSystemConvertor(Element el)
         {
-            var isFan_coil_system = SelectedSystemType.Value != StaticSystemsTypes.Fan_coil_system;
-            return isFan_coil_system
+            var isFanCoilSystem = SelectedSystemType.Value != StaticSystemsTypes.Fan_coil_system;
+            return isFanCoilSystem
                 ? ParameterDisplayConvertor.CubicMetersPerHour(el, SelectedProperty)
                 : ParameterDisplayConvertor.Watts(el, SelectedProperty);
         }

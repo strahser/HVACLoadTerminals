@@ -1,34 +1,32 @@
-﻿using HVACLoadTerminals;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Windows;
 using HVACLoadTerminals.Models;
-
-namespace SQLiteCRUD
+namespace HVACLoadTerminals.Utils.DbUtility
 
 {
 
-    public class SQLiteEquipmentDbHelper
+    public class SqLiteEquipmentDbHelper
     {
         private SQLiteConnection connection;
         private readonly string  _tableName = "Terminals_equipmentbase";
 
-        public SQLiteEquipmentDbHelper(SQLiteConnection _connection)
+        public SqLiteEquipmentDbHelper(SQLiteConnection _connection)
         {
             connection = _connection;
         }
 
 
         // Метод для проверки существования записи по Id
-        public bool RecordExists(string equipment_id)
+        private bool RecordExists(string equipmentId)
         {
                 using (var command = new SQLiteCommand(connection))
                 {
                     command.CommandText = $"SELECT 1 FROM {_tableName} WHERE equipment_id = @equipment_id";
-                    command.Parameters.AddWithValue("@equipment_id", equipment_id);
+                    command.Parameters.AddWithValue("@equipment_id", equipmentId);
                     return command.ExecuteScalar() != null;
-            }
+                }
         }
 
         // Метод для добавления или обновления записи в базе данных
@@ -48,16 +46,16 @@ namespace SQLiteCRUD
                                 // Обновление записи
                                 using (var command = new SQLiteCommand(connection))
                                 {
-                                    command.CommandText = @"
-                                        UPDATE Terminals_equipmentbase
-                                        SET family_device_name = @family_device_name, 
-                                        max_flow = @max_flow,
-                                        family_instance_name = @family_instance_name,
-                                        system_flow_parameter_name = @system_flow_parameter_name,
-                                        system_equipment_type = @system_equipment_type,
-                                        update_stamp =@update_stamp
-                                        WHERE equipment_id = @equipment_id;
-                                    ";
+                                    command.CommandText = $"""
+                                                           UPDATE Terminals_equipmentbase
+                                                           SET family_device_name = @family_device_name, 
+                                                           max_flow = @max_flow,
+                                                           family_instance_name = @family_instance_name,
+                                                           system_flow_parameter_name = @system_flow_parameter_name,
+                                                           system_equipment_type = @system_equipment_type,
+                                                           update_stamp =@update_stamp
+                                                           WHERE equipment_id = @equipment_id;
+                                                           """;
                                     command.Parameters.AddWithValue("@equipment_id", model.equipment_id);
                                     command.Parameters.AddWithValue("@family_device_name", model.family_device_name);
                                     command.Parameters.AddWithValue("@max_flow", model.max_flow);
@@ -74,10 +72,12 @@ namespace SQLiteCRUD
                                 // Добавление новой записи
                                 using (var command = new SQLiteCommand(connection))
                                 {
-                                    command.CommandText = @"
-                                        INSERT INTO Terminals_equipmentbase (equipment_id,family_device_name, max_flow,family_instance_name,system_flow_parameter_name,system_equipment_type,creation_stamp)
-                                        VALUES (@equipment_id,@family_device_name, @max_flow,@family_instance_name,@system_flow_parameter_name,@system_equipment_type,@creation_stamp);
-                                    ";
+                                    command.CommandText = $"""
+                                                           INSERT INTO Terminals_equipmentbase (equipment_id,family_device_name, max_flow,family_instance_name,
+                                                                                                system_flow_parameter_name,system_equipment_type,creation_stamp)
+                                                           VALUES (@equipment_id,@family_device_name, @max_flow,@family_instance_name,
+                                                                   @system_flow_parameter_name,@system_equipment_type,@creation_stamp);
+                                                           """;
                                     command.Parameters.AddWithValue("@equipment_id", model.equipment_id);
                                     command.Parameters.AddWithValue("@family_device_name", model.family_device_name);
                                     command.Parameters.AddWithValue("@max_flow", model.max_flow);

@@ -25,7 +25,7 @@ namespace HVACLoadTerminals.Commands
         {
             RevitConfig.Initialize(commandData);
             _Document = RevitConfig.Document;
-            connection = RevitConfig.connection;
+            connection = RevitConfig.Connection;
             connection.Open();
             
             GetSelectedFamilyEquipmentDB();
