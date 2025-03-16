@@ -10,7 +10,6 @@ using ReactiveUI.Fody.Helpers;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.Models;
 using HVACLoadTerminals.ModelsStatic;
-using HVACLoadTerminals.StaticData;
 using HVACLoadTerminals.Utils;
 using HVACLoadTerminals.Utils.DbUtility;
 

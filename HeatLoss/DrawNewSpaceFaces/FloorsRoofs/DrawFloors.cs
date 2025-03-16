@@ -13,7 +13,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs
     public abstract class DrawFloors
     {  
         public static void DrawFloorsForSelectedSpaces(Document hvacDocument,List<Space> spaces,Level level, 
-            FloorType floorType,string enclosureType=EnclosureTypeOptions.Floor)
+            FloorType floorType,string enclosureType)
         {
 
             foreach (var space in spaces.Cast<Space>())
