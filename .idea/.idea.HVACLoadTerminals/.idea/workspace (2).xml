@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="20bc68da-595b-4dd0-898e-7767bf77637f" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/CreateParameters/ParameterProjectInfoCreator.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/DIrectShape/ConvertToDirectShapeCommand.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/DIrectShape/CreateDirectShapesForEachElement.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/ParametersHandler.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/HeatLoss/HeatLossResult/CreateDocxReport.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/HeatLoss/HeatLossResult/HeatBalanceParametersMappings.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/HeatLoss/MetadataHandler/ClimateDataCommand.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/HeatLoss/MetadataHandler/ClimateDataView.xaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/HeatLoss/MetadataHandler/ClimateDataView.xaml .cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/HeatLoss/MetadataHandler/ClimateDataViewModel.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ModelsStatic/ParameterNames.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Commands/DeviceUpdate.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Commands/DeviceUpdate.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Commands/DrawTerminalsFromDb.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Commands/DrawTerminalsFromDb.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Commands/ExportSpacesDataToJson.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Commands/ExportSpacesDataToJson.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CreateParameters/BaseParameterModel.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CreateParameters/BaseParameterCreator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CreateParameters/ParameterSpaceModel.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CreateParameters/ParameterSpaceCreator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CreateParameters/ParameterSurfacesModel.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CreateParameters/ParameterSurfacesCreator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/FloorsRoofs/DrawFloors.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/FloorsRoofs/DrawFloors.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/FloorsRoofs/DrawFloorsViewModel.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/FloorsRoofs/DrawFloorsViewModel.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/FloorsRoofs/DrawFloorsWindow.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/FloorsRoofs/DrawFloorsWindow.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/FloorsRoofs/DrawFloorsWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/FloorsRoofs/DrawFloorsWindow.xaml.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/MainCommand.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/MainCommand.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/MainViewModel.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/MainViewModel.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/MainWindow.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/MainWindow.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/MainWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/MainWindow.xaml.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/Walls/DrawFaceGeometry.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/Walls/DrawFaceGeometry.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/Walls/DrawWalls.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/Walls/DrawWalls.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/Walls/DrawWallsCommand.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/Walls/DrawWallsCommand.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/Walls/WallOrientationWindow.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/Walls/WallOrientationWindow.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/Walls/WallOrientationWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/Walls/WallOrientationWindow.xaml.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/WindowsDoors/DrawWindowsAndDoorsCommand.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/WindowsDoors/DrawWindowsAndDoorsCommand.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/WindowsDoors/WindowsAndDoorsSelectionWindow.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/WindowsDoors/WindowsAndDoorsSelectionWindow.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/WindowsDoors/WindowsAndDoorsSelectionWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/WindowsDoors/WindowsAndDoorsSelectionWindow.xaml.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DrawNewSpaceFaces/WindowsDoors/WindowsAndDoorsViewModel.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/DrawNewSpaceFaces/WindowsDoors/WindowsAndDoorsViewModel.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/HVACLoadTerminals.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/HVACLoadTerminals.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/HeatLoss/HeatLossWindow.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/HeatLossResult/HeatLossWindow.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/HeatLoss/HeatLossWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/HeatLoss/HeatLossResult/HeatLossWindow.xaml.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Models/ParameterSpaceModel.cs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModelsStatic/SystemData.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ModelsStatic/HvacSystemData.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Utils/CanvasHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Utils/CanvasHelper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Utils/CollectorQuery.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Utils/CollectorQuery.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Utils/DbUtility/DatabaseConfig.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Utils/DbUtility/DatabaseConfig.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Utils/DbUtility/SQLiteEquipmentDbHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Utils/DbUtility/SQLiteEquipmentDbHelper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Utils/DbUtility/SQLiteSpaceDbHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Utils/DbUtility/SQLiteSpaceDbHelper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Utils/DbUtility/SqlLiteSystemFamilyDbHelper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Utils/DbUtility/SqlLiteSystemFamilyDbHelper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Utils/ParametersUtility.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Utils/ParametersUtility.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Utils/RevitConfig.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Utils/RevitConfig.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ViewModels/DeviceViewModel.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ViewModels/DeviceViewModel.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Views/DeviceView.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/Views/DeviceView.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Views/DeviceView.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Views/DeviceView.xaml.cs" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="XML File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;strahser&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/strahser/HVACLoadTerminals.git&quot;,
+    &quot;accountId&quot;: &quot;e6cc91c3-a49f-49de-8606-619e5c45a7d8&quot;
+  }
+}</component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/eee8432ef53a4ab48075de6978057fd81f49920/14/9269659b/MechanicalSystem.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/eee8432ef53a4ab48075de6978057fd81f49920/4e/b927fc95/Face.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/eee8432ef53a4ab48075de6978057fd81f49920/6c/7324ab1b/ProjectInfo.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/eee8432ef53a4ab48075de6978057fd81f49920/dc/e4392d6d/ConstructionType.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/eee8432ef53a4ab48075de6978057fd81f49920/e8/405ed97e/Wall.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Utils/DbUtility/DatabaseConfig.cs" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7
+}</component>
+  <component name="ProjectId" id="2qOFd5JuP9prm37G04vZNwRCxA7" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;MVVM-Fody&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.sourceCode.C#&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;sqlite&quot;
+    ],
+    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
+      &quot;Xaml&quot;
+    ]
+  }
+}</component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="20bc68da-595b-4dd0-898e-7767bf77637f" name="Changes" comment="" />
+      <created>1734525831265</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1734525831265</updated>
+      <workItem from="1734525837272" duration="6812000" />
+      <workItem from="1734588873280" duration="13156000" />
+      <workItem from="1734674932955" duration="1284000" />
+      <workItem from="1734939204198" duration="7349000" />
+      <workItem from="1735306613912" duration="1225000" />
+      <workItem from="1737637026911" duration="5930000" />
+      <workItem from="1737698989665" duration="16504000" />
+      <workItem from="1737959231240" duration="18983000" />
+      <workItem from="1738044347236" duration="8117000" />
+      <workItem from="1739801182167" duration="583000" />
+      <workItem from="1740052533489" duration="3001000" />
+      <workItem from="1740118056054" duration="17374000" />
+      <workItem from="1740376677090" duration="24184000" />
+      <workItem from="1740463142139" duration="20850000" />
+      <workItem from="1740549788538" duration="20966000" />
+      <workItem from="1740635810632" duration="19455000" />
+      <workItem from="1740722507443" duration="19493000" />
+      <workItem from="1740827326960" duration="718000" />
+      <workItem from="1740828890602" duration="837000" />
+      <workItem from="1740829760734" duration="224000" />
+      <workItem from="1740830181320" duration="372000" />
+      <workItem from="1740982083811" duration="7404000" />
+      <workItem from="1741002565793" duration="9172000" />
+      <workItem from="1741068069376" duration="12841000" />
+      <workItem from="1741154215916" duration="1974000" />
+      <workItem from="1741157381619" duration="15879000" />
+      <workItem from="1741240678110" duration="13459000" />
+      <workItem from="1741331435645" duration="17114000" />
+      <workItem from="1741586147729" duration="20011000" />
+      <workItem from="1741676960591" duration="19033000" />
+      <workItem from="1741759690523" duration="16785000" />
+      <workItem from="1742029970606" duration="60000" />
+    </task>
+    <task id="LOCAL-00001" summary="добавил space shared parameter">
+      <option name="closed" value="true" />
+      <created>1734526117326</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1734526117326</updated>
+    </task>
+    <task id="LOCAL-00002" summary="рефакторинг 1">
+      <option name="closed" value="true" />
+      <created>1737728496123</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1737728496123</updated>
+    </task>
+    <task id="LOCAL-00003" summary="add mvvm heat loss. Refactoring parameters (deep seek)">
+      <option name="closed" value="true" />
+      <created>1741002163936</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1741002163936</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="UnityCheckinConfiguration" checkUnsavedScenes="true" />
+  <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
+  <component name="VcsManagerConfiguration">
+    <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
+    <MESSAGE value="добавил space shared parameter" />
+    <MESSAGE value="рефакторинг 1" />
+    <MESSAGE value="add mvvm heat loss. Refactoring parameters (deep seek)" />
+    <option name="LAST_COMMIT_MESSAGE" value="add mvvm heat loss. Refactoring parameters (deep seek)" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>
