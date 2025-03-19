@@ -1,14 +1,8 @@
-﻿namespace HVACLoadTerminals.StaticData
+﻿namespace HVACLoadTerminals.ModelsStatic
 {
-    public class CalculationOption
+    public class CalculationOption(string key, string value)
     {
-        public CalculationOption(string key, string value)
-        {
-            Name = key;
-            DisplayName = value;
-        }
-
-        public string Name { get; }
-        public string DisplayName { get; }
+        public string Name { get; } = key;
+        public string DisplayName { get; } = value;
     }
 }
