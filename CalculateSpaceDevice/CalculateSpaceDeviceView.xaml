@@ -1,0 +1,219 @@
+﻿<Window x:Class="HVACLoadTerminals.Views.OffsetDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Расчет оборудования HVAC" 
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized" 
+        FontFamily="Segoe UI"
+        Background="#F0F0F0">
+    
+    <Window.Resources>
+        <!-- Общие стили -->
+        <Style TargetType="TextBlock">
+            <Setter Property="Margin" Value="5 2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="Label">
+            <Setter Property="Margin" Value="5 2"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#333333"/>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Margin" Value="5 2"/>
+            <Setter Property="Padding" Value="3"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Margin" Value="5 2"/>
+            <Setter Property="Padding" Value="3"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="5 8"/>
+            <Setter Property="Padding" Value="8 4"/>
+            <Setter Property="Background" Value="#0078D4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="4" Opacity="0.2" ShadowDepth="2"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#006CBE"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#005696"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="RowBackground" Value="White"/>
+            <Setter Property="AlternatingRowBackground" Value="#F8F8F8"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#0078D4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="5 3"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="MainGrid" Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/> <!-- или GridLength.Auto в зависимости от желаемого поведения -->
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Левая панель - Ввод данных -->
+        <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="2"
+                Background="White" CornerRadius="5" Padding="5"
+                Margin="0 0 5 0" BorderBrush="#DDDDDD" BorderThickness="1">
+            <StackPanel>
+                <TextBlock Text="Исходные данные" FontSize="16" FontWeight="Bold" 
+                         Margin="0 0 0 10" HorizontalAlignment="Center"/>
+                
+                <Label Content="Тип оборудования:"/>
+                <ComboBox x:Name="SystemEquipmentTypeComboBox" 
+                        ItemsSource="{Binding SystemEquipmentTypes}"
+                        SelectedItem="{Binding SelectedSystemEquipmentType}"/>
+                
+                <Label Content="Название оборудования:"/>
+                <ComboBox x:Name="FamilyDeviceNameComboBox" 
+                        ItemsSource="{Binding FamilyDeviceNames}"
+                        SelectedItem="{Binding SelectedFamilyDeviceName}"/>
+                
+                <Label Content="Номер выбранной стены:"/>
+                <ComboBox x:Name="CurveIndexComboBox1" 
+                        ItemsSource="{Binding CurveIndices}" 
+                        SelectedItem="{Binding SelectedCurveIndex1, Mode=TwoWay}"/>
+                
+                <Label Content="Номер стены для получения центра:"/>
+                <ComboBox x:Name="CurveIndexComboBox2" 
+                        ItemsSource="{Binding CurveIndices}"                   
+                        SelectedItem="{Binding SelectedCurveIndex2, Mode=TwoWay}"/>
+                
+                <Button Command="{Binding GetCurveCenterCommand}" 
+                      Content="Получить Центр кривой 2"
+                      Margin="0 15 0 5"/>
+                
+                <Label Content="Смещение:"/>
+                <TextBox x:Name="OffsetDistanceTextBox" 
+                       Text="{Binding OffsetDistance, Mode=TwoWay, StringFormat=N2}"/>
+                
+                <Label Content="Начальное Смещение:"/>
+                <TextBox x:Name="StartOffsetDistanceTextBox" 
+                       Text="{Binding StartOffsetDistance, Mode=TwoWay, StringFormat=N2}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Правая панель - Результаты -->
+        <Border Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
+                Background="White" CornerRadius="5" Padding="5"
+                Margin="5 0 0 0" BorderBrush="#DDDDDD" BorderThickness="1">
+            <StackPanel>
+                <TextBlock Text="Результат расчета" FontSize="16" FontWeight="Bold" 
+                         Margin="0 0 0 10" HorizontalAlignment="Center"/>
+                
+                <Grid Margin="0 0 0 10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Text="Id Пространства:" Grid.Row="0" Grid.Column="0"/>
+                    <TextBlock Text="{Binding SpaceID}" Grid.Row="0" Grid.Column="1"/>
+                    
+                    <TextBlock Text="Расход системы:" Grid.Row="1" Grid.Column="0"/>
+                    <TextBlock Text="{Binding SystemFlow}" Grid.Row="1" Grid.Column="1"/>
+                    
+                    <TextBlock Text="Наименование системы:" Grid.Row="2" Grid.Column="0"/>
+                    <TextBlock Text="{Binding SystemName}" Grid.Row="2" Grid.Column="1"/>
+                </Grid>
+
+                <Grid Margin="0 10 0 10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Text="Опции расчета:" Grid.Row="0" Grid.Column="0"/>
+                    <ComboBox Grid.Row="0" Grid.Column="1" 
+                            ItemsSource="{Binding CalculationOptions}" 
+                            DisplayMemberPath="DisplayName" 
+                            SelectedItem="{Binding SelectedCalculationOption}"/>
+                    
+                    <Label Content="Количество точек:" Grid.Row="1" Grid.Column="0"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" 
+                           x:Name="NumberOfPointsTextBox" 
+                           Text="{Binding NumberOfPoints, Mode=TwoWay}"/>
+                </Grid>
+
+                <Button x:Name="CalculateTerminalsButton" 
+                      Command="{Binding CalculateTerminalsCommand}" 
+                      Content="Рассчитать оборудование"/>
+                
+                <DataGrid x:Name="dataGrid" 
+                        ItemsSource="{Binding CalculatedDeviceInstance}" 
+                        SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
+                        MaxHeight="200" Margin="0 10">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Наименование Системы" Binding="{Binding system_name}"/>
+                        <DataGridTextColumn Header="Расход" Binding="{Binding SystemFlow}" Width="*"/>
+                        <DataGridTextColumn Header="Тип" Binding="{Binding family_device_name}"/>
+                        <DataGridTextColumn Header="Экземпляр" Binding="{Binding family_instance_name}"/>
+                        <DataGridTextColumn Header="Макс.расход" Binding="{Binding max_flow}"/>
+                        <DataGridTextColumn Header="Кол-во" Binding="{Binding MinDevices}"/>
+                        <DataGridTextColumn Header="K_Ef" Binding="{Binding KEf}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <Button Command="{Binding InsertDevicesCommand}" 
+                      Content="Установить оборудование" 
+                      Margin="0 10 0 0"/>
+                
+                <StackPanel Orientation="Horizontal" Margin="0 10">
+                    <TextBlock Text="Выбранный экземпляр:" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding SelectedDevice}" Margin="5 0 0 0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Canvas для графики -->
+        <Border Grid.Column="1" Grid.Row="2" 
+              Margin="5 10 0 0" CornerRadius="5"
+              Background="White" BorderBrush="#DDDDDD" BorderThickness="1">
+            <ContentControl Content="{Binding CustomCanvas}" Margin="5"/>
+        </Border>
+    </Grid>
+</Window>
