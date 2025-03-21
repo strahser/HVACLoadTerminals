@@ -3,110 +3,131 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:normativeHeatResistance="clr-namespace:HVACLoadTerminals.NormativeHeatResistance"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
-        Title="Нормативное сопротивление" Height="500" Width="800"
-        WindowStartupLocation="CenterScreen">
+        Title="Нормативное сопротивление" 
+        WindowState="Maximized"
+        WindowStartupLocation="CenterScreen"
+        Background="#FFF0F0F0"
+        FontFamily="Segoe UI"
+        
+        >
+    
     
     <Window.DataContext>
         <normativeHeatResistance:NormativeHeatViewModel/>
     </Window.DataContext>
 
     <Window.Resources>
-        <CollectionViewSource x:Key="GroupedElements" Source="{Binding EnclosureElements}">
-            <CollectionViewSource.GroupDescriptions>
-                <PropertyGroupDescription PropertyName="EnclosureType"/>
-            </CollectionViewSource.GroupDescriptions>
-        </CollectionViewSource>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/HVACLoadTerminals;component/Resources/Styles.xaml"/>
+                <ResourceDictionary Source="./NormativeStyle.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="Margin" Value="10 0 10 10"/>
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Foreground" Value="#FF333333"/>
+            </Style>
 
-        <Style x:Key="GroupHeaderStyle" TargetType="GroupItem">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="GroupItem">
-                        <Expander IsExpanded="True" Background="#FFE0E0E0" Margin="0,2">
-                            <Expander.Header>
-                                <DockPanel>
-                                    <CheckBox IsChecked="{Binding DataContext.IsGroupChecked, RelativeSource={RelativeSource AncestorType=Window}}"
-                                              Command="{Binding DataContext.UpdateGroupCheckBoxStateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                              CommandParameter="{Binding Name}"
-                                              Margin="5,0"/>
-                                    <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
-                                    <TextBlock Text="{Binding ItemCount}" Margin="10,0" Foreground="DarkBlue"/>
-                                </DockPanel>
-                            </Expander.Header>
-                            <ItemsPresenter/>
-                        </Expander>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        </ResourceDictionary>
+        
     </Window.Resources>
 
     <Grid Margin="10">
-        <StackPanel>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Building Category Section -->
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Выберите Категорию Здания"/>
             <ComboBox ItemsSource="{Binding BuildingCategories}"
                       SelectedItem="{Binding SelectedCategory}"
-                      Margin="0,0,0,10"
-                      />
+                      Margin="0 0 0 15"/>
+        </StackPanel>
 
+        <!-- Construction Groups Section -->
+        <StackPanel Grid.Row="1">
+            <Grid>
+                <TextBlock Text="Уникальные группы конструкций из энергетической модели"/>
+                <CheckBox Content="Применить ко всем"
+                          IsChecked="{Binding MasterCheckBoxState}"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Margin="0 0 10 0"/>
+            </Grid>
+        </StackPanel>
+
+        <!-- DataGrid Section -->
+        <DataGrid Grid.Row="2" 
+                  ItemsSource="{Binding Source={StaticResource GroupedElements}}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  EnableRowVirtualization="True"
+                  Margin="0 0 0 10"
+                  Style="{StaticResource {x:Type DataGrid}}">
+            
+            <DataGrid.GroupStyle>
+                <GroupStyle ContainerStyle="{StaticResource GroupHeaderStyle}"/>
+            </DataGrid.GroupStyle>
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Тип Конструкции" 
+                                    Binding="{Binding EnclosureType}"
+                                    Width="120"/>
+                <DataGridTextColumn Header="Конструкция" 
+                                    Binding="{Binding ConstructionName}"
+                                    Width="*"/>
+                <DataGridTextColumn Header="Сокращение" 
+                                    Binding="{Binding ShortConstructionName}"
+                                    Width="120"/>
+                <DataGridTextColumn Header="K факт." 
+                                    Binding="{Binding TransferCoefficient, StringFormat=F2}"
+                                    Width="80"/>
+                <DataGridTextColumn Header="K норм." 
+                                    Binding="{Binding NormativeTransferCoefficient, StringFormat=F2}"
+                                    Width="80"
+                                    IsReadOnly="True"/>
+                <DataGridTextColumn Header="R0 норм." 
+                                    Binding="{Binding NormativeTransferThermalCoefficient, StringFormat=F2}"
+                                    Width="80"
+                                    IsReadOnly="True"/>
+                <DataGridTemplateColumn Header="Использовать" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding UseNormative, Mode=TwoWay}"
+                                      HorizontalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Summary Section -->
+        <TextBox Grid.Row="3"
+                 Text="{Binding UpdateSummary}"
+                 IsReadOnly="True"
+                 Margin="0 0 0 10"
+                 Style="{StaticResource SummaryTextBoxStyle}"/>
+
+        <!-- Button Panel -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Обновить поверхности" 
                     Command="{Binding UpdateSurfacesCommand}"
                     Width="150" 
-                    HorizontalAlignment="Left"
-                    Margin="0,0,0,10"/>
-
+                    Margin="0 0 10 0"
+                    Style="{StaticResource DrawFloorsButtonStyle}"/>
+            
             <Button Content="Закрыть окно" 
                     Click="CloseWindow_Click"
                     Width="100"
-                    HorizontalAlignment="Left"
-                    Margin="0,0,0,10"/>
-
-            <CheckBox Content="Применить ко всем"
-                      IsChecked="{Binding MasterCheckBoxState}"
-                      HorizontalAlignment="Right"
-                      Margin="0,0,0,10"/>
-
-            <DataGrid ItemsSource="{Binding Source={StaticResource GroupedElements}}"
-                      AutoGenerateColumns="False"
-                      CanUserAddRows="False"
-                      EnableRowVirtualization="True">
-                
-                <DataGrid.GroupStyle>
-                    <GroupStyle ContainerStyle="{StaticResource GroupHeaderStyle}"/>
-                </DataGrid.GroupStyle>
-
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Конструкция" 
-                                      Binding="{Binding ConstructionType}"
-                                      Width="*"/>
-                    <DataGridTextColumn Header="Сокращение" 
-                                      Binding="{Binding ShortConstructionName}"
-                                      Width="120"/>
-                    <DataGridTextColumn Header="K факт." 
-                                      Binding="{Binding TransferCoefficient, StringFormat=F2}"
-                                      Width="80"/>
-                    <DataGridTextColumn Header="K норм." 
-                                      Binding="{Binding NormativeTransferCoefficient, StringFormat=F2}"
-                                      Width="80"
-                                      IsReadOnly="True"/>
-                    <DataGridTextColumn Header="R0 норм." 
-                                      Binding="{Binding NormativeTransferThermalCoefficient, StringFormat=F2}"
-                                      Width="80"
-                                      IsReadOnly="True"/>
-                    <DataGridTemplateColumn Header="Использовать" Width="100">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <CheckBox IsChecked="{Binding UseNormative, Mode=TwoWay}"
-                                          HorizontalAlignment="Center"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
-
-            <TextBox Text="{Binding UpdateSummary}"
-                     IsReadOnly="True"
-                     Height="100"
-                     Margin="0,10"
-                     VerticalScrollBarVisibility="Auto"/>
+                    Style="{StaticResource DrawRoofsButtonStyle}"/>
         </StackPanel>
+
     </Grid>
 </Window>

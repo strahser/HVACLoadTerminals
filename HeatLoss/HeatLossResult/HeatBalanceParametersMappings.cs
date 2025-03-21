@@ -1,15 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-
 using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.Mechanical;
-using Autodesk.Revit.UI;
-using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
-using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
 using Document = Autodesk.Revit.DB.Document;
 
 namespace HVACLoadTerminals.HeatLoss.HeatLossResult;
@@ -20,13 +13,14 @@ public static class HeatBalanceParametersMappings
     public static void SetParametersFromModelToElementByFaceId(Document doc, ConstructionSurfaceModel model, List<string> parametersToTransfer, ref int totalParametersSet)
     {
         // 1. По FaceId находим элемент, которому нужно установить параметры
-        Element element = FindElementByFaceId(doc, model.FaceId);
+        Element element = FindElementByFaceId(doc, model.RevitElementId);
 
         if (element == null)
         {
-            Debug.WriteLine($"Element with FaceId '{model.FaceId}' not found.");
+            Debug.WriteLine($"Element with FaceId '{model.RevitElementId}' not found.");
             return; // Прерываем выполнение, если элемент не найден
         }
+        Debug.WriteLine($" Found Element with FaceId '{model.RevitElementId}'.");
 
         // 2. Устанавливаем параметры в найденный элемент
         totalParametersSet += SetParametersFromModelToElement(doc, element, model, parametersToTransfer);
@@ -57,45 +51,43 @@ public static class HeatBalanceParametersMappings
         {
             int parametersSetCount = 0; // Счетчик установленных параметров
 
-            using (Transaction tx = new Transaction(doc, "Set Parameters from Model"))
+            using Transaction tx = new Transaction(doc, "Set Parameters from Model");
+            tx.Start();
+
+            foreach (string parameterName in parametersToTransfer)
             {
-                tx.Start();
-
-                foreach (string parameterName in parametersToTransfer)
+                try
                 {
-                    try
+                    Parameter parameter = element.LookupParameter(parameterName);
+
+                    if (parameter != null)
                     {
-                        Parameter parameter = element.LookupParameter(parameterName);
+                        // Получаем значение параметра из модели
+                        object modelValue = GetPropertyValue(model, parameterName);
 
-                        if (parameter != null)
+                        if (modelValue != null)
                         {
-                            // Получаем значение параметра из модели
-                            object modelValue = GetPropertyValue(model, parameterName);
-
-                            if (modelValue != null)
-                            {
-                                // Устанавливаем значение параметра в элементе
-                                ParametersUtility.SetParameterValue(parameter, modelValue, doc);
-                                parametersSetCount++; // Увеличиваем счетчик при успешной установке параметра
-                            }
-                            else
-                            {
-                                Debug.WriteLine($"Value for parameter '{parameterName}' is null in ConstructionSurfaceModel.");
-                            }
+                            // Устанавливаем значение параметра в элементе
+                            ParametersUtility.SetParameterValue(parameter, modelValue, doc);
+                            parametersSetCount++; // Увеличиваем счетчик при успешной установке параметра
                         }
                         else
                         {
-                            Debug.WriteLine($"Parameter '{parameterName}' not found on element with ID: {element.Id.IntegerValue}");
+                            Debug.WriteLine($"Value for parameter '{parameterName}' is null in ConstructionSurfaceModel.");
                         }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Debug.WriteLine($"Error setting parameter '{parameterName}' on element with ID: {element.Id.IntegerValue}. Error: {ex.Message}");
+                        Debug.WriteLine($"Parameter '{parameterName}' not found on element with ID: {element.Id.IntegerValue}");
                     }
                 }
-
-                tx.Commit();
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error setting parameter '{parameterName}' on element with ID: {element.Id.IntegerValue}. Error: {ex.Message}");
+                }
             }
+
+            tx.Commit();
 
             return parametersSetCount;  
         }

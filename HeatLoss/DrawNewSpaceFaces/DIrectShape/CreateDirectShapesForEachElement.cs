@@ -207,7 +207,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape
                     if (sourceParameter != null)
                     {
                         // Читаем значение параметра в зависимости от типа
-                        string parameterValue = GetParameterValueAsString(sourceParameter);
+                        string parameterValue = ParametersUtility.GetParameterValueAsString(sourceParameter);
 
 
                         // Передаем значение параметра
@@ -237,37 +237,6 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape
         }
 
         // Метод для получения значения параметра в виде строки
-        private static string GetParameterValueAsString(Parameter parameter)
-        {
-            string parameterValue = string.Empty;
-
-            switch (parameter.StorageType)
-            {
-                case StorageType.String:
-                    parameterValue = parameter.AsString();
-                    break;
-                case StorageType.Integer:
-                    parameterValue = parameter.AsInteger().ToString();
-                    break;
-                case StorageType.Double:
-                    parameterValue = parameter.AsDouble().ToString();
-                    break;
-                case StorageType.ElementId:
-                    ElementId elementId = parameter.AsElementId();
-                    // Если ID не InvalidElementId, можно попробовать получить элемент и его имя
-                    // (может быть полезно, если параметр ссылается на другой элемент)
-                    if (elementId != ElementId.InvalidElementId)
-                    {
-                        parameterValue = elementId.IntegerValue.ToString(); // Возвращаем ID элемента
-                    }
-
-                    break;
-                default:
-                    parameterValue = "Unsupported parameter type.";
-                    break;
-            }
-
-            return parameterValue;
-        }
+    
     }
 }

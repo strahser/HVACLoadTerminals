@@ -98,14 +98,16 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls
             var spaceHeight = space.get_Parameter(BuiltInParameter.ROOM_UPPER_OFFSET)?.AsDouble() ?? 0;
             var calculateArea = ParameterDisplayConvertor.SquareMeters(wall.get_Parameter(BuiltInParameter.HOST_AREA_COMPUTED).AsDouble());
             
-            //устанавливаем параметры
+            ////устанавливаем параметры в Ревит поверхности
             roomBoundingParam?.Set(0); // 0 - означает false
             heightParameter?.Set(spaceHeight); // берем и устанавливаем в футах
+            
             ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.Orientation), orientationValue);
             ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.SpaceId), space.Id.ToString());
             ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.SpaceNumber), space.Number.ToString());
+            ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.SpaceName), space.Name.ToString());
             ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.TransferCoefficient), faceModel.TransferCoefficient);
-            ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.ConstructionType), faceModel.ConstructionType);
+            ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.ConstructionName), faceModel.ConstructionName);
             ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.EnclosureType), faceModel.EnclosureType);
             ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.ConstructionArea), calculateArea);
             ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.TemperatureInSpace), ParametersHandler.GetSpaceSetHeatPoint(hvacDocument,space));

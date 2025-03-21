@@ -51,7 +51,7 @@ namespace HVACLoadTerminals.DrawNewSpaceFaces.Walls
                                 SpaceNumber = room.Number,
                                 RevitElementId = verticalFace.WallType.Id.ToString(),
                                 FullWallArea = ParameterDisplayConvertor.SquareMeters(face.Area),
-                                ConstructionType = verticalFace.WallType.Name,
+                                ConstructionName = verticalFace.WallType.Name,
                                 EnclosureType = verticalFace.WallType.Kind == WallKind.Curtain ? EnclosureTypeOptions.Curtain  : EnclosureTypeOptions.Wall,
                                 Orientation = OrientationNames.GetSideFromOrientationAzimuth(verticalFace.Orientation),
                                 TransferCoefficient = CheckTransferCoefficient(verticalFace),

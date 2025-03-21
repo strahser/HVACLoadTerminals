@@ -104,13 +104,18 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\OpensHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\WindowsAndDoorsSelectionWindow.xaml.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\WindowsAndDoorsViewModel.cs" />
-    <Compile Include="HeatLoss\HeatLossResult\CreateDocxReport.cs" />
     <Compile Include="HeatLoss\HeatLossResult\HeatBalanceParametersMappings.cs" />
     <Compile Include="HeatLoss\HeatLossResult\HeatLossTableCommand.cs" />
     <Compile Include="HeatLoss\HeatLossResult\HeatLossTableViewModel.cs" />
     <Compile Include="HeatLoss\HeatLossResult\HeatLossWindow.xaml.cs">
       <DependentUpon>HeatLossWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="HeatLoss\HeatLossResult\Reports\CreateDocxReport.cs" />
+    <Compile Include="HeatLoss\HeatLossResult\Reports\CreateJsonReport.cs" />
+    <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\CreateSpecificationCommand.cs" />
+    <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\GenericModelSpecification.cs" />
+    <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\ScheduleCreator.cs" />
+    <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\ScheduleFactory.cs" />
     <Compile Include="HeatLoss\MetadataHandler\ClimateDataCommand.cs" />
     <Compile Include="HeatLoss\MetadataHandler\ClimateDataView.xaml .cs" />
     <Compile Include="HeatLoss\MetadataHandler\ClimateDataViewModel.cs" />
@@ -129,6 +134,7 @@
     <Compile Include="ModelsStatic\OrientationOptions.cs" />
     <Compile Include="ModelsStatic\EnclosureTypeOptions.cs" />
     <Compile Include="NormativeHeatResistance\BuildingCategory.cs" />
+    <Compile Include="NormativeHeatResistance\GroupViewModelConverter.cs" />
     <Compile Include="NormativeHeatResistance\NormativeHeatCommand.cs" />
     <Compile Include="NormativeHeatResistance\NormativeHeatViewModel.cs" />
     <Compile Include="NormativeHeatResistance\NormativeValueCalculator.cs" />
@@ -142,7 +148,6 @@
     <Compile Include="Utils\DbUtility\SQLiteEquipmentDbHelper.cs" />
     <Compile Include="Utils\DbUtility\SQLiteSpaceDbHelper.cs" />
     <Compile Include="Utils\DbUtility\SqlLiteSystemFamilyDbHelper.cs" />
-    <Compile Include="Utils\EnergyModele.cs" />
     <Compile Include="CalculateSpaceDevice\InsertTerminal.cs" />
     <Compile Include="Utils\InfiltrationCalculator.cs" />
     <Compile Include="Utils\ParametersUtility.cs" />
@@ -186,6 +191,9 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="HeatLoss\MetadataHandler\ClimateDataView.xaml" />
+    <Page Include="NormativeHeatResistance\NormativeStyle.xaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Page>
     <Page Include="NormativeHeatResistance\NormativeWindow.xaml" />
     <Page Include="Resources\Styles.xaml" />
     <Page Include="Views\DeviceView.xaml">

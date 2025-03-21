@@ -85,4 +85,46 @@
         <Setter Property="Padding" Value="5"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
+    <!-- Общий стиль для TextBox -->
+    <Style x:Key="SummaryTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Background" Value="#FFF5F5F5"/>
+        <Setter Property="BorderBrush" Value="#FFB0B0B0"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="#FF333333"/>
+        <Setter Property="CaretBrush" Value="Transparent"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Stretch"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="#FF909090"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Стиль для TextBox с многострочным вводом -->
+    <Style x:Key="MultilineTextBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="AcceptsReturn" Value="True"/>
+        <Setter Property="MinHeight" Value="80"/>
+    </Style>
+    
+
 </ResourceDictionary>

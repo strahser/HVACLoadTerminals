@@ -103,6 +103,48 @@ namespace HVACLoadTerminals.Utils
         }
     }
         
+        public static string GetParameterValueAsString(Parameter parameter)
+        {
+            string parameterValue = string.Empty;
+
+            switch (parameter.StorageType)
+            {
+                case StorageType.String:
+                    parameterValue = parameter.AsString();
+                    break;
+                case StorageType.Integer:
+                    parameterValue = parameter.AsInteger().ToString();
+                    break;
+                case StorageType.Double:
+                    parameterValue = parameter.AsDouble().ToString();
+                    break;
+                case StorageType.ElementId:
+                    ElementId elementId = parameter.AsElementId();
+                    // Если ID не InvalidElementId, можно попробовать получить элемент и его имя
+                    // (может быть полезно, если параметр ссылается на другой элемент)
+                    if (elementId != ElementId.InvalidElementId)
+                    {
+                        parameterValue = elementId.IntegerValue.ToString(); // Возвращаем ID элемента
+                    }
+
+                    break;
+                default:
+                    parameterValue = "Unsupported parameter type.";
+                    break;
+            }
+
+            return parameterValue;
+        }
+        
+        public static object GetParamValueFromPropertyType(Parameter param, Type targetType)
+        {
+            if (targetType == typeof(string)) return param.AsString();
+            if (targetType == typeof(double)) return param.AsDouble();
+            if (targetType == typeof(int)) return param.AsInteger();
+            if (targetType == typeof(bool)) return param.AsInteger() != 0;
+
+            throw new NotSupportedException($"Тип {targetType} не поддерживается");
+        }
     }
     
     

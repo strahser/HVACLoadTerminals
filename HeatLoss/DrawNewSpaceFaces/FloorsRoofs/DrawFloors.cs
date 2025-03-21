@@ -35,6 +35,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs
 
                 using (var transaction = new Transaction(hvacDocument, $"Create Floor in {space.Number}"))
                 {
+                    //устанавливаем параметры в Ревит поверхности
                     transaction.Start();
                     try
                     {
@@ -43,12 +44,14 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.Orientation), OrientationNames.Horizontal);
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.SpaceId), space.Id.ToString());
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.SpaceNumber), space.Number.ToString());
+                        ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.SpaceName), space.Name.ToString());
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.TransferCoefficient), 1);
-                        ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.ConstructionType), nameof(ConstructionSurfaceModel.ConstructionType));
+                        ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.ConstructionName), nameof(ConstructionSurfaceModel.ConstructionName));
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.EnclosureType), enclosureType);
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.ConstructionArea), calculateArea);
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.TemperatureInSpace), ParametersHandler.GetSpaceSetHeatPoint(hvacDocument,space));
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.TemperatureOut), ParametersHandler.GetProjectInformation(hvacDocument,nameof(ClimateData.TWinterOut092)));
+                       
                         transaction.Commit();
                     }
                     catch (Exception ex)

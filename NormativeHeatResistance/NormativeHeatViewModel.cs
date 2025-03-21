@@ -6,9 +6,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reactive;
 using System.Reflection;
+using System.Text;
 using System.Windows.Forms;
 using System.Windows.Input;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
 using HVACLoadTerminals.HeatLoss;
 using HVACLoadTerminals.Utils;
 using ReactiveUI;
@@ -152,7 +154,7 @@ namespace HVACLoadTerminals.NormativeHeatResistance
                     var constructionSurface = new ConstructionSurfaceModel
                     {
                         RevitElementId = element.Id.ToString(),
-                        ConstructionType = GetParameterValue(element, nameof(ConstructionSurfaceModel.ConstructionType)),
+                        ConstructionName = GetParameterValue(element, nameof(ConstructionSurfaceModel.ConstructionName)),
                         EnclosureType = GetParameterValue(element, nameof(ConstructionSurfaceModel.EnclosureType)),
                         TransferCoefficient = GetDoubleParameterValue(element, nameof(ConstructionSurfaceModel.TransferCoefficient)),
                     };
@@ -161,7 +163,7 @@ namespace HVACLoadTerminals.NormativeHeatResistance
                 }
             }
             return new ObservableCollection<ConstructionSurfaceModel>(constructionSurfaces
-                .GroupBy(x => new { x.EnclosureType, x.ConstructionType })
+                .GroupBy(x => new { x.EnclosureType, ConstructionType = x.ConstructionName })
                 .Select(g => g.First()));
         }
 
@@ -190,6 +192,34 @@ namespace HVACLoadTerminals.NormativeHeatResistance
 
             return 0;
         }
+        
+        private bool UpdateParameter(Element element, string paramName, object value)
+        {
+            try
+            {
+                var param = element.LookupParameter(paramName);
+                if (param == null || param.IsReadOnly) return false;
+
+                switch (param.StorageType)
+                {
+                    case StorageType.Double when value is double doubleValue:
+                        return param.Set(doubleValue);
+            
+                    case StorageType.Integer when value is int intValue:
+                        return param.Set(intValue);
+            
+                    case StorageType.String when value is string stringValue:
+                        return param.Set(stringValue);
+            
+                    default:
+                        return false;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         // Получение элементов DirectShape из документа Revit
         private static IList<Element> GetDirectShapeElements(Document doc)
@@ -215,8 +245,6 @@ namespace HVACLoadTerminals.NormativeHeatResistance
         private void UpdateNormativeTransferCoefficients()
         {
             if (SelectedCategory == null) return;
-            MessageBox.Show($"Grouped DATA {EnclosureElements.Count().ToString()}");
-
             var updatedEnclosureElements = new ObservableCollection<ConstructionSurfaceModel>();
             foreach (var enclosure in EnclosureElements)
             {
@@ -235,88 +263,77 @@ namespace HVACLoadTerminals.NormativeHeatResistance
         }
 
         // Применение нормативных значений к элементам Revit
-        public void ApplyNormativeValuesToRevit()
-{
-        var updateCounts = new Dictionary<string, int>(); // Словарь для подсчета обновлений по группам
+        private void ApplyNormativeValuesToRevit()
+    {
+    var updateCounts = new Dictionary<string, int>();
+    var directShapeElements = GetDirectShapeElements(_doc);
 
-        using (Transaction t = new Transaction(_doc, "Apply Normative Values"))
+    // Создаем словарь эталонных значений по ключу (EnclosureType, ConstructionName)
+    var groupSettings = EnclosureElements
+        .GroupBy(e => (e.EnclosureType, ConstructionType: e.ConstructionName))
+        .ToDictionary(
+            g => g.Key,
+            g => g.First()
+        );
+
+    using (Transaction t = new Transaction(_doc, "Apply Group Values"))
+    {
+        t.Start();
+
+        foreach (Element element in directShapeElements)
         {
-            t.Start();
+            if (!(element is DirectShape ds)) continue;
 
-            foreach (var enclosure in EnclosureElements)
+            // Получаем параметры элемента
+            var enclosureType = GetParameterValue(element, nameof(ConstructionSurfaceModel.EnclosureType));
+            var constructionType = GetParameterValue(element, nameof(ConstructionSurfaceModel.ConstructionName));
+            var key = (enclosureType, constructionType);
+
+            if (!groupSettings.TryGetValue(key, out var setting)) continue;
+
+            bool isUpdated = false;
+
+            // Обновление TransferCoefficient
+            isUpdated |= UpdateParameter(element, nameof(setting.TransferCoefficient), setting.TransferCoefficient);
+            
+            // Обновление NormativeTransferCoefficient
+            isUpdated |= UpdateParameter(element, nameof(setting.NormativeTransferCoefficient), setting.NormativeTransferCoefficient);
+            
+            // Обновление NormativeTransferCoefficient
+            isUpdated |= UpdateParameter(element, nameof(setting.NormativeTransferThermalCoefficient), setting.NormativeTransferThermalCoefficient);
+            
+            // Обновление ShortConstructionName
+            isUpdated |= UpdateParameter(element, nameof(setting.ShortConstructionName), setting.ShortConstructionName);
+            
+            // Обновление ConstructionName
+            //isUpdated |= UpdateParameter(element, nameof(setting.ConstructionName), setting.ConstructionName);
+
+            if (isUpdated)
             {
-                if (string.IsNullOrEmpty(enclosure.RevitElementId)) continue;
-
-                var elementId = new ElementId(int.Parse(enclosure.RevitElementId));
-                var element = _doc.GetElement(elementId);
-
-                if (element != null)
-                {
-                    bool isUpdated = false; // Флаг для проверки, было ли обновление
-
-                    // Установка TransferCoefficient
-                    var transferCoefficientParam = element.LookupParameter(nameof(enclosure.TransferCoefficient));
-                    if (transferCoefficientParam != null && !transferCoefficientParam.IsReadOnly)
-                    {
-                        if (enclosure.UseNormative)
-                        {
-                            transferCoefficientParam.Set(enclosure.NormativeTransferCoefficient);
-                            isUpdated = true;
-                        }
-                    }
-
-                    // Установка NormativeTransferCoefficient
-                    var normativeTransferCoefficientParam = element.LookupParameter(nameof(enclosure.NormativeTransferCoefficient));
-                    if (normativeTransferCoefficientParam != null && !normativeTransferCoefficientParam.IsReadOnly)
-                    {
-                        normativeTransferCoefficientParam.Set(enclosure.NormativeTransferCoefficient);
-                        isUpdated = true;
-                    }
-
-                    // Установка NormativeTransferThermalCoefficient
-                    var normativeTransferThermalCoefficientParam = element.LookupParameter(nameof(enclosure.NormativeTransferThermalCoefficient));
-                    if (normativeTransferThermalCoefficientParam != null && !normativeTransferThermalCoefficientParam.IsReadOnly)
-                    {
-                        normativeTransferThermalCoefficientParam.Set(enclosure.NormativeTransferThermalCoefficient);
-                        isUpdated = true;
-                    }
-
-                    // Установка ConstructionType
-                    var constructionTypeParam = element.LookupParameter(nameof(enclosure.ConstructionType));
-                    if (constructionTypeParam != null && !constructionTypeParam.IsReadOnly)
-                    {
-                        constructionTypeParam.Set(enclosure.ConstructionType);
-                        isUpdated = true;
-                    }
-
-                    // Если элемент был обновлен, увеличиваем счетчик для соответствующей группы
-                    if (isUpdated)
-                    {
-                        if (!updateCounts.ContainsKey(enclosure.EnclosureType))
-                        {
-                            updateCounts[enclosure.EnclosureType] = 0;
-                        }
-                        updateCounts[enclosure.EnclosureType]++;
-                    }
-                }
+                updateCounts.TryGetValue(enclosureType, out var count);
+                updateCounts[enclosureType] = count + 1;
+            }
+        }
+        t.Commit();
+    }
+    // Обновление UI с результатами
+    UpdateSummary = BuildSummaryText(updateCounts);
+    } private string BuildSummaryText(Dictionary<string, int> updateCounts)
+        {
+            if (updateCounts == null || updateCounts.Count == 0)
+            {
+                return "Обновленные элементы не найдены";
             }
 
-            t.Commit();
-
-            // Вывод результатов обновления
-            Debug.WriteLine("Обновление значений в Revit завершено:");
+            var summaryBuilder = new StringBuilder();
+            summaryBuilder.AppendLine("Обновление значений в Revit завершено:");
+    
             foreach (var kvp in updateCounts)
             {
-                Debug.WriteLine($"Тип ограждения: {kvp.Key}, Количество обновленных элементов: {kvp.Value}");
+                summaryBuilder.AppendLine($"• Тип ограждения: {kvp.Key}, Обновлено элементов: {kvp.Value}");
             }
-            var summary = "Обновление значений в Revit завершено:\n";
-            foreach (var kvp in updateCounts)
-            {
-                summary += $"Тип ограждения: {kvp.Key}, Количество обновленных элементов: {kvp.Value}\n";
-            }
-            UpdateSummary = summary;
+            return summaryBuilder.ToString();
         }
-}
-        }
+    }
 }
 

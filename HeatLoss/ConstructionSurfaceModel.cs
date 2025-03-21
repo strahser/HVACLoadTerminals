@@ -19,10 +19,12 @@ namespace HVACLoadTerminals.HeatLoss
         public Room _Room { get; set; }
         public Face _Face { get; set; }
         public string RevitElementId { get; set; }
+        
+
         public string FaceId { get; set; }
         public double FullWallArea { get; set; }
         public double BuildingHeight { get; set; }
-        public double InstanceHeight { get; set; }
+        public double OpenInstanceHeight { get; set; }
         
         private bool _useNormative;
         public bool UseNormative
@@ -37,80 +39,86 @@ namespace HVACLoadTerminals.HeatLoss
             }
         }
         
-        [Description("ID Пространства")]
+        [Description("ID Помещения")]
         [RevitParameter]
         public string SpaceId { get; set; }
         
-        [Description("Номер Помещения")]
+        [ColumnOrder(1)]
+        [Description("Ном. Пом.")]
         [RevitParameter]
         public string SpaceNumber { get; set; }
         
-        [Description("Тип Конструкции")]
+        [ColumnOrder(2)]
+        [Description("Наим.  Пом.")]
         [RevitParameter]
-        public string ConstructionType { get; set; }
+        public string SpaceName { get; set; }
+        
+        [ColumnOrder(3)]
+        [Description("Наим. Огражд.")]
+        [RevitParameter]
+        public string ConstructionName { get; set; }
 
-        [Description("Тип Ограждения")]
+        [ColumnOrder(4)]
+        [Description("Тип Огражд.")]
         [RevitParameter]
         public string EnclosureType { get; set; }
         
-        [Description("Наим Огр.")]
+        [ColumnOrder(5)]
+        [Description("Сокр.Наим Огр.")]
         [RevitParameter]
         public string ShortConstructionName { get; set; }
-
-        [Description("Ориентация")]
-        [RevitParameter]
-        public string Orientation { get; set; }
         
-        [Description("Ор.знач.")]
-        [RevitParameter]
-        public double OrientationValue => OrientationNames.GetOrientationValue(Orientation);
-
-        [Description("Площадь")]
-        [RevitParameter]
-        public double ConstructionArea { get; set; }
-        
-        
-        private double _transferCoefficient;
-        
-        [Description("Коэф. Теплопередачи")]
-        [RevitParameter]
-        public double TransferCoefficient
-        {
-            get => _transferCoefficient;
-            set
-            {
-                if (_transferCoefficient.Equals(value)) return;
-                _transferCoefficient = value;
-                RaisePropertyChanged(nameof(TransferCoefficient));
-            }
-        }
-        
-        
-        [Description("Нормируемое Термическое сопротивление")]
-        [RevitParameter]
-        public double NormativeTransferThermalCoefficient { get; set; }
-        
-        
-        [Description(" Нормируемый Коэф. Теплопередачи")]
-        [RevitParameter]
-        public double NormativeTransferCoefficient { get; set; } 
-        
+        [ColumnOrder(6)]
         [Description("Tвн")]
         [RevitParameter]
         public double TemperatureInSpace { get; set; }
 
+        [ColumnOrder(7)]
         [Description("Tнар")]
         [RevitParameter]
         public double TemperatureOut { get; set; }
 
+        [ColumnOrder(8)]
+        [Description("Ор-ия")]
+        [RevitParameter]
+        public string Orientation { get; set; }
+        
+        [ColumnOrder(9)]
+        [Description("Ор-ия.знач.")]
+        [RevitParameter]
+        public double OrientationValue => OrientationNames.GetOrientationValue(Orientation);
+
+        [ColumnOrder(10)]
+        [Description("Площадь")]
+        [RevitParameter]
+        public double ConstructionArea { get; set; }
+        
+        [ColumnOrder(11)]
+        [Description("Коэф. Теплопередачи")]
+        [RevitParameter]
+        public double TransferCoefficient { get; set; }
+        
+        
+        [Description("Норм. Терм. Сопр.")]
+        [RevitParameter]
+        public double NormativeTransferThermalCoefficient { get; set; }
+        
+
+        [Description("Норм. Коэф. Тепл-чи")]
+        [RevitParameter]
+        public double NormativeTransferCoefficient { get; set; }
+
+        [ColumnOrder(14)]
         [Description("Угл.пом")]
         [RevitParameter]
         public double CornerValue { get; set; }
         
-        [Description("Промежуточный итог")]
+
+        [Description("Промеж. итог")]
         [RevitParameter]
         public double Subtotal { get; set; }
         
+        [ColumnOrder(16)]
         [Description("Огражд.контрукции, Вт")]
         [RevitParameter]
         public double SurfaceHeatLoss
@@ -122,6 +130,7 @@ namespace HVACLoadTerminals.HeatLoss
             }
         }
         
+        [ColumnOrder(17)]
         [Description("Инфильтрация, Вт")]
         [RevitParameter]
         public double InfiltrationLoad
@@ -129,7 +138,7 @@ namespace HVACLoadTerminals.HeatLoss
             get {
                 if (EnclosureType == EnclosureTypeOptions.Window )
                 {
-                    if ( BuildingHeight > 0 && InstanceHeight > 0 && BuildingHeight - InstanceHeight > 0)
+                    if ( BuildingHeight > 0 && OpenInstanceHeight > 0 && BuildingHeight - OpenInstanceHeight > 0)
                         try
                         {
                             var projectInfo = CollectorQuery.GetProjectInfo();
@@ -143,7 +152,7 @@ namespace HVACLoadTerminals.HeatLoss
                                 MessageBox.Show("Не удалось получить скорость ветра в зимний период. Скорость ветра принята 6 м/с");
                                 airVelocity = 6;
                             }
-                            var calculator = new InfiltrationCalculator(BuildingHeight, InstanceHeight, TemperatureInSpace, TemperatureOut, airVelocity, ConstructionArea);
+                            var calculator = new InfiltrationCalculator(BuildingHeight, OpenInstanceHeight, TemperatureInSpace, TemperatureOut, airVelocity, ConstructionArea);
                             var heatLoad = calculator.CalculateHeatInfWindow();
                             return Math.Round(heatLoad);
                         }
@@ -157,7 +166,8 @@ namespace HVACLoadTerminals.HeatLoss
                 else { return 0.0; }
             }
         }
-
+        
+        [ColumnOrder(18)]
         [Description("Итого, Вт")]
         [RevitParameter]
         public double TotalHeatLoad => SurfaceHeatLoss+ InfiltrationLoad;
@@ -194,6 +204,7 @@ namespace HVACLoadTerminals.HeatLoss
             nameof(Orientation),
             nameof(SpaceId),
             nameof(SpaceNumber),
+            nameof(SpaceName),
             nameof(TemperatureOut),
             nameof(TemperatureInSpace)
         ];

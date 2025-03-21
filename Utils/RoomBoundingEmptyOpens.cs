@@ -12,7 +12,8 @@ namespace HVACLoadTerminals.Utils
     internal class RoomBoundingEmptyOpens
     {
         //Метод для получения наружных стен и витражей
-        private void GetExternalOpens(Document RoomDoc, List<Element> _rooms, FilteredElementCollector elements, BuiltInParameter height, BuiltInParameter widhth)
+        private void GetExternalOpens(Document RoomDoc, List<Element> _rooms, 
+            FilteredElementCollector elements, BuiltInParameter height, BuiltInParameter widhth)
         {
             //GetExternalOpens(_roomWidowsList,BuiltInParameter.WINDOW_HEIGHT,BuiltInParameter.WINDOW_WIDTH);
             //GetExternalOpens(_roomDoorsList, BuiltInParameter.DOOR_HEIGHT, BuiltInParameter.DOOR_WIDTH);
@@ -40,11 +41,11 @@ namespace HVACLoadTerminals.Utils
                         var Area = ParameterDisplayConvertor.SquareMeters(aReaFt);
                         var wallFaceData = new ConstructionSurfaceModel
                         {
-                            FaceId = windowWallId.ToString(),
+                            RevitElementId = windowWallId.ToString(),
                             _Room = room,
                             SpaceNumber = room.Number,
                             ConstructionArea = Area,
-                            ConstructionType = opens.Name,
+                            ConstructionName = opens.Name,
                             EnclosureType = opens.Category.BuiltInCategory.ToString()
                         };
                     }
@@ -59,8 +60,8 @@ namespace HVACLoadTerminals.Utils
             // Клонируем исходный список, чтобы не изменять его напрямую
             var updatedFaceDataList = new List<ConstructionSurfaceModel>(faceDataList);
 
-            // Группировка по FaceId
-            var faceIdGroups = updatedFaceDataList.GroupBy(fd => fd.FaceId);
+            // Группировка по RevitElementId
+            var faceIdGroups = updatedFaceDataList.GroupBy(fd => fd.RevitElementId);
 
             foreach (var group in faceIdGroups)
             {
@@ -87,10 +88,10 @@ namespace HVACLoadTerminals.Utils
         {
             // Группируем ConstructionSurfaceModel по FaceId и Room.Id
             var groupedFaceDatas = faceDatas
-                .GroupBy(f => new { f.FaceId, f._Room.Id })
+                .GroupBy(f => new { f.RevitElementId, f._Room.Id })
                 .Select(group => new
                 {
-                    FaceId = group.Key.FaceId,
+                    RevitElementId = group.Key.RevitElementId,
                     RoomId = group.Key.Id,
                     FaceDatas = group.ToList()
                 })

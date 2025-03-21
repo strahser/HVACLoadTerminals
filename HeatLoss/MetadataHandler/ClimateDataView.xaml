@@ -11,8 +11,8 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/HVACLoadTerminals;component/Resources/Styles.xaml"/>
+                <ResourceDictionary Source="./NormativeStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            
         </ResourceDictionary>
     </Window.Resources>
     <Grid Margin="15">

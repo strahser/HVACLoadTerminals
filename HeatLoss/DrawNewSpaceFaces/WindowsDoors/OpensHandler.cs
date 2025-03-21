@@ -119,7 +119,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
             }
             //забираем параметры окон дверей из связанного документа
             ParametersUtility.SetParameterByValueAndName(newOpen, nameof(ConstructionSurfaceModel.TransferCoefficient), uValue);
-            ParametersUtility.SetParameterByValueAndName(newOpen, nameof(ConstructionSurfaceModel.ConstructionType), open.Name);
+            ParametersUtility.SetParameterByValueAndName(newOpen, nameof(ConstructionSurfaceModel.ConstructionName), open.Name);
             ParametersUtility.SetParameterByValueAndName(newOpen, nameof(ConstructionSurfaceModel.EnclosureType), enclosureType);
         }
 

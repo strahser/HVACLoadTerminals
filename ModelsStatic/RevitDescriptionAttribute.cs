@@ -3,7 +3,12 @@ using System.Reflection;
 using Autodesk.Revit.DB;
 using static Autodesk.Revit.DB.SpecTypeId;
 namespace HVACLoadTerminals.ModelsStatic;
-
+[AttributeUsage(AttributeTargets.Property)]
+public class ColumnOrderAttribute : Attribute
+{
+    public int Order { get; }
+    public ColumnOrderAttribute(int order) => Order = order;
+}
 // Пользовательский атрибут для описания
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 public class DescriptionAttribute(string description) : Attribute
@@ -61,19 +66,19 @@ public class RevitParameterAttribute : Attribute
 }
 
 
-//Вспомогательный класс для получения описаний
-public static class AttributeHelper
-{
-    public static string GetDescription(this object obj, string propertyName)
+    //Вспомогательный класс для получения описаний
+    public static class AttributeHelper
     {
-        PropertyInfo propertyInfo = obj.GetType().GetProperty(propertyName);
-        if (propertyInfo == null)
+        public static string GetDescription(this object obj, string propertyName)
         {
-            return null; // Свойство не найдено
+            PropertyInfo propertyInfo = obj.GetType().GetProperty(propertyName);
+            if (propertyInfo == null)
+            {
+                return null; // Свойство не найдено
+            }
+
+            DescriptionAttribute attribute = (DescriptionAttribute)Attribute.GetCustomAttribute(propertyInfo, typeof(DescriptionAttribute));
+
+            return attribute?.Description;
         }
-
-        DescriptionAttribute attribute = (DescriptionAttribute)Attribute.GetCustomAttribute(propertyInfo, typeof(DescriptionAttribute));
-
-        return attribute?.Description;
     }
-}

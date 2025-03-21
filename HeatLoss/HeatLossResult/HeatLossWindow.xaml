@@ -3,13 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:ext="http://schemas.xceed.com/wpf/xaml/toolkit"
-             xmlns:local="clr-namespace:HVACLoadTerminals.Views"
-             xmlns:viewmodels="clr-namespace:HVACLoadTerminals.ViewModels"
-             xmlns:drawNewSpaceFaces="clr-namespace:HVACLoadTerminals.DrawNewSpaceFaces"
-             xmlns:heatLoss="clr-namespace:HVACLoadTerminals.HeatLoss"
+             xmlns:data="clr-namespace:System.Windows.Data;assembly=PresentationFramework"
              xmlns:heatLossResult="clr-namespace:HVACLoadTerminals.HeatLoss.HeatLossResult"
-             
              d:DataContext="{d:DesignInstance Type=heatLossResult:HeatLossTableViewModel}"
              mc:Ignorable="d"
              Title="Теплопотери помещений"
@@ -21,7 +16,7 @@
              TextOptions.TextFormattingMode="Ideal"
              TextOptions.TextRenderingMode="Auto"
              Background="#F0F0F0"
-             WindowState="Maximized"> <!-- Добавлено свойство WindowState -->
+             WindowState="Maximized"> 
 
     <Window.Resources>
         <ResourceDictionary>
@@ -48,7 +43,49 @@
                 <Setter Property="Padding" Value="5"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
             </Style>
+            <!-- Коллекция с группировкой -->
+            <CollectionViewSource x:Key="GroupedData" Source="{Binding FaceDataList}">
+                <CollectionViewSource.GroupDescriptions>
+                    <PropertyGroupDescription PropertyName="SpaceNumber"/>
+                </CollectionViewSource.GroupDescriptions>
+            </CollectionViewSource>
+            <!-- Стиль для Expander в заголовке группы -->
+            <Style x:Key="GroupHeaderStyle" TargetType="GroupItem">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="GroupItem">
+                            <!-- Expander растягивается на всю ширину -->
+                            <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                      Background="#E0E0E0"
+                                      Margin="0,2"
+                                      HorizontalContentAlignment="Stretch">
+                    
+                                <Expander.Header>
+                                    <!-- Grid занимает всю ширину -->
+                                    <Grid>
+                 <!-- Текст выравнивается по правому краю -->
+                                        <TextBlock HorizontalAlignment="Right"
+                                                   Margin="5,0">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="Теплопотери помещения {0} (Итого: {1} Вт) Количество конструкций {2}">
+                                                    <Binding Path="Name"/>
+                                                    <Binding Path="Items[0].Subtotal"/>
+                                                    <Binding Path="Items.Count"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </Grid>
+                                </Expander.Header>
+
+                                <!-- Контент группы -->
+                                <ItemsPresenter/>
+                            </Expander>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
+        
     </Window.Resources>
 
     <Grid>
@@ -84,65 +121,32 @@
                         Style="{StaticResource {x:Type Button}}"/>  
                 
             </StackPanel>
-
+            <!--~1~ Панель управления @1@
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10">
+                <Button Content="Показать все" 
+                        Command="{Binding ExpandAllCommand}"
+                        Margin="5" Padding="10"/>
+                <Button Content="Скрыть все" 
+                        Command="{Binding CollapseAllCommand}"
+                        Margin="5" Padding="10"/>
+            </StackPanel>-->
             <ScrollViewer DockPanel.Dock="Bottom"
                           HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Auto">
-                
-                <DataGrid ItemsSource="{Binding FaceDataList}"
+                <DataGrid x:Name="MainDataGrid"
+                          ItemsSource="{Binding Source={StaticResource GroupedData}}"
                           AutoGenerateColumns="False"
                           IsReadOnly="True"
                           CanUserSortColumns="True"
-                          GridLinesVisibility="None"
+                          GridLinesVisibility="Vertical"
                           HeadersVisibility="Column"
-                          ColumnWidth="Auto">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="ID Пространства"
-                                            Binding="{Binding SpaceId}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Номер Помещения"
-                                            Binding="{Binding SpaceNumber}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Категория Конструкции"
-                                            Binding="{Binding EnclosureType}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Коэф. Теплопередачи"
-                                            Binding="{Binding TransferCoefficient}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Ориентация"
-                                            Binding="{Binding Orientation}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Ориент.знач."
-                                            Binding="{Binding OrientationValue}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Тип Конструкции"
-                                            Binding="{Binding ConstructionType}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Площадь"
-                                            Binding="{Binding ConstructionArea}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Tвн"
-                                            Binding="{Binding TemperatureInSpace}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Tнар"
-                                            Binding="{Binding TemperatureOut}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Угл.пом"
-                                            Binding="{Binding CornerValue}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Огражд.контрукции, Вт"
-                                            Binding="{Binding SurfaceHeatLoss}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Инфильтрация, Вт"
-                                            Binding="{Binding InfiltrationLoad}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="Итого, Вт"
-                                            Binding="{Binding TotalHeatLoad}"
-                                            Width="Auto"/>
-                        <DataGridTextColumn Header="По помещению, Вт"
-                                            Binding="{Binding Subtotal}"
-                                            Width="Auto"/>
-                    </DataGrid.Columns>
+                          ColumnWidth="Auto"
+                >
+                            
+                    <DataGrid.GroupStyle>
+                        <GroupStyle ContainerStyle="{StaticResource GroupHeaderStyle}"/>
+                    </DataGrid.GroupStyle>
+
                 </DataGrid>
             </ScrollViewer>
         </DockPanel>
