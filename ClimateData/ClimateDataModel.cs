@@ -1,9 +1,11 @@
 // ReSharper disable UnusedMember.Global
 // ReSharper disable InconsistentNaming
 
-namespace HVACLoadTerminals.ModelsStatic;
+using HVACLoadTerminals.ModelsStatic;
+
+namespace HVACLoadTerminals.ClimateData;
 //https://helpeng.ru/engineer/climatology/climatology-2020
-    public class ClimateData
+    public class ClimateDataModel
     {
         [Description("Регион")]
         [RevitParameter("SpecTypeId.String.Text")]

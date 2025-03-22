@@ -5,6 +5,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.CalculateSpaceDevice;
+using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
 
@@ -50,7 +51,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.EnclosureType), enclosureType);
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.ConstructionArea), calculateArea);
                         ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.TemperatureInSpace), ParametersHandler.GetSpaceSetHeatPoint(hvacDocument,space));
-                        ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.TemperatureOut), ParametersHandler.GetProjectInformation(hvacDocument,nameof(ClimateData.TWinterOut092)));
+                        ParametersUtility.SetParameterByValueAndName(floor, nameof(ConstructionSurfaceModel.TemperatureOut), ParametersHandler.GetProjectInformation(hvacDocument,nameof(ClimateDataModel.TWinterOut092)));
                        
                         transaction.Commit();
                     }

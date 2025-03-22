@@ -7,8 +7,10 @@ using System.ServiceModel.Channels;
 using System.Windows.Forms;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
+using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
+using HVACLoadTerminals.Utils.HVACLoadTerminals.Utils;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
 
@@ -34,7 +36,7 @@ namespace HVACLoadTerminals.HeatLoss
             {
                 if (_useNormative == value) return;
                 _useNormative = value;
-                RaisePropertyChanged(nameof(UseNormative));
+                OnPropertyChanged();
                 UpdateTransferCoefficient();
             }
         }
@@ -145,7 +147,7 @@ namespace HVACLoadTerminals.HeatLoss
                             double airVelocity;
                             try
                             {
-                                airVelocity = projectInfo.LookupParameter(nameof(ClimateData.WinterWindSpeed)).AsDouble();
+                                airVelocity = projectInfo.LookupParameter(nameof(ClimateDataModel.WinterWindSpeed)).AsDouble();
                             }
                             catch (Exception e)
                             {
@@ -201,12 +203,12 @@ namespace HVACLoadTerminals.HeatLoss
         /// Используем для передачи данных из стены в окна/двери
         /// </summary>
         public static readonly List<string> TransferParameters = [
-            nameof(Orientation),
             nameof(SpaceId),
             nameof(SpaceNumber),
             nameof(SpaceName),
             nameof(TemperatureOut),
-            nameof(TemperatureInSpace)
+            nameof(TemperatureInSpace),
+            nameof(Orientation),
         ];
         
         /// <summary>

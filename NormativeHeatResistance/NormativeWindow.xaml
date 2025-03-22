@@ -7,10 +7,7 @@
         WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
         Background="#FFF0F0F0"
-        FontFamily="Segoe UI"
-        
-        >
-    
+        FontFamily="Segoe UI">
     
     <Window.DataContext>
         <normativeHeatResistance:NormativeHeatViewModel/>
@@ -20,9 +17,35 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/HVACLoadTerminals;component/Resources/Styles.xaml"/>
-                <ResourceDictionary Source="./NormativeStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            
+            <!--стиль группировки данных expander-->
+            <Style x:Key="GroupHeaderStyle" TargetType="GroupItem">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="GroupItem">
+                            <Expander IsExpanded="True" Background="#FFE0E0E0" Margin="0,2">
+                                <Expander.Header>
+                                    <DockPanel>
+                                        <CheckBox IsChecked="{Binding IsGroupChecked, Mode=TwoWay}"
+                                                  Command="{Binding DataContext.UpdateGroupCheckBoxStateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  CommandParameter="{Binding Name}"
+                                                  Margin="5,0"/>
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding ItemCount}" Margin="10,0" Foreground="DarkBlue"/>
+                                    </DockPanel>
+                                </Expander.Header>
+                                <ItemsPresenter/>
+                            </Expander>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+    
+            <CollectionViewSource x:Key="GroupedElements" Source="{Binding EnclosureElements}">
+                <CollectionViewSource.GroupDescriptions>
+                    <PropertyGroupDescription PropertyName="EnclosureType"/>
+                </CollectionViewSource.GroupDescriptions>
+            </CollectionViewSource>
             <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                 <Setter Property="Margin" Value="10 0 10 10"/>
                 <Setter Property="FontSize" Value="16"/>
@@ -31,7 +54,6 @@
             </Style>
 
         </ResourceDictionary>
-        
     </Window.Resources>
 
     <Grid Margin="10">

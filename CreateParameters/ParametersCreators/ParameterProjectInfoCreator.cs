@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using Autodesk.Revit.DB;
+using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.CreateParameters.ParametersCreators;
 
-public class ParameterProjectInfoCreator : BaseParameterCreator<ClimateData>
+public class ParameterProjectInfoCreator : BaseParameterCreator<ClimateDataModel>
 {
     private static readonly ParameterProjectInfoCreator Instance = new();
     public static void CreateParameterBindings() => Instance.CreateParameterBindings(RevitConfig.Document);

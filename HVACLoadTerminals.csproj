@@ -41,11 +41,11 @@
     <Reference Include="PresentationFramework" />
     <Reference Include="ReachFramework" />
     <Reference Include="RevitAPI">
-      <HintPath>..\..\..\..\..\Program Files\Autodesk\Revit 2023\RevitAPI.dll</HintPath>
+      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
-      <HintPath>..\..\..\..\..\Program Files\Autodesk\Revit 2023\RevitAPIUI.dll</HintPath>
+      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
@@ -71,6 +71,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AddPanel.cs" />
+    <Compile Include="ClimateData\ClimateDataCommand.cs" />
+    <Compile Include="ClimateData\ClimateDataModel.cs" />
+    <Compile Include="ClimateData\ClimateDataRepository.cs" />
+    <Compile Include="ClimateData\ClimateDataRow.cs" />
+    <Compile Include="ClimateData\ClimateDataUtils.cs" />
+    <Compile Include="ClimateData\ClimateDataView.xaml .cs" />
+    <Compile Include="ClimateData\ClimateDataViewModel.cs" />
     <Compile Include="Commands\DrawTerminalsFromDb.cs" />
     <Compile Include="Commands\ExportSpacesDataToJson.cs" />
     <Compile Include="CalculateSpaceDevice\CalculateSpaceDeviceCommand.cs" />
@@ -82,6 +89,11 @@
     <Compile Include="CreateParameters\ParametersCreators\ParameterSurfacesCreator.cs" />
     <Compile Include="CreateParameters\ReportItem.cs" />
     <Compile Include="CreateParameters\ReportWindow.xaml.cs" />
+    <Compile Include="DataBases\DbUtility\DatabaseConfig.cs" />
+    <Compile Include="DataBases\DbUtility\DbQuery.cs" />
+    <Compile Include="DataBases\DbUtility\SQLiteEquipmentDbHelper.cs" />
+    <Compile Include="DataBases\DbUtility\SQLiteSpaceDbHelper.cs" />
+    <Compile Include="DataBases\DbUtility\SqlLiteSystemFamilyDbHelper.cs" />
     <Compile Include="HeatLoss\ConstructionSurfaceModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapesForEachElement.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\ConvertToDirectShapeCommand.cs" />
@@ -116,12 +128,8 @@
     <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\GenericModelSpecification.cs" />
     <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\ScheduleCreator.cs" />
     <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\ScheduleFactory.cs" />
-    <Compile Include="HeatLoss\MetadataHandler\ClimateDataCommand.cs" />
-    <Compile Include="HeatLoss\MetadataHandler\ClimateDataView.xaml .cs" />
-    <Compile Include="HeatLoss\MetadataHandler\ClimateDataViewModel.cs" />
     <Compile Include="HeatLoss\SpaceDataModel.cs" />
     <Compile Include="InvokeCommandAction.cs" />
-    <Compile Include="ModelsStatic\ClimateData.cs" />
     <Compile Include="ModelsStatic\OrientationMapping.cs" />
     <Compile Include="ModelsStatic\RevitDescriptionAttribute.cs" />
     <Compile Include="Models\ParameterFields.cs" />
@@ -141,13 +149,10 @@
     <Compile Include="NormativeHeatResistance\NormativeValueCalculatorTests.cs" />
     <Compile Include="NormativeHeatResistance\NormativeWindow.xaml.cs" />
     <Compile Include="NormativeHeatResistance\StaticCoefficientStructures.cs" />
+    <Compile Include="PipeSewageHandler\InsertTeeAtFloorCommand.cs" />
+    <Compile Include="PipeSewageHandler\TeeSelectorWindow.xaml.cs" />
     <Compile Include="Utils\CanvasHelper.cs" />
     <Compile Include="Utils\CollectorGeometry.cs" />
-    <Compile Include="Utils\DbUtility\DatabaseConfig.cs" />
-    <Compile Include="Utils\DbUtility\DbQuery.cs" />
-    <Compile Include="Utils\DbUtility\SQLiteEquipmentDbHelper.cs" />
-    <Compile Include="Utils\DbUtility\SQLiteSpaceDbHelper.cs" />
-    <Compile Include="Utils\DbUtility\SqlLiteSystemFamilyDbHelper.cs" />
     <Compile Include="CalculateSpaceDevice\InsertTerminal.cs" />
     <Compile Include="Utils\InfiltrationCalculator.cs" />
     <Compile Include="Utils\ParametersUtility.cs" />
@@ -179,6 +184,7 @@
     <None Include="HVACLoadTerminals.addin" />
   </ItemGroup>
   <ItemGroup>
+    <Page Include="ClimateData\ClimateDataView.xaml" />
     <Page Include="CreateParameters\ReportWindow.xaml" />
     <Page Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsWindow.xaml" />
     <Page Include="HeatLoss\DrawNewSpaceFaces\MainWindow.xaml" />
@@ -190,11 +196,8 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="HeatLoss\MetadataHandler\ClimateDataView.xaml" />
-    <Page Include="NormativeHeatResistance\NormativeStyle.xaml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Page>
     <Page Include="NormativeHeatResistance\NormativeWindow.xaml" />
+    <Page Include="PipeSewageHandler\TeeSelectorWindow.xaml" />
     <Page Include="Resources\Styles.xaml" />
     <Page Include="Views\DeviceView.xaml">
       <SubType>Designer</SubType>
@@ -206,6 +209,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="ClimateData\ProjectData.db">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="FodyWeavers.xml" />
     <Content Include="lib\System.Data.SQLite.dll" />
     <Resource Include="Resources\39-Globe_32x32.png" />

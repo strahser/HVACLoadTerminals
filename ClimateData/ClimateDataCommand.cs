@@ -11,7 +11,7 @@ public class ClimateDataCommand : IExternalCommand
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
         RevitConfig.Initialize(commandData);
-        var view = new ClimateDataView();
+        var view = new ClimateData.ClimateDataView();
         view.ShowDialog();
         return Result.Succeeded;
     }

@@ -13,6 +13,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.HeatLoss;
 using HVACLoadTerminals.Utils;
+using HVACLoadTerminals.Utils.HVACLoadTerminals.Utils;
 using ReactiveUI;
 
 

@@ -1,9 +1,9 @@
 // ClimateDataView.xaml.cs
 
 using System.Windows;
-using ReactiveUI;
+using HVACLoadTerminals.HeatLoss.MetadataHandler;
 
-namespace HVACLoadTerminals.HeatLoss.MetadataHandler;
+namespace HVACLoadTerminals.ClimateData;
 
 public partial class ClimateDataView : Window
 {

@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
+using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.DrawNewSpaceFaces;
 using HVACLoadTerminals.DrawNewSpaceFaces.Walls;
 using HVACLoadTerminals.ModelsStatic;
@@ -111,7 +112,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls
             ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.EnclosureType), faceModel.EnclosureType);
             ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.ConstructionArea), calculateArea);
             ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.TemperatureInSpace), ParametersHandler.GetSpaceSetHeatPoint(hvacDocument,space));
-            ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.TemperatureOut), ParametersHandler.GetProjectInformation(hvacDocument,nameof(ClimateData.TWinterOut092)));
+            ParametersUtility.SetParameterByValueAndName(wall, nameof(ConstructionSurfaceModel.TemperatureOut), ParametersHandler.GetProjectInformation(hvacDocument,nameof(ClimateDataModel.TWinterOut092)));
         }
         private static string GetOrientation(Curve curve, string northDirection)
         {
