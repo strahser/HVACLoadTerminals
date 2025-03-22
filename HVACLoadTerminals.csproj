@@ -149,7 +149,10 @@
     <Compile Include="NormativeHeatResistance\NormativeValueCalculatorTests.cs" />
     <Compile Include="NormativeHeatResistance\NormativeWindow.xaml.cs" />
     <Compile Include="NormativeHeatResistance\StaticCoefficientStructures.cs" />
+    <Compile Include="PipeSewageHandler\DiameterConverter.cs" />
     <Compile Include="PipeSewageHandler\InsertTeeAtFloorCommand.cs" />
+    <Compile Include="PipeSewageHandler\Logger.cs" />
+    <Compile Include="PipeSewageHandler\TeeSelectorViewModel.cs" />
     <Compile Include="PipeSewageHandler\TeeSelectorWindow.xaml.cs" />
     <Compile Include="Utils\CanvasHelper.cs" />
     <Compile Include="Utils\CollectorGeometry.cs" />

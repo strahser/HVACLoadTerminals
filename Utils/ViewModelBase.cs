@@ -1,11 +1,15 @@
 ﻿
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
+// INotifyPropertyChanged
+
+// [Conditional()], [DebuggerStepThrough]
 
 namespace HVACLoadTerminals.Utils
 {
 
-    using System.ComponentModel;
-    using System.Runtime.CompilerServices;
 
     namespace HVACLoadTerminals.Utils
     {
