@@ -1,314 +1,493 @@
+// InsertTeeAtFloorCommand.cs
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.ComponentModel;
 using System.Linq;
+using System.Windows;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Plumbing;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
+using Autodesk.Revit.DB.Structure;
 
-namespace HVACLoadTerminals.PipeSewageHandler;
-
-[Transaction(TransactionMode.Manual)]
-public class InsertTeeAtFloorCommand : IExternalCommand
+namespace HVACLoadTerminals.PipeSewageHandler
 {
-    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+    [Transaction(TransactionMode.Manual)]
+    public class InsertTeeAtFloorCommand : IExternalCommand
     {
-        const int offsetValue = 200;
-        UIApplication uiapp = commandData.Application;
-        UIDocument uidoc = uiapp.ActiveUIDocument;
-        Document doc = uidoc.Document;
-        double offset = UnitUtils.ConvertToInternalUnits(offsetValue, UnitTypeId.Millimeters);;
-        try
+        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            Logger.Log("Начало выполнения скрипта");
-            
-            // Выбор трубопроводов
-            Logger.Log("Запрос выбора трубопроводов...");
-            IList<Reference> pipeRefs = uidoc.Selection.PickObjects(
-                ObjectType.Element,
-                new PipeSelectionFilter(),
-                "Выберите вертикальные трубопроводы");
+            UIApplication uiapp = commandData.Application;
+            UIDocument uidoc = uiapp.ActiveUIDocument;
+            Document doc = uidoc.Document;
 
-            List<Pipe> pipes = pipeRefs.Select(r => doc.GetElement(r) as Pipe).ToList();
-            Logger.Log($"Выбрано трубопроводов: {pipes.Count}");
-
-            // Показать диалог с перечнем труб
-            if (pipes.Count > 0)
-            {
-                string pipeList = string.Join("\n", pipes.Select(p => 
-                    $"ID {p.Id}: {p.get_Parameter(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)?.AsValueString()} мм"));
-                
-                TaskDialog.Show("Выбранные трубопроводы", $"Выбрано вертикальных труб:\n{pipeList}");
-            }
-
-            // Поиск пересечений с перекрытиями
-            Logger.Log("Начало поиска пересечений с перекрытиями");
-            var intersections = new Dictionary<Pipe, List<XYZ>>();
-            ElementCategoryFilter floorFilter = new ElementCategoryFilter(BuiltInCategory.OST_Floors);
-            
-            foreach (Pipe pipe in pipes)
-            {
-                Logger.Log($"Обработка трубы ID {pipe.Id}");
-                var pipeIntersections = FindFloorIntersections(pipe, doc, floorFilter);
-                intersections.Add(pipe, pipeIntersections);
-                Logger.Log($"Найдено пересечений: {pipeIntersections.Count}");
-            }
-
-            // Выбор семейства тройника
-            Logger.Log("Выбор семейства тройника...");
-            FamilySymbol teeSymbol = SelectTeeFamily(doc);
-            if (teeSymbol == null)
-            {
-                Logger.Log("Тройник не выбран - отмена выполнения");
-                return Result.Cancelled;
-            }
-
-            // Вставка тройников
-            
-            Logger.Log($"Смещение для вставки: {offset} внутренних единиц");
-
-            using (Transaction t = new Transaction(doc, "Вставка тройников"))
-            {
-                t.Start();
-                Logger.Log("Старт транзакции");
-                
-                foreach (var kvp in intersections)
-                {
-                    Pipe pipe = kvp.Key;
-                    Logger.Log($"Вставка тройников для трубы ID {pipe.Id}");
-                    
-                    foreach (XYZ intersection in kvp.Value)
-                    {
-                        Logger.Log($"Точка пересечения: {intersection}");
-                        XYZ insertionPoint = CalculateInsertionPoint(pipe, intersection, offset);
-                        Logger.Log($"Рассчитанная точка вставки: {insertionPoint}");
-                        
-                        InsertTee(pipe, insertionPoint, teeSymbol, doc);
-                        Logger.Log("Тройник успешно вставлен");
-                    }
-                }
-                
-                t.Commit();
-                Logger.Log("Коммит транзакции");
-            }
-
-            Logger.Log("Скрипт выполнен успешно");
-            return Result.Succeeded;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"ОШИБКА: {ex.Message}\n{ex.StackTrace}");
-            message = ex.Message;
-            return Result.Failed;
-        }
-    }
-
-    private List<XYZ> FindFloorIntersections(Pipe pipe, Document doc, ElementCategoryFilter floorFilter)
-    {
-    List<XYZ> intersections = new List<XYZ>();
-    Logger.Log($"Поиск пересечений для трубы ID {pipe?.Id}");
-
-    // Проверка pipe на null
-    if (pipe == null)
-    {
-        Logger.Log("ОШИБКА: Переданный объект pipe равен null");
-        return intersections;
-    }
-
-    LocationCurve lc = pipe.Location as LocationCurve;
-    if (lc == null)
-    {
-        Logger.Log("Труба не имеет LocationCurve");
-        return intersections;
-    }
-
-    Curve curve = lc.Curve;
-    if (curve == null)
-    {
-        Logger.Log("ОШИБКА: Не удалось получить кривую из LocationCurve");
-        return intersections;
-    }
-    Logger.Log($"Тип кривой трубы: {curve.GetType().Name}");
-
-    FilteredElementCollector floors = new FilteredElementCollector(doc).WherePasses(floorFilter);
-    Logger.Log($"Найдено перекрытий: {floors.Count()}");
-
-    foreach (Element floor in floors)
-    {
-        if (floor == null)
-        {
-            Logger.Log("Пропуск null-перекрытия");
-            continue;
-        }
-
-        Logger.Log($"Обработка перекрытия ID {floor.Id}");
-        Options geomOptions = new Options { ComputeReferences = true };
-        GeometryElement geomElement = floor.get_Geometry(geomOptions);
-
-        // Проверка GeometryElement
-        if (geomElement == null)
-        {
-            Logger.Log("ОШИБКА: Не удалось получить GeometryElement для перекрытия");
-            continue;
-        }
-
-        foreach (GeometryObject geomObj in geomElement)
-        {
-            if (geomObj == null)
-            {
-                Logger.Log("Пропуск null-геометрии");
-                continue;
-            }
-
-            Solid solid = geomObj as Solid;
-            if (solid == null)
-            {
-                Logger.Log("Пропуск не-Solid объекта: " + geomObj.GetType().Name);
-                continue;
-            }
-
-            if (solid.Faces.Size == 0)
-            {
-                Logger.Log("Пропуск пустого Solid");
-                continue;
-            }
-
-            Logger.Log($"Обработка Solid с {solid.Faces.Size} гранями");
             try
             {
-                SolidCurveIntersectionOptions options = new SolidCurveIntersectionOptions();
-                SolidCurveIntersection intersection = solid.IntersectWithCurve(curve, options);
+                // Выбор труб
+                var pipes = new TeeProcessor.PipeSelectionFilter().SelectVerticalPipes(uidoc);
+                if (pipes.Count == 0) return Result.Cancelled;
 
-                // Критическая проверка на null
-                if (intersection == null)
-                {
-                    Logger.Log("Результат пересечения равен null");
-                    continue;
-                }
+                // Настройка параметров
+                var configWindow = new TeeConfigurationWindow(doc);
+                if (configWindow.ShowDialog() != true) return Result.Cancelled;
 
-                if (intersection.SegmentCount > 0)
+                // Обработка вставки
+                var processor = new TeeProcessor(doc, configWindow);
+                var insertedTees = processor.Process(pipes);
+
+                // Применение параметров
+                if (insertedTees.Any())
                 {
-                    Logger.Log($"Найдено сегментов пересечения: {intersection.SegmentCount}");
-                    for (int i = 0; i < intersection.SegmentCount; i++)
+                    using (Transaction t = new Transaction(doc, "Update Parameters"))
                     {
-                        Curve segment = intersection.GetCurveSegment(i);
-                        if (segment == null)
-                        {
-                            Logger.Log($"ОШИБКА: Сегмент {i} равен null");
-                            continue;
-                        }
-
-                        XYZ start = segment.GetEndPoint(0);
-                        XYZ end = segment.GetEndPoint(1);
-                        XYZ upperPoint = start.Z > end.Z ? start : end;
-                        intersections.Add(upperPoint);
-                        
-                        Logger.Log($"Добавлены точки: {start} - {end}");
+                        t.Start();
+                        processor.ApplyParameters(insertedTees);
+                        t.Commit();
                     }
                 }
-                else
-                {
-                    Logger.Log("Пересечений не найдено");
-                }
+
+                return Result.Succeeded;
             }
             catch (Exception ex)
             {
-                Logger.Log($"ОШИБКА при обработке Solid: {ex.Message}");
+                message = ex.ToString();
+                return Result.Failed;
             }
         }
     }
 
-    return intersections;
-}
+    // Класс для обработки вставки тройников
+    internal class TeeProcessor(Document doc, TeeConfigurationWindow config)
+    {
+        private readonly FamilySymbol _symbol = config.SelectedSymbol;
+        private readonly double _offset = config.Offset;
 
-    private XYZ CalculateInsertionPoint(Pipe pipe, XYZ intersection, double offset)
+        public List<FamilyInstance> Process(List<Pipe> pipes)
         {
-            Line line = (pipe.Location as LocationCurve).Curve as Line;
-            XYZ direction = line.Direction;
-            return intersection + direction * offset;
+            var insertedTees = new List<FamilyInstance>();
+            var intersections = new IntersectionFinder(doc).Find(pipes);
+
+            using (Transaction t = new Transaction(doc, "Insert Tees"))
+            {
+                t.Start();
+                foreach (var pipe in pipes)
+                {
+                    foreach (var point in intersections[pipe])
+                    {
+                        var tee = InsertTee(pipe, point);
+                        ConfigureTee(tee, pipe, point);
+                        insertedTees.Add(tee);
+                    }
+                }
+
+                t.Commit();
+            }
+
+            return insertedTees;
         }
 
-    private void InsertTee(Pipe pipe, XYZ insertionPoint, FamilySymbol teeSymbol, Document doc)
+        private FamilyInstance InsertTee(Pipe pipe, XYZ point)
         {
-            if (!teeSymbol.IsActive) teeSymbol.Activate();
+            if (!_symbol.IsActive) _symbol.Activate();
+            XYZ offsetPoint = point + (pipe.GetVerticalDirection() * _offset);
+            // Убедитесь, что смещение не отдаляет тройник от трубы слишком сильно
+            return doc.Create.NewFamilyInstance(
+                offsetPoint,
+                _symbol,
+                pipe, // Хост-труба для автоматического соединения
+                StructuralType.NonStructural);
+        }
 
-            FamilyInstance tee = doc.Create.NewFamilyInstance(
-                insertionPoint,
-                teeSymbol,
-                pipe,
-                Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-
-            // Логика подключения соединителей
-            ConnectorSet connectors = tee.MEPModel.ConnectorManager.Connectors;
-            Connector pipeConnector = GetConnectorClosestToPoint(pipe, insertionPoint);
-            
-            foreach (Connector conn in connectors)
+        private void ConfigureTee(FamilyInstance tee, Pipe pipe, XYZ point)
+        {
+            try
             {
-                if (conn.CoordinateSystem.BasisZ.IsAlmostEqualTo(pipeConnector.CoordinateSystem.BasisZ))
-                {
-                    conn.ConnectTo(pipeConnector);
-                    break;
-                }
+                Logger.Log($"\n=== Начало обработки тройника {tee.Id} ===");
+        
+                // Логирование информации о трубе
+                Logger.Log($"\nИнформация о трубе {pipe.Id}:");
+                LogPipeGeometry(pipe);
+                LogPipeConnectors(pipe, point);
+
+                // Повороты тройника
+                RotateTee(tee, pipe);
+        
+                // Исправленный вызов (LogTeeConnectors -> LogConnectorInfo)
+                Logger.Log($"\nСостояние тройника после поворотов:");
+                LogConnectorInfo(tee, "После поворотов");
+
+                // Подключение коннекторов
+                Logger.Log($"\nПопытка подключения...");
+                ConnectorAnalytics.Connect(tee, pipe, point);
+        
+                // Проверка результатов (исправленный вызов)
+                Logger.Log($"\nИтоговое состояние подключений:");
+                LogConnectorInfo(tee, "После подключения");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Критическая ошибка: {ex.Message}");
             }
         }
 
-    private Connector GetConnectorClosestToPoint(Pipe pipe, XYZ point)
+        private void RotateTee(FamilyInstance tee, Pipe pipe)
         {
-            ConnectorSet connectors = pipe.ConnectorManager.Connectors;
-            Connector closest = null;
-            double minDist = double.MaxValue;
-
-            foreach (Connector c in connectors)
+            if (tee.Location is not LocationPoint locationPoint)
             {
-                double dist = c.Origin.DistanceTo(point);
-                if (dist < minDist)
+                Logger.Log("Ошибка: тройник не имеет LocationPoint");
+                return;
+            }
+
+            XYZ teePoint = locationPoint.Point;
+            Logger.Log($"\nИсходная позиция тройника: {teePoint}");
+
+            // Поворот вокруг Z на -90°
+            ElementTransformUtils.RotateElement(
+                doc, 
+                tee.Id, 
+                Line.CreateBound(teePoint, teePoint + XYZ.BasisZ), 
+                -Math.PI / 2
+            );
+
+            // Поворот вокруг X на 90°
+            ElementTransformUtils.RotateElement(
+                doc, 
+                tee.Id, 
+                Line.CreateBound(teePoint, teePoint + XYZ.BasisX), 
+                Math.PI / 2
+            );
+
+            doc.Regenerate();
+            Logger.Log($"Позиция после поворотов: {((LocationPoint)tee.Location).Point}");
+        }
+        public void ApplyParameters(List<FamilyInstance> tees)
+        {
+            foreach (var tee in tees)
+            {
+                foreach (var paramConfig in config.SelectedParameters)
                 {
-                    minDist = dist;
-                    closest = c;
+                    Parameter param = tee.LookupParameter(paramConfig.Key);
+                    if (param == null || param.IsReadOnly) continue;
+
+                    try
+                    {
+                        switch (param.StorageType)
+                        {
+                            case StorageType.Double:
+                                if (double.TryParse(paramConfig.Value, out double dVal))
+                                    param.Set(dVal);
+                                break;
+                            case StorageType.Integer:
+                                if (int.TryParse(paramConfig.Value, out int iVal))
+                                    param.Set(iVal);
+                                break;
+                            case StorageType.String:
+                                param.Set(paramConfig.Value);
+                                break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log($"Ошибка установки параметра {param.Definition.Name}: {ex.Message}");
+                    }
                 }
             }
-            return closest;
         }
-
-    private FamilySymbol SelectTeeFamily(Document doc)
+        private void LogConnectorInfo(FamilyInstance tee, string stage)
         {
-            FilteredElementCollector collector = new FilteredElementCollector(doc)
-                .OfClass(typeof(FamilySymbol))
-                .OfCategory(BuiltInCategory.OST_PipeFitting)
-                .WhereElementIsElementType();
-
-            var teeSymbols = collector.Cast<FamilySymbol>()
-                //.Where(fs => fs.FamilyName.IndexOf("Tee", StringComparison.OrdinalIgnoreCase) >= 0)
+            var connectors = tee.MEPModel?.ConnectorManager?.Connectors?
+                .Cast<Connector>()
                 .ToList();
 
-            TeeSelectorWindow window = new TeeSelectorWindow(teeSymbols);
-            window.ShowDialog();
-
-            return window.SelectedSymbol;
-        }
+            Logger.Log($"\n{stage}:");
     
-    }
+            if (connectors == null || !connectors.Any())
+            {
+                Logger.Log("Коннекторы не найдены");
+                return;
+            }
 
-    public class PipeSelectionFilter : ISelectionFilter
+            foreach (var conn in connectors)
+            {
+                
+                // Исправленная строка с правильным форматированием
+                Logger.Log(
+                    $"Коннектор {conn.Id}: " +
+                    $"Подключен к {conn.AllRefs} элементам | " +
+                    $"Направление: {conn.CoordinateSystem?.BasisZ.ToString() ?? "N/A"}"
+                );
+            }
+        }
+
+        private void LogPipeGeometry(Pipe pipe)
+        {
+            var locCurve = pipe.Location as LocationCurve;
+            if (locCurve?.Curve is Line line)
+            {
+                Logger.Log($"Направление трубы: {(line.GetEndPoint(1) - line.GetEndPoint(0)).Normalize()}");
+                Logger.Log($"Высота трубы (Z): {line.GetEndPoint(0).Z} -> {line.GetEndPoint(1).Z}");
+            }
+        }
+
+        private void LogPipeConnectors(Pipe pipe, XYZ point)
+        {
+            var connectors = pipe.ConnectorManager.Connectors
+                .Cast<Connector>()
+                .OrderBy(c => c.Origin.DistanceTo(point))
+                .ToList();
+
+            Logger.Log($"Коннекторы трубы ({connectors.Count}):");
+            foreach (Connector conn in connectors)
+            {
+                Logger.Log($"ID: {conn.Id} | Тип: {conn.ConnectorType} | " +
+                           $"Позиция: {conn.Origin} | Направление: {conn.CoordinateSystem.BasisZ}");
+            }
+        }
+        // Класс поиска пересечений
+        internal class IntersectionFinder(Document doc)
+        {
+            public Dictionary<Pipe, List<XYZ>> Find(List<Pipe> pipes)
+            {
+                var results = new Dictionary<Pipe, List<XYZ>>();
+                var filter = new ElementCategoryFilter(BuiltInCategory.OST_Floors);
+
+                foreach (var pipe in pipes)
+                {
+                    var locationCurve = pipe.Location as LocationCurve;
+                    if (locationCurve?.Curve is not Line curve) continue;
+
+                    var intersections = new List<XYZ>();
+                    var floors = new FilteredElementCollector(doc)
+                        .WherePasses(filter)
+                        .WhereElementIsNotElementType();
+
+                    foreach (Element floor in floors)
+                    {
+                        var geomOptions = new Options { ComputeReferences = true };
+                        using (var geomElement = floor.get_Geometry(geomOptions))
+                        {
+                            if (geomElement == null) continue;
+
+                            foreach (GeometryObject geomObj in geomElement)
+                            {
+                                if (geomObj is not Solid solid || solid.Faces.Size == 0) continue;
+
+                                var intersection = solid.IntersectWithCurve(
+                                    curve,
+                                    new SolidCurveIntersectionOptions());
+
+                                if (intersection?.SegmentCount > 0)
+                                {
+                                    for (int i = 0; i < intersection.SegmentCount; i++)
+                                    {
+                                        var segment = intersection.GetCurveSegment(i);
+                                        if (segment == null) continue;
+
+                                        XYZ upperPoint = segment.GetEndPoint(0).Z > segment.GetEndPoint(1).Z
+                                            ? segment.GetEndPoint(0)
+                                            : segment.GetEndPoint(1);
+                                        intersections.Add(upperPoint);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    results[pipe] = intersections;
+                }
+
+                return results;
+            }
+        }
+
+        // Фильтр выбора труб
+        public class PipeSelectionFilter : ISelectionFilter
+        {
+            public List<Pipe> SelectVerticalPipes(UIDocument uidoc)
+            {
+                try
+                {
+                    var refs = uidoc.Selection.PickObjects(
+                        ObjectType.Element,
+                        this,
+                        "Выберите вертикальные трубы");
+
+                    return refs.Select(r => uidoc.Document.GetElement(r) as Pipe).ToList();
+                }
+                catch
+                {
+                    return new List<Pipe>();
+                }
+            }
+
+            public bool AllowElement(Element elem) =>
+                elem is Pipe pipe && pipe.IsVertical();
+
+            public bool AllowReference(Reference reference, XYZ position) => false;
+        }
+
+        // Класс для работы с коннекторами
+        public static class ConnectorAnalytics
+        {
+            public static void Connect(FamilyInstance tee, Pipe pipe, XYZ point)
     {
-        public bool AllowElement(Element elem)
-        {
-            if (!(elem is Pipe pipe)) return false;
-            
-            LocationCurve lc = pipe.Location as LocationCurve;
-            if (lc == null) return false;
+    var teeConnectors = tee.MEPModel?.ConnectorManager?.Connectors?
+        .Cast<Connector>()
+        .ToList();
 
-            Line line = lc.Curve as Line;
-            return line != null && IsVertical(line.Direction);
-        }
+    var pipeConnectors = pipe.ConnectorManager.Connectors
+        .Cast<Connector>()
+        .OrderBy(c => c.Origin.DistanceTo(point))
+        .ToList();
 
-        private bool IsVertical(XYZ direction)
-        {
-            return Math.Abs(direction.Z) > 0.9; // Учитываем возможные отклонения
-        }
-
-        public bool AllowReference(Reference reference, XYZ position) => false;
+    if (teeConnectors == null || !pipeConnectors.Any()) 
+    {
+        Logger.Log("Ошибка: отсутствуют коннекторы");
+        return;
     }
 
+    foreach (Connector teeConn in teeConnectors)
+    {
+        // Увеличение допустимого расстояния до 0.5 единиц
+        Connector nearestPipeConn = pipeConnectors
+            .FirstOrDefault(pc => pc.Origin.DistanceTo(teeConn.Origin) < 0.5);
+
+        if (nearestPipeConn != null)
+        {
+            // Проверка направления с допуском
+            if (IsMatchingDirection(teeConn, nearestPipeConn, 0.1))
+            {
+                try
+                {
+                    teeConn.ConnectTo(nearestPipeConn);
+                    Logger.Log($"Коннектор {teeConn.Id} подключен к {nearestPipeConn.Id}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"Ошибка подключения: {ex.Message}");
+                }
+                break;
+            }
+        }
+    }
+}
+
+            // Проверка направления с допуском
+        private static bool IsMatchingDirection(Connector a, Connector b, double tolerance = 0.1)
+{
+    return a.CoordinateSystem.BasisZ.IsAlmostEqualTo(b.CoordinateSystem.BasisZ.Negate(), tolerance);
+}
+
+        private static bool IsMatchingDirection(Connector a, Connector b)
+            {
+                return a.CoordinateSystem.BasisZ.IsAlmostEqualTo(b.CoordinateSystem.BasisZ.Negate());
+            }
+        
+        
+         }
+
+        // Класс для работы с семействами
+        public static class FamilySelector
+        {
+            public static void LoadSymbols(Document doc, System.Windows.Controls.ComboBox comboBox)
+            {
+                comboBox.ItemsSource = new FilteredElementCollector(doc)
+                    .OfClass(typeof(FamilySymbol))
+                    .OfCategory(BuiltInCategory.OST_PipeFitting)
+                    .Cast<FamilySymbol>()
+                    .ToList();
+            }
+
+            public static IEnumerable<ParameterWrapper> GetEditableParameters( FamilySymbol symbol)
+            {
+                return symbol.Parameters
+                    .Cast<Parameter>()
+                    .Where(p => !p.IsReadOnly)
+                    .Select(p => new ParameterWrapper(p));
+            }
+        }
+
+        // Модель для отображения параметров
+        public class ParameterWrapper : INotifyPropertyChanged
+        {
+            private bool _isSelected;
+            private string _value;
+
+            public string Name { get; }
+            public StorageType Type { get; }
+    
+            public bool IsSelected
+            {
+                get => _isSelected;
+                set
+                {
+                    _isSelected = value;
+                    OnPropertyChanged(nameof(IsSelected));
+                }
+            }
+
+            public string Value
+            {
+                get => _value;
+                set
+                {
+                    _value = value;
+                    OnPropertyChanged(nameof(Value));
+                }
+            }
+
+            public ParameterWrapper(Parameter parameter)
+            {
+                Name = parameter.Definition.Name;
+                Type = parameter.StorageType;
+                Value = parameter.AsValueString() ?? parameter.AsString() ?? "";
+            }
+
+            public event PropertyChangedEventHandler PropertyChanged;
+    
+            protected virtual void OnPropertyChanged(string propertyName)
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+
+        public static class FamilyParameterHelper
+        {
+            public static List<ParameterWrapper> GetInstanceParameters(Document doc, FamilySymbol symbol)
+            {
+                using (Transaction tempTx = new Transaction(doc, "Temp Insert"))
+                {
+                    tempTx.Start();
+
+                    try
+                    {
+                        // Создаем временный экземпляр в скрытом виде
+                        var tempTee = doc.Create.NewFamilyInstance(
+                            XYZ.Zero,
+                            symbol,
+                            StructuralType.NonStructural);
+
+                        // Собираем параметры
+                        var parameters = tempTee.Parameters
+                            .Cast<Parameter>()
+                            .Where(p => !p.IsReadOnly)
+                            .Select(p => new ParameterWrapper(p))
+                            .ToList();
+
+                        // Удаляем временный объект
+                        doc.Delete(tempTee.Id);
+
+                       tempTx.RollBack(); // Откатываем транзакцию
+                        return parameters;
+                    }
+                    catch
+                    {
+                        tempTx.RollBack();
+                        return new List<ParameterWrapper>();
+                    }
+                }
+            }
+        }
+    }
+}

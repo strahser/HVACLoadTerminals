@@ -149,11 +149,12 @@
     <Compile Include="NormativeHeatResistance\NormativeValueCalculatorTests.cs" />
     <Compile Include="NormativeHeatResistance\NormativeWindow.xaml.cs" />
     <Compile Include="NormativeHeatResistance\StaticCoefficientStructures.cs" />
-    <Compile Include="PipeSewageHandler\DiameterConverter.cs" />
+    <Compile Include="PipeSewageHandler\FamilyManagerParameterHelper.cs" />
     <Compile Include="PipeSewageHandler\InsertTeeAtFloorCommand.cs" />
     <Compile Include="PipeSewageHandler\Logger.cs" />
-    <Compile Include="PipeSewageHandler\TeeSelectorViewModel.cs" />
-    <Compile Include="PipeSewageHandler\TeeSelectorWindow.xaml.cs" />
+    <Compile Include="PipeSewageHandler\PipeExtensions.cs" />
+    <Compile Include="PipeSewageHandler\TeeConfigViewModel.cs" />
+    <Compile Include="PipeSewageHandler\TeeConfigWindow.xaml.cs" />
     <Compile Include="Utils\CanvasHelper.cs" />
     <Compile Include="Utils\CollectorGeometry.cs" />
     <Compile Include="CalculateSpaceDevice\InsertTerminal.cs" />
@@ -200,7 +201,7 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="NormativeHeatResistance\NormativeWindow.xaml" />
-    <Page Include="PipeSewageHandler\TeeSelectorWindow.xaml" />
+    <Page Include="PipeSewageHandler\TeeConfigWindow.xaml" />
     <Page Include="Resources\Styles.xaml" />
     <Page Include="Views\DeviceView.xaml">
       <SubType>Designer</SubType>
