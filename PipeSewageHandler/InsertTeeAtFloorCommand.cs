@@ -68,21 +68,19 @@ namespace HVACLoadTerminals.PipeSewageHandler
             var insertedTees = new List<FamilyInstance>();
             var intersections = new IntersectionFinder(doc).Find(pipes);
 
-            using (Transaction t = new Transaction(doc, "Insert Tees"))
+            using var t = new Transaction(doc, "Insert Tees");
+            t.Start();
+            foreach (var pipe in pipes)
             {
-                t.Start();
-                foreach (var pipe in pipes)
+                foreach (var point in intersections[pipe])
                 {
-                    foreach (var point in intersections[pipe])
-                    {
-                        var tee = InsertTee(pipe, point);
-                        ConfigureTee(tee, pipe, point);
-                        insertedTees.Add(tee);
-                    }
+                    var tee = InsertTee(pipe, point);
+                    ConfigureTeeLogs(tee, pipe, point);
+                    insertedTees.Add(tee);
                 }
-
-                t.Commit();
             }
+
+            t.Commit();
 
             return insertedTees;
         }
@@ -90,16 +88,22 @@ namespace HVACLoadTerminals.PipeSewageHandler
         private FamilyInstance InsertTee(Pipe pipe, XYZ point)
         {
             if (!_symbol.IsActive) _symbol.Activate();
-            XYZ offsetPoint = point + (pipe.GetVerticalDirection() * _offset);
-            // Убедитесь, что смещение не отдаляет тройник от трубы слишком сильно
-            return doc.Create.NewFamilyInstance(
+            
+            // Получаем направление трубы и корректируем точку вставки
+            Line pipeLine = (pipe.Location as LocationCurve).Curve as Line;
+            XYZ pipeDirection = pipeLine.Direction;
+            
+            // Смещение вдоль направления трубы, а не вертикали
+            XYZ offsetPoint = point + (pipeDirection * _offset);
+            var tee =doc.Create.NewFamilyInstance(
                 offsetPoint,
                 _symbol,
-                pipe, // Хост-труба для автоматического соединения
+                pipe, // Хост-труба
                 StructuralType.NonStructural);
+            return tee;
         }
 
-        private void ConfigureTee(FamilyInstance tee, Pipe pipe, XYZ point)
+        private void ConfigureTeeLogs(FamilyInstance tee, Pipe pipe, XYZ point)
         {
             try
             {
@@ -107,15 +111,14 @@ namespace HVACLoadTerminals.PipeSewageHandler
         
                 // Логирование информации о трубе
                 Logger.Log($"\nИнформация о трубе {pipe.Id}:");
-                LogPipeGeometry(pipe);
-                LogPipeConnectors(pipe, point);
+                Logger.LogPipeGeometry(pipe);
+                Logger.LogPipeConnectors(pipe, point);
 
                 // Повороты тройника
                 RotateTee(tee, pipe);
         
-                // Исправленный вызов (LogTeeConnectors -> LogConnectorInfo)
                 Logger.Log($"\nСостояние тройника после поворотов:");
-                LogConnectorInfo(tee, "После поворотов");
+                Logger.LogConnectorInfo(tee, "После поворотов");
 
                 // Подключение коннекторов
                 Logger.Log($"\nПопытка подключения...");
@@ -123,7 +126,7 @@ namespace HVACLoadTerminals.PipeSewageHandler
         
                 // Проверка результатов (исправленный вызов)
                 Logger.Log($"\nИтоговое состояние подключений:");
-                LogConnectorInfo(tee, "После подключения");
+                Logger.LogConnectorInfo(tee, "После подключения");
             }
             catch (Exception ex)
             {
@@ -139,28 +142,31 @@ namespace HVACLoadTerminals.PipeSewageHandler
                 return;
             }
 
-            XYZ teePoint = locationPoint.Point;
-            Logger.Log($"\nИсходная позиция тройника: {teePoint}");
+            XYZ pipeDirection = ((pipe.Location as LocationCurve)!.Curve as Line)!.Direction;
+            XYZ teeDirectionZ = XYZ.BasisZ; // Направление коннектора тройника по умолчанию
+            XYZ teeDirectionY = XYZ.BasisY; // Направление коннектора тройника по умолчанию
 
-            // Поворот вокруг Z на -90°
+            // Вычисляем угол между направлением трубы и тройником
+            double angleZ = pipeDirection.AngleTo(teeDirectionZ);
+            double angleY = pipeDirection.AngleTo(teeDirectionY);
+
+            // Поворот вокруг оси Z
             ElementTransformUtils.RotateElement(
-                doc, 
-                tee.Id, 
-                Line.CreateBound(teePoint, teePoint + XYZ.BasisZ), 
-                -Math.PI / 2
+                doc,
+                tee.Id,
+                Line.CreateBound(locationPoint.Point, locationPoint.Point + XYZ.BasisZ),
+                angleZ
             );
-
-            // Поворот вокруг X на 90°
             ElementTransformUtils.RotateElement(
-                doc, 
-                tee.Id, 
-                Line.CreateBound(teePoint, teePoint + XYZ.BasisX), 
-                Math.PI / 2
+                doc,
+                tee.Id,
+                Line.CreateBound(locationPoint.Point, locationPoint.Point + XYZ.BasisY),
+                angleY
             );
 
             doc.Regenerate();
-            Logger.Log($"Позиция после поворотов: {((LocationPoint)tee.Location).Point}");
         }
+        
         public void ApplyParameters(List<FamilyInstance> tees)
         {
             foreach (var tee in tees)
@@ -194,56 +200,8 @@ namespace HVACLoadTerminals.PipeSewageHandler
                 }
             }
         }
-        private void LogConnectorInfo(FamilyInstance tee, string stage)
-        {
-            var connectors = tee.MEPModel?.ConnectorManager?.Connectors?
-                .Cast<Connector>()
-                .ToList();
+        
 
-            Logger.Log($"\n{stage}:");
-    
-            if (connectors == null || !connectors.Any())
-            {
-                Logger.Log("Коннекторы не найдены");
-                return;
-            }
-
-            foreach (var conn in connectors)
-            {
-                
-                // Исправленная строка с правильным форматированием
-                Logger.Log(
-                    $"Коннектор {conn.Id}: " +
-                    $"Подключен к {conn.AllRefs} элементам | " +
-                    $"Направление: {conn.CoordinateSystem?.BasisZ.ToString() ?? "N/A"}"
-                );
-            }
-        }
-
-        private void LogPipeGeometry(Pipe pipe)
-        {
-            var locCurve = pipe.Location as LocationCurve;
-            if (locCurve?.Curve is Line line)
-            {
-                Logger.Log($"Направление трубы: {(line.GetEndPoint(1) - line.GetEndPoint(0)).Normalize()}");
-                Logger.Log($"Высота трубы (Z): {line.GetEndPoint(0).Z} -> {line.GetEndPoint(1).Z}");
-            }
-        }
-
-        private void LogPipeConnectors(Pipe pipe, XYZ point)
-        {
-            var connectors = pipe.ConnectorManager.Connectors
-                .Cast<Connector>()
-                .OrderBy(c => c.Origin.DistanceTo(point))
-                .ToList();
-
-            Logger.Log($"Коннекторы трубы ({connectors.Count}):");
-            foreach (Connector conn in connectors)
-            {
-                Logger.Log($"ID: {conn.Id} | Тип: {conn.ConnectorType} | " +
-                           $"Позиция: {conn.Origin} | Направление: {conn.CoordinateSystem.BasisZ}");
-            }
-        }
         // Класс поиска пересечений
         internal class IntersectionFinder(Document doc)
         {
@@ -328,62 +286,56 @@ namespace HVACLoadTerminals.PipeSewageHandler
         }
 
         // Класс для работы с коннекторами
-        public static class ConnectorAnalytics
+        private static class ConnectorAnalytics
         {
             public static void Connect(FamilyInstance tee, Pipe pipe, XYZ point)
-    {
-    var teeConnectors = tee.MEPModel?.ConnectorManager?.Connectors?
-        .Cast<Connector>()
-        .ToList();
-
-    var pipeConnectors = pipe.ConnectorManager.Connectors
-        .Cast<Connector>()
-        .OrderBy(c => c.Origin.DistanceTo(point))
-        .ToList();
-
-    if (teeConnectors == null || !pipeConnectors.Any()) 
-    {
-        Logger.Log("Ошибка: отсутствуют коннекторы");
-        return;
-    }
-
-    foreach (Connector teeConn in teeConnectors)
-    {
-        // Увеличение допустимого расстояния до 0.5 единиц
-        Connector nearestPipeConn = pipeConnectors
-            .FirstOrDefault(pc => pc.Origin.DistanceTo(teeConn.Origin) < 0.5);
-
-        if (nearestPipeConn != null)
-        {
-            // Проверка направления с допуском
-            if (IsMatchingDirection(teeConn, nearestPipeConn, 0.1))
-            {
-                try
                 {
-                    teeConn.ConnectTo(nearestPipeConn);
-                    Logger.Log($"Коннектор {teeConn.Id} подключен к {nearestPipeConn.Id}");
-                }
-                catch (Exception ex)
+                var teeConnectors = tee.MEPModel?.ConnectorManager?.Connectors?
+                    .Cast<Connector>()
+                    .ToList();
+
+                var pipeConnectors = pipe.ConnectorManager.Connectors
+                    .Cast<Connector>()
+                    .OrderBy(c => c.Origin.DistanceTo(point))
+                    .ToList();
+
+                if (teeConnectors == null || !pipeConnectors.Any()) 
                 {
-                    Logger.Log($"Ошибка подключения: {ex.Message}");
+                    Logger.Log("Ошибка: отсутствуют коннекторы");
+                    return;
                 }
-                break;
-            }
-        }
-    }
-}
+
+                foreach (Connector teeConn in teeConnectors)
+                {
+                    // Увеличение допустимого расстояния до 0.5 единиц
+                    Connector nearestPipeConn = pipeConnectors
+                        .FirstOrDefault(pc => pc.Origin.DistanceTo(teeConn.Origin) < 0.5);
+
+                    if (nearestPipeConn != null)
+                    {
+                        // Проверка направления с допуском
+                        if (IsMatchingDirection(teeConn, nearestPipeConn, 0.1))
+                        {
+                            try
+                            {
+                                teeConn.ConnectTo(nearestPipeConn);
+                                Logger.Log($"Коннектор {teeConn.Id} подключен к {nearestPipeConn.Id}");
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Log($"Ошибка подключения: {ex.Message}");
+                            }
+                            break;
+                        }
+                    }
+                }
+                }
 
             // Проверка направления с допуском
-        private static bool IsMatchingDirection(Connector a, Connector b, double tolerance = 0.1)
-{
-    return a.CoordinateSystem.BasisZ.IsAlmostEqualTo(b.CoordinateSystem.BasisZ.Negate(), tolerance);
-}
-
-        private static bool IsMatchingDirection(Connector a, Connector b)
+            private static bool IsMatchingDirection(Connector a, Connector b, double tolerance = 0.1)
             {
-                return a.CoordinateSystem.BasisZ.IsAlmostEqualTo(b.CoordinateSystem.BasisZ.Negate());
+                return a.CoordinateSystem.BasisZ.IsAlmostEqualTo(b.CoordinateSystem.BasisZ.Negate(), tolerance);
             }
-        
         
          }
 
