@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Autodesk.Revit.DB;
 
-namespace HVACLoadTerminals.DrawNewSpaceFaces.Walls
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls
 {
     internal class DrawFaceGeometry
     {

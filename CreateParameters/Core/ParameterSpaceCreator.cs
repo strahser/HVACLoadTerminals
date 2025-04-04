@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using Autodesk.Revit.DB;
+using HVACLoadTerminals.CreateParameters.ParametersCreators;
 using HVACLoadTerminals.HeatLoss;
 using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.CreateParameters.ParametersCreators
+namespace HVACLoadTerminals.CreateParameters.Core
 {
     public class ParameterSpaceCreator : BaseParameterCreator<SpaceDataModel>
     {

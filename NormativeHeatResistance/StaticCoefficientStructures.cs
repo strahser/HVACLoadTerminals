@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using HVACLoadTerminals.ModelsStatic;
+using HVACLoadTerminals.ProjectSettings;
 
 namespace HVACLoadTerminals.NormativeHeatResistance;
 

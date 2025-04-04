@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Windows;
 using HVACLoadTerminals.Models;
-namespace HVACLoadTerminals.Utils.DbUtility
+
+namespace HVACLoadTerminals.DataBases.DbUtility
 
 {
 

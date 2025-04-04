@@ -6,6 +6,8 @@ using System.Reflection;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
+using HVACLoadTerminals.ClimateData;
+using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces;
 using HVACLoadTerminals.HeatLoss.HeatLossResult.Reports;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
@@ -24,16 +26,13 @@ namespace HVACLoadTerminals.HeatLoss.HeatLossResult
         [Reactive]
         private double? BuildingHeight { get; set; } = CollectorQuery.GetBuildingHeightFromGroundLevel(RevitConfig.Document);
 
-        [Reactive] public bool IsExpanded { get; set; } = true;
-        
-
+        [Reactive] 
+        public bool IsExpanded { get; set; } = true;
         private Document HvacDocument=>RevitConfig.Document;
-        
-        private readonly List<string> _calculatedModelsParametersNames = ["SurfaceHeatLoss","OrientationValue", "CornerValue","InfiltrationLoad"];
 
         #region Commands
 
-        private RelayCommand _createFacesCommand;
+        private RelayCommand _recalculateDataCommand;
 
         private RelayCommand _setRoomHeatLoadsCommand;
 
@@ -48,30 +47,60 @@ namespace HVACLoadTerminals.HeatLoss.HeatLossResult
         {
             get { return _setRoomHeatLoadsCommand ??= new RelayCommand(obj => SetRoomHeatLoads()); }
         }
-        public RelayCommand CreateFacesCommand
+        public RelayCommand RecalculateDataCommand
         {
-            get { return _createFacesCommand ??= new RelayCommand(obj => FaceDataList = AggregateEnclosureData()); }
+            get { return _recalculateDataCommand ??= new RelayCommand(obj => FaceDataList = AggregateEnclosureData()); }
         }
         public RelayCommand SetSurfaceHeatLoadsCommand
         {
-            get { return _setSurfaceHeatLoads ??= new RelayCommand(obj => SetSurfaceHeatLoads()); }
+            get { return _setSurfaceHeatLoads ??= new RelayCommand(obj => UpdateConstructionSurfaceData()); }
         }
         #endregion
         
-    
+        //Получаем даные из модели ревита
         private List<ConstructionSurfaceModel> GetAllStructuralData()
         {
-
             var directShapes = CollectorQuery.GetDirectShapeElements(HvacDocument);
+            List<ConstructionSurfaceModel> constructionSurfaceData = new List<ConstructionSurfaceModel>();
 
-            // Создаем и возвращаем список моделей конструкций
-            var constructionSurfaceData = directShapes
-                .Select(CreateHeatLossTable)
-                .Where(model => model != null) 
-                .OrderBy(model => model.SpaceId) 
-                .ToList();
+            foreach (var directShape in directShapes)
+            {
+                ConstructionSurfaceModel model = CreateHeatLossTable(directShape);
+
+                if (model != null)
+                {
+                    // Получаем Space по ID из модели
+                    Space space = null;
+                    try
+                    {
+                        space = HvacDocument.GetElement(new ElementId(int.Parse(model.SpaceId))) as Space;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Ошибка при получении Space по ID {model.SpaceId}: {ex.Message}");
+                    }
+
+
+                    // Обновляем TemperatureInSpace
+                    if (space != null)
+                    {
+                        model.TemperatureInSpace = ParametersHandler.GetSpaceSetHeatPoint(HvacDocument, space);
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Не удалось получить Space для SpaceId {model.SpaceId}, TemperatureInSpace не обновлено.");
+                        model.TemperatureInSpace = 0.0; // Или какое-то значение по умолчанию
+                    }
+
+                    // Обновляем TemperatureOut
+                    model.TemperatureOut = ParametersHandler.GetProjectInformation(HvacDocument, nameof(ClimateDataModel.TWinterOut092));
+                    constructionSurfaceData.Add(model);
+                }
+            }
+            constructionSurfaceData = constructionSurfaceData.OrderBy(m => m.SpaceId).ToList();
             return ConstructionSurfaceModel.SetCornerValue(constructionSurfaceData);
         }
+
         
         /// <summary>
         /// Автоматически устанавливаем параметры из Ревит поверхности в модель
@@ -106,7 +135,7 @@ namespace HVACLoadTerminals.HeatLoss.HeatLossResult
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Ошибка при установке параметра {paramName}: {ex.Message}");
+                    Debug.WriteLine($"Метод {nameof(CreateFromRevitElement)}-Ошибка при установке параметра {paramName}: {ex.Message}");
                 }
             }
 
@@ -128,6 +157,7 @@ namespace HVACLoadTerminals.HeatLoss.HeatLossResult
               return null; // или выбросить исключение
         }
         var windowHeight = CollectorGeometry.GetWindowHeights(RevitConfig.Document, element);
+        //получаем данные из модели ревит (обобщенные элементы)
         return CreateFromRevitElement(element,  BuildingHeight, windowHeight);
     }
       
@@ -195,13 +225,18 @@ namespace HVACLoadTerminals.HeatLoss.HeatLossResult
             TaskDialog.Show("Информация",$"Тепловые Потери установлены в параметр {nameof(SpaceDataModel.HeatLoss)}");
         }
         
-        private void SetSurfaceHeatLoads()
+        private void UpdateConstructionSurfaceData()
         {
             int totalParametersSet = 0;
+            
+            using Transaction transaction = new Transaction(HvacDocument, "Update Heat Loss Data");
+            transaction.Start();
             foreach (var surfaceModel in FaceDataList)
             {
-  HeatBalanceParametersMappings.SetParametersFromModelToElementByFaceId(HvacDocument, surfaceModel,_calculatedModelsParametersNames, ref totalParametersSet);
+                 HeatBalanceParametersMappings.SetParametersFromModelToElement(HvacDocument, surfaceModel);
+                totalParametersSet++;
             }
+            transaction.Commit();
             TaskDialog.Show("Обновление параметров завершено", $"Параметры успешно обновлены для {totalParametersSet} элементов.");
         }
         

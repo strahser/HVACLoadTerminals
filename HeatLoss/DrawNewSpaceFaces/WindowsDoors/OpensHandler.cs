@@ -5,8 +5,7 @@ using System.Linq;
 using System.Windows;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
-using HVACLoadTerminals.DrawNewSpaceFaces;
-using HVACLoadTerminals.Models;
+using Autodesk.Revit.UI;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
 
@@ -15,18 +14,50 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
     internal class OpensHandler(Document hvacDocument, Document roomDocument)
     {
         private static readonly List<string> TransferParameters = ConstructionSurfaceModel.TransferParameters;
-        
+
+        private static bool IsExternalElement(Element element)
+        {
+            if (element is FamilyInstance instance)
+            {
+                var fromRoom = instance.FromRoom;
+                var toRoom = instance.ToRoom;
+                return fromRoom == null || toRoom == null;
+            }
+            return false;
+        }
+
+        // Получение последней фазы проекта
+        Phase GetLastPhase(Document doc)
+        {
+            var phases = doc.Phases;
+            return phases.Cast<Phase>().LastOrDefault();
+        }
+
+        private List<Element> GetExternalOpens(List<Element> Collection)
+        {
+            //var externalWindows = CollectorQuery.GetAllWindows(doc)
+           // .Where(w => IsExternalElement(w, lastPhase))
+             //   .ToList();
+             
+            var doc = roomDocument; // текущий документ
+            var lastPhase = GetLastPhase(doc);
+            if (lastPhase == null) return []; // проверка наличия фаз
+
+            return Collection
+                .Where(w => IsExternalElement(w))
+                .ToList();
+        }
         public void DrawWindows(List<Element> walls)
         {
+            var roomWidowsList = GetExternalOpens(CollectorQuery.GetAllWindows(roomDocument));
             var windowsSymbols = CollectorQuery.GetAllWindowsFamilySymbols(hvacDocument);
-            var roomWidowsList = CollectorQuery.GetAllWindows(roomDocument);
             var windowSymbol = windowsSymbols.FirstOrDefault() as FamilySymbol;
             DrawOpensForSelectedWalls(walls,roomWidowsList, windowSymbol, EnclosureTypeOptions.Window);
         }
         
         public void DrawDoors(List<Element> walls)
         {
-            var roomDoorsList = CollectorQuery.GetAllDoors(roomDocument);
+            var roomDoorsList = GetExternalOpens(CollectorQuery.GetAllDoors(roomDocument));
             var doorsSymbols = CollectorQuery.GetAllDoorsFamilySymbols(hvacDocument);
             var doorSymbol = doorsSymbols.FirstOrDefault() as FamilySymbol;
             DrawOpensForSelectedWalls(walls,roomDoorsList, doorSymbol, EnclosureTypeOptions.Door);
@@ -60,6 +91,10 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
         
         private List<FamilyInstance>  DrawBaseOpens(Wall wall, List<Element> opensList, FamilySymbol opensInstance, string enclosureType)
         {
+            if (opensInstance == null)
+            {
+                TaskDialog.Show("Error", "Не найдено семейство стены/окна");
+            }
             var openList = new List<FamilyInstance>();
             // Создание окна, если точка вставки находится внутри ограничивающего прямоугольника стены
             foreach (var element in opensList)

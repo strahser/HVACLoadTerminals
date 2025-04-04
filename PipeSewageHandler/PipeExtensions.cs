@@ -237,7 +237,5 @@ public static class PipeExtensions
             Connector pipeConn = pipeConnectors
                 .OrderBy(c => c.Origin.DistanceTo(teePosition))
                 .First();
-
-            // Остальной код подключения...
         }
 }

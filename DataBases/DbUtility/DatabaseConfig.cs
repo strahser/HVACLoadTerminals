@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace HVACLoadTerminals.Utils.DbUtility
+namespace HVACLoadTerminals.DataBases.DbUtility
 {
     public static class DatabaseConfig
     {

@@ -3,7 +3,7 @@ using System.Data.SQLite;
 using HVACLoadTerminals.Models;
 using Newtonsoft.Json;
 
-namespace HVACLoadTerminals.Utils.DbUtility
+namespace HVACLoadTerminals.DataBases.DbUtility
 {
     public static class SqLiteSpaceDbHelper
     {

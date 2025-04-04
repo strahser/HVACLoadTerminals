@@ -84,7 +84,92 @@ namespace HVACLoadTerminals.PipeSewageHandler
 
             return insertedTees;
         }
+    //Решение: автоматическое добавление тройника с разрывом трубы
 
+        public void InsertTeeIntoPipe(Document doc, Pipe pipe, XYZ insertPoint, FamilySymbol teeSymbol)
+
+        {
+            /*using Transaction tx = new Transaction(doc, "Insert Tee");
+            tx.Start();*/
+
+            // Загружаем семейство тройника, если не загружено
+
+            if (!teeSymbol.IsActive)
+
+                teeSymbol.Activate();
+
+            // Получаем систему трубы
+
+            MEPSystem pipeSystem = pipe.MEPSystem;
+
+            Level pipeLevel = pipe.ReferenceLevel;
+
+            // Разрезаем трубу на две части
+
+            Line pipeLine = (pipe.Location as LocationCurve).Curve as Line;
+
+            XYZ start = pipeLine.GetEndPoint(0);
+
+            XYZ end = pipeLine.GetEndPoint(1);
+
+            // Создаем две новые трубы
+
+            Pipe pipe1 = Pipe.Create(doc, pipeSystem.Id, pipe.GetTypeId(), pipeLevel.Id, start, insertPoint);
+
+            Pipe pipe2 = Pipe.Create(doc, pipeSystem.Id, pipe.GetTypeId(), pipeLevel.Id, insertPoint, end);
+
+            // Удаляем старую трубу
+
+            doc.Delete(pipe.Id);
+
+            // Вставляем тройник в точке разрыва
+
+            FamilyInstance tee = doc.Create.NewFamilyInstance(insertPoint, teeSymbol, StructuralType.NonStructural);
+
+            // Получаем коннекторы тройника
+            var rotatedTee = RotateTee(tee, pipe);  
+
+            ConnectorSet teeConnectors = rotatedTee.MEPModel.ConnectorManager.Connectors;
+
+            List<Connector> teeConnectorList = teeConnectors.Cast<Connector>().ToList();
+
+            // Подключаем трубы к тройнику
+
+            ConnectClosest(teeConnectorList[0], pipe1);
+
+            ConnectClosest(teeConnectorList[1], pipe2);
+
+            /*tx.Commit();*/
+        }
+        
+        // Метод для поиска ближайшего коннектора и подключения трубы
+
+        private void ConnectClosest(Connector teeConnector, Pipe pipe)
+        {
+
+            Connector closestConnector = null;
+            double minDistance = double.MaxValue;
+            foreach (Connector pipeConnector in pipe.ConnectorManager.Connectors)
+            {
+
+                double distance = teeConnector.Origin.DistanceTo(pipeConnector.Origin);
+
+                if (distance < minDistance)
+                {
+
+                    minDistance = distance;
+
+                    closestConnector = pipeConnector;
+                }
+            }
+            if (closestConnector != null)
+            {
+
+                teeConnector.ConnectTo(closestConnector);
+
+            }
+
+        }
         private FamilyInstance InsertTee(Pipe pipe, XYZ point)
         {
             if (!_symbol.IsActive) _symbol.Activate();
@@ -134,12 +219,12 @@ namespace HVACLoadTerminals.PipeSewageHandler
             }
         }
 
-        private void RotateTee(FamilyInstance tee, Pipe pipe)
+        private FamilyInstance RotateTee(FamilyInstance tee, Pipe pipe)
         {
             if (tee.Location is not LocationPoint locationPoint)
             {
                 Logger.Log("Ошибка: тройник не имеет LocationPoint");
-                return;
+                return tee;
             }
 
             XYZ pipeDirection = ((pipe.Location as LocationCurve)!.Curve as Line)!.Direction;
@@ -165,6 +250,7 @@ namespace HVACLoadTerminals.PipeSewageHandler
             );
 
             doc.Regenerate();
+            return tee;
         }
         
         public void ApplyParameters(List<FamilyInstance> tees)

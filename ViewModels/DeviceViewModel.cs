@@ -8,10 +8,10 @@ using System.Data.SQLite;
 using Autodesk.Revit.DB;
 using ReactiveUI.Fody.Helpers;
 using Autodesk.Revit.UI;
+using HVACLoadTerminals.DataBases.DbUtility;
 using HVACLoadTerminals.Models;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
-using HVACLoadTerminals.Utils.DbUtility;
 
 
 namespace HVACLoadTerminals.ViewModels

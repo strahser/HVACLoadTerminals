@@ -96,7 +96,7 @@
                            FontWeight="SemiBold"
                            Margin="0,0,0,10"/>
                 <!-- Consider adding a ComboBox/RadioButtons here for North direction -->
-                <Button Command="{Binding CreateFacesCommand}"
+                <Button Command="{Binding RecalculateDataCommand}"
                         Content="Пересчитать Данные"
                         Padding="10,5"
                         Margin="0,0,0,10"

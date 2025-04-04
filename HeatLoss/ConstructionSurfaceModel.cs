@@ -116,7 +116,7 @@ namespace HVACLoadTerminals.HeatLoss
         public double CornerValue { get; set; }
         
 
-        [Description("Промеж. итог")]
+        [Description("По Помещению Вт")]
         [RevitParameter]
         public double Subtotal { get; set; }
         

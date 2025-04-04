@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using HVACLoadTerminals.CreateParameters.Core;
 using HVACLoadTerminals.CreateParameters.ParametersCreators;
 using HVACLoadTerminals.Utils;
 
@@ -25,9 +26,9 @@ internal class AddParametersCommand : IExternalCommand
                 return ParameterSpaceCreator.GetCreationReport();
             },
             () => {
-                ParameterProjectInfoCreator.CreateParameterBindings();
-                ParameterProjectInfoCreator.AddSharedParametersToCategories();
-                return ParameterProjectInfoCreator.GetCreationReport();
+                ParameterClimateDataCreator.CreateParameterBindings();
+                ParameterClimateDataCreator.AddSharedParametersToCategories();
+                return ParameterClimateDataCreator.GetCreationReport();
             },
             () => {
                 ParameterSurfacesCreator.CreateParameterBindings();

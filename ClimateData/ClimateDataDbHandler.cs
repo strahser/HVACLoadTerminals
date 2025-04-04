@@ -10,7 +10,7 @@ using Autodesk.Revit.UI;
 
 namespace HVACLoadTerminals.ClimateData;
 
- public class ClimateDataRepository(string dbPath)
+ public class ClimateDataDbHandler(string dbPath)
  {
      public List<string> GetRegions()
         {
@@ -82,79 +82,73 @@ namespace HVACLoadTerminals.ClimateData;
         {
             ClimateDataModel climateData = new ClimateDataModel();
 
-            using (var conn = new SQLiteConnection($"Data Source={dbPath};Version=3;"))
+            using var conn = new SQLiteConnection($"Data Source={dbPath};Version=3;");
+            try
             {
-                try
+                conn.Open();
+                Debug.WriteLine("Connection to database opened successfully.");
+
+                var cmd = new SQLiteCommand("SELECT * FROM ClimateData WHERE Region = @Region AND City = @City LIMIT 1", conn);
+                cmd.Parameters.AddWithValue("@Region", selectedRegion);
+                cmd.Parameters.AddWithValue("@City", selectedCity);
+
+                Debug.WriteLine($"Executing query: {cmd.CommandText} with parameters Region={selectedRegion}, City={selectedRegion}");
+
+                using var reader = cmd.ExecuteReader();
+                if (!reader.Read())
                 {
-                    conn.Open();
-                    Debug.WriteLine("Connection to database opened successfully.");
+                    Debug.WriteLine("No data found for the specified Region and City.");
+                    return null;
+                }
 
-                    var cmd = new SQLiteCommand("SELECT * FROM ClimateData WHERE Region = @Region AND City = @City LIMIT 1", conn);
-                    cmd.Parameters.AddWithValue("@Region", selectedRegion);
-                    cmd.Parameters.AddWithValue("@City", selectedCity);
+                Debug.WriteLine("Data found in database, starting to populate ClimateData object.");
 
-                    Debug.WriteLine($"Executing query: {cmd.CommandText} with parameters Region={selectedRegion}, City={selectedRegion}");
+                List<string> columnNames = GetColumnNames(reader);
 
-                    using (var reader = cmd.ExecuteReader())
+                var properties = typeof(ClimateDataModel).GetProperties();
+
+                foreach (var property in properties)
+                {
+                    string propertyName = property.Name;
+
+                    Debug.WriteLine($"Processing property: {propertyName}");
+
+                    if (columnNames.Any(columnName => string.Equals(columnName, propertyName, StringComparison.OrdinalIgnoreCase)))
                     {
-                        if (!reader.Read())
+                        try
                         {
-                            Debug.WriteLine("No data found for the specified Region and City.");
-                            TaskDialog.Show("Error", "Климатические данные не найдены.");
-                            return null;
+                            object dbValue = reader[propertyName];
+
+                            Debug.WriteLine($"Value from database for {propertyName}: {dbValue ?? "NULL"}");
+
+                            object convertedValue = ClimateDataUtils.ConvertValue(dbValue, property.PropertyType);
+
+                            property.SetValue(climateData, convertedValue);
+
+                            Debug.WriteLine($"Successfully set property {propertyName} to {convertedValue ?? "NULL"}");
                         }
-
-                        Debug.WriteLine("Data found in database, starting to populate ClimateData object.");
-
-                        List<string> columnNames = GetColumnNames(reader);
-
-                        var properties = typeof(ClimateDataModel).GetProperties();
-
-                        foreach (var property in properties)
+                        catch (Exception ex)
                         {
-                            string propertyName = property.Name;
-
-                            Debug.WriteLine($"Processing property: {propertyName}");
-
-                            if (columnNames.Any(columnName => string.Equals(columnName, propertyName, StringComparison.OrdinalIgnoreCase)))
-                            {
-                                try
-                                {
-                                    object dbValue = reader[propertyName];
-
-                                    Debug.WriteLine($"Value from database for {propertyName}: {dbValue ?? "NULL"}");
-
-                                    object convertedValue = ClimateDataUtils.ConvertValue(dbValue, property.PropertyType);
-
-                                    property.SetValue(climateData, convertedValue);
-
-                                    Debug.WriteLine($"Successfully set property {propertyName} to {convertedValue ?? "NULL"}");
-                                }
-                                catch (Exception ex)
-                                {
-                                    Debug.WriteLine($"Error setting property {propertyName}: {ex.Message}");
-                                    TaskDialog.Show("Warning", $"Не удалось установить значение для параметра '{propertyName}'. Ошибка: {ex.Message}");
-                                }
-                            }
-                            else
-                            {
-                                Debug.WriteLine($"Column {propertyName} not found in database.");
-                            }
+                            Debug.WriteLine($"Error setting property {propertyName}: {ex.Message}");
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error in GetClimateDataFromDB: {ex.Message}");
-                    TaskDialog.Show("Error", $"Ошибка при получении климатических данных: {ex.Message}");
-                }
-                finally
-                {
-                    if (conn.State == ConnectionState.Open)
+                    else
                     {
-                        conn.Close();
-                        Debug.WriteLine("Connection to database closed.");
+                        Debug.WriteLine($"Column {propertyName} not found in database.");
                     }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in GetClimateDataFromDB: {ex.Message}");
+                
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                    Debug.WriteLine("Connection to database closed.");
                 }
             }
 
@@ -177,7 +171,7 @@ namespace HVACLoadTerminals.ClimateData;
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error in GetColumnNames: {ex.Message}");
-                TaskDialog.Show("Warning", $"Ошибка при получении имен столбцов: {ex.Message}");
+
             }
             return columnNames;
         }

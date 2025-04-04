@@ -1,6 +1,6 @@
 using HVACLoadTerminals.ModelsStatic;
 
-namespace HVACLoadTerminals.NormativeHeatResistance;
+namespace HVACLoadTerminals.ProjectSettings;
 
 public static class BuildingCategory
 {

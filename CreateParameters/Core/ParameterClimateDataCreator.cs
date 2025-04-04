@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using Autodesk.Revit.DB;
 using HVACLoadTerminals.ClimateData;
-using HVACLoadTerminals.ModelsStatic;
+using HVACLoadTerminals.CreateParameters.ParametersCreators;
 using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.CreateParameters.ParametersCreators;
+namespace HVACLoadTerminals.CreateParameters.Core;
 
-public class ParameterProjectInfoCreator : BaseParameterCreator<ClimateDataModel>
+public class ParameterClimateDataCreator : BaseParameterCreator<ClimateDataModel>
 {
-    private static readonly ParameterProjectInfoCreator Instance = new();
+    private static readonly ParameterClimateDataCreator Instance = new();
     public static void CreateParameterBindings() => Instance.CreateParameterBindings(RevitConfig.Document);
     public static void AddSharedParametersToCategories() => Instance.AddSharedParametersToCategories(RevitConfig.Document);
     protected override string CreatorName => "Project Parameters";

@@ -1,6 +1,6 @@
 ﻿using System.Data.SQLite;
 
-namespace HVACLoadTerminals.Utils.DbUtility
+namespace HVACLoadTerminals.DataBases.DbUtility
 {
     public  class SqlLiteSystemFamilyDbHelper
     {

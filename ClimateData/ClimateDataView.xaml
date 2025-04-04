@@ -23,7 +23,8 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/> <!-- Добавленная строка для TextBlock -->
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -50,12 +51,37 @@
                   Grid.Row="2"
                   Margin="0,5,0,15"
                   HorizontalAlignment="Stretch"/>
-        <ScrollViewer Grid.Row="3">
-            <DataGrid ItemsSource="{Binding ClimateDataRows}" AutoGenerateColumns="False" IsReadOnly="True">
+        
+        <!-- Building Category Section -->
+        <StackPanel Grid.Row="3">
+            <TextBlock Text="Выберите Категорию Здания"/>
+            <ComboBox ItemsSource="{Binding BuildingCategories}"
+                      SelectedItem="{Binding SelectedCategory}"
+                      Margin="0 0 0 15"/>
+            <TextBlock Text="Укажите температуру Здания"/>
+            <TextBox Grid.Row="3" 
+                     Text="{Binding TinSelected, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="0,5,0,15"
+                     HorizontalAlignment="Stretch">
+                <TextBox.Style>
+                    <Style TargetType="TextBox">
+                        <Style.Triggers>
+                            <Trigger Property="Validation.HasError" Value="True">
+                                <Setter Property="ToolTip" 
+                                        Value="{Binding RelativeSource={x:Static RelativeSource.Self}, Path=(Validation.Errors)[0].ErrorContent}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+            
+        </StackPanel>
+        <ScrollViewer Grid.Row="4">
+            <DataGrid ItemsSource="{Binding ClimateDataRows}" AutoGenerateColumns="False" IsReadOnly="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Свойство" Binding="{Binding PropertyName}" Width="Auto"/>
                     <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="*"/>
-                    <DataGridTextColumn Header="Значение" Binding="{Binding Value}" Width="Auto"/>
+                    <DataGridTextColumn Header="Значение" Binding="{Binding Value, Mode=TwoWay}" Width="Auto"/>
                 </DataGrid.Columns>
             </DataGrid>
         </ScrollViewer>
@@ -63,7 +89,7 @@
 
         <!-- Buttons -->
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
             
             <Button x:Name="OkButton"
                     Command="{Binding OnConfirmCommand}"

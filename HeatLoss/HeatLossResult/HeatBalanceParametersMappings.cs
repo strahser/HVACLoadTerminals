@@ -1,110 +1,106 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Autodesk.Revit.DB;
-using HVACLoadTerminals.Utils;
-using Document = Autodesk.Revit.DB.Document;
+using HVACLoadTerminals.ModelsStatic;
 
 namespace HVACLoadTerminals.HeatLoss.HeatLossResult;
 
-public static class HeatBalanceParametersMappings
-{
-    // Метод для установки параметров из ConstructionSurfaceModel в элемент Revit по FaceId
-    public static void SetParametersFromModelToElementByFaceId(Document doc, ConstructionSurfaceModel model, List<string> parametersToTransfer, ref int totalParametersSet)
+    public static class HeatBalanceParametersMappings
     {
-        // 1. По FaceId находим элемент, которому нужно установить параметры
-        Element element = FindElementByFaceId(doc, model.RevitElementId);
 
-        if (element == null)
+        public static int SetParametersFromModelToElement(Document doc, ConstructionSurfaceModel model)
         {
-            Debug.WriteLine($"Element with FaceId '{model.RevitElementId}' not found.");
-            return; // Прерываем выполнение, если элемент не найден
-        }
-        Debug.WriteLine($" Found Element with FaceId '{model.RevitElementId}'.");
+            Element element = FindElementByRevitElementId(doc, model.RevitElementId);
 
-        // 2. Устанавливаем параметры в найденный элемент
-        totalParametersSet += SetParametersFromModelToElement(doc, element, model, parametersToTransfer);
-
-    }
-	
-        private static Element FindElementByFaceId(Document doc, string faceId)
-        {
-            // Сначала попробуем преобразовать faceId в ElementId.
-            if (int.TryParse(faceId, out int elementIdValue))
+            if (element == null)
             {
-                ElementId elementId = new ElementId(elementIdValue);
-                Element element = doc.GetElement(elementId);
-
-                if (element != null)
-                {
-                    // Базовая проверка, чтобы убедиться, что мы нашли правильный элемент.
-                    // Можно добавить более строгую проверку, например, проверку типа элемента.
-                    return element;
-                }
+                Debug.WriteLine($"Element with RevitElementId '{model.RevitElementId}' not found.");
+                return 0; // Возвращаем 0, если элемент не найден
             }
+            int parametersSet = 0;
 
-            // Если преобразование не удалось или элемент не найден, возвращаем null.
-            return null;
-        }
-        // Метод для установки параметров из ConstructionSurfaceModel в элемент Revit
-        private static int SetParametersFromModelToElement(Document doc, Element element, ConstructionSurfaceModel model, List<string> parametersToTransfer)
-        {
-            int parametersSetCount = 0; // Счетчик установленных параметров
+            // Получаем все свойства ConstructionSurfaceModel с атрибутом [RevitParameter]
+            var properties = typeof(ConstructionSurfaceModel).GetProperties()
+                .Where(p => p.GetCustomAttributes(typeof(RevitParameterAttribute), true).Length > 0);
 
-            using Transaction tx = new Transaction(doc, "Set Parameters from Model");
-            tx.Start();
-
-            foreach (string parameterName in parametersToTransfer)
+            foreach (var property in properties)
             {
                 try
                 {
-                    Parameter parameter = element.LookupParameter(parameterName);
+                    string parameterName = property.Name; // Используем имя свойства как имя параметра
+                    object value = property.GetValue(model); // Получаем значение свойства из модели
 
-                    if (parameter != null)
+                    if (value != null)
                     {
-                        // Получаем значение параметра из модели
-                        object modelValue = GetPropertyValue(model, parameterName);
+                        Parameter parameter = element.LookupParameter(parameterName);
 
-                        if (modelValue != null)
+                        if (parameter != null && !parameter.IsReadOnly)
                         {
-                            // Устанавливаем значение параметра в элементе
-                            ParametersUtility.SetParameterValue(parameter, modelValue, doc);
-                            parametersSetCount++; // Увеличиваем счетчик при успешной установке параметра
+                            // В зависимости от типа значения, устанавливаем параметр
+                            if (value is double doubleValue)
+                            {
+                                parameter.Set(doubleValue);
+                                parametersSet++;
+                            }
+                            else if (value is string stringValue)
+                            {
+                                parameter.Set(stringValue);
+                                parametersSet++;
+                            }
+                            else if (value is int intValue)
+                            {
+                                parameter.Set(intValue);
+                                parametersSet++;
+                            }
+                            // Добавьте другие типы, если необходимо
+                            else
+                            {
+                                Debug.WriteLine($"Неподдерживаемый тип данных для параметра {parameterName}: {value?.GetType()}");
+                            }
                         }
                         else
                         {
-                            Debug.WriteLine($"Value for parameter '{parameterName}' is null in ConstructionSurfaceModel.");
+                            Debug.WriteLine($"Параметр {parameterName} не найден или доступен только для чтения для элемента {element.Id}");
                         }
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"Parameter '{parameterName}' not found on element with ID: {element.Id.IntegerValue}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error setting parameter '{parameterName}' on element with ID: {element.Id.IntegerValue}. Error: {ex.Message}");
+                    Debug.WriteLine($"Ошибка при установке параметра {property.Name}: {ex.Message}");
                 }
             }
 
-            tx.Commit();
-
-            return parametersSetCount;  
+            return parametersSet;
         }
-        
-        // Вспомогательный метод для получения значения свойства из объекта ConstructionSurfaceModel
-        private static object GetPropertyValue(ConstructionSurfaceModel model, string propertyName)
-        {
-            Type type = typeof(ConstructionSurfaceModel);
-            System.Reflection.PropertyInfo property = type.GetProperty(propertyName);
 
-            if (property != null)
+
+        // Вспомогательный метод для поиска элемента по RevitElementId RevitElementId - это строка
+        private static Element FindElementByRevitElementId(Document doc, string revitElementId)
+        {
+            try
             {
-                return property.GetValue(model);
+                if (string.IsNullOrEmpty(revitElementId))
+                {
+                    Debug.WriteLine("RevitElementId is null or empty.");
+                    return null;
+                }
+
+                // Преобразуем строку в ElementId
+                if (int.TryParse(revitElementId, out int elementIdValue))
+                {
+                    ElementId elementId = new ElementId(elementIdValue);
+                    return doc.GetElement(elementId);
+                }
+                else
+                {
+                    Debug.WriteLine($"Invalid RevitElementId format: {revitElementId}");
+                    return null;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Debug.WriteLine($"Property '{propertyName}' not found in ConstructionSurfaceModel.");
+                Debug.WriteLine($"Error finding element by RevitElementId: {ex.Message}");
                 return null;
             }
         }

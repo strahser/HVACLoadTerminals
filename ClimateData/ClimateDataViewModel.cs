@@ -1,11 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using DynamicData;
+using HVACLoadTerminals.GSOP;
 using HVACLoadTerminals.ModelsStatic;
+using HVACLoadTerminals.ProjectSettings;
 using HVACLoadTerminals.Utils;
 using HVACLoadTerminals.Utils.HVACLoadTerminals.Utils;
 
@@ -33,14 +38,18 @@ public class ClimateDataViewModel : ViewModelBase
         }
     }
     private readonly Document _document;
-    private readonly ClimateDataRepository _repository;
+    private readonly ClimateDataDbHandler _dbHandler;
     private string _selectedRegion;
     private string _selectedCity;
+    private string  _TinSelected;
     private readonly string _dbPath;
+    private BuildingCategoryItem _selectedCategory;
     private static readonly string RelativeDbPath = Path.Combine("ClimateData", "ProjectData.db"); 
     public ObservableCollection<ClimateDataRow> ClimateDataRows { get; } = new();
     public ObservableCollection<string> Regions { get; } = new();
     public ObservableCollection<string> Cities { get; } = new();
+    
+    public ObservableCollection<BuildingCategoryItem> BuildingCategories { get; set; }
 
     public string SelectedRegion
     {
@@ -65,6 +74,32 @@ public class ClimateDataViewModel : ViewModelBase
             UpdateClimateDataRows();
         }
     }
+    
+    public string  TinSelected
+    {
+        get => _TinSelected;
+        set
+        {
+            if (_TinSelected == value) return;
+            _TinSelected = value;
+            OnPropertyChanged();
+            UpdateClimateDataRows();
+        }
+    }
+    
+    public BuildingCategoryItem SelectedCategory
+    {
+        get => _selectedCategory;
+        set
+        {
+            if (_selectedCategory != value)
+            {
+                _selectedCategory = value;
+                OnPropertyChanged();
+                UpdateClimateDataRows();
+            }
+        }
+    }
     public ClimateDataViewModel()
     {
         _document = RevitConfig.Document;
@@ -78,39 +113,60 @@ public class ClimateDataViewModel : ViewModelBase
             return;
         }
 
-        _repository = new ClimateDataRepository(_dbPath);
+        _dbHandler = new ClimateDataDbHandler(_dbPath);
         LoadRegions();
         if (Regions.Count > 0) SelectedRegion = Regions[0];
+        
+        BuildingCategories = LoadBuildingCategories();
+        SelectedCategory = BuildingCategories.First();
+        TinSelected = 18.ToString();
     }
 
     
     private void OnConfirm()
     {
-        if (string.IsNullOrEmpty(SelectedRegion)) return;
+
         if (string.IsNullOrEmpty(SelectedCity)) return;
+
         try
         {
-            var climateData = _repository.GetClimateDataFromDb(_selectedCity,SelectedRegion); // Получаем объект ClimateData
-            if (climateData != null)
+            // Создаем новую модель и заполняем данными из ClimateDataRows
+            var climateData = new ClimateDataModel();
+            
+            foreach (var row in ClimateDataRows)
             {
-                UpdateProjectParameters(climateData); // Передаем объект ClimateData
-                TaskDialog.Show("Успешно", "Климатические данные обновлены успешно");
+                var property = typeof(ClimateDataModel).GetProperty(row.PropertyName);
+                if (property == null || !property.CanWrite) continue;
+
+                try
+                {
+                    // Конвертируем строку в нужный тип
+                    object convertedValue = Convert.ChangeType(row.Value, property.PropertyType);
+                    property.SetValue(climateData, convertedValue);
+                }
+                catch (Exception ex)
+                {
+                    TaskDialog.Show("Ошибка", 
+                        $"Некорректное значение для {row.PropertyName}: {row.Value}");
+                    Debug.WriteLine($"Ошибка конвертации: {ex.Message}");
+                    return; // Прерываем выполнение при ошибке
+                }
             }
-            else
-            {
-                TaskDialog.Show("Error", "Failed to retrieve climate data from database.");
-            }
+            
+            // Обновляем параметры проекта
+            UpdateProjectParameters(climateData);
+            TaskDialog.Show("Успешно", "Данные сохранены");
         }
         catch (Exception ex)
         {
-            TaskDialog.Show("Error", $"Failed to update parameters: {ex.Message}");
+            TaskDialog.Show("Ошибка", $"Ошибка: {ex.Message}");
         }
     }
     
     private void LoadRegions()
     {
         Regions.Clear();
-        foreach (var region in _repository.GetRegions()) 
+        foreach (var region in _dbHandler.GetRegions()) 
             Regions.Add(region);
     }
 
@@ -119,55 +175,75 @@ public class ClimateDataViewModel : ViewModelBase
         Cities.Clear();
         if (string.IsNullOrEmpty(SelectedRegion)) return;
             
-        foreach (var city in _repository.GetCities(SelectedRegion)) 
+        foreach (var city in _dbHandler.GetCities(SelectedRegion)) 
             Cities.Add(city);
         SelectedCity = Cities.Count > 0 ? Cities[0] : null;
     }
     
     private void UpdateProjectParameters(ClimateDataModel climateData)
+    {
+        using Transaction t = new Transaction(_document, "Update Climate Data");
+        t.Start();
+        var projectInfo = CollectorQuery.GetProjectInfo();
+
+        var properties = typeof(ClimateDataModel).GetProperties();
+
+        foreach (var property in properties)
         {
-            using (Transaction t = new Transaction(_document, "Update Climate Data"))
+            var attribute = property.GetCustomAttribute<RevitParameterAttribute>();
+            if (attribute == null) continue;
+
+            string parameterName = property.Name;
+            object value = property.GetValue(climateData);
+
+            Parameter p = projectInfo.LookupParameter(parameterName);
+
+            if (p == null) continue;
+            if (value is string stringValue)
             {
-                t.Start();
-                var projectInfo = CollectorQuery.GetProjectInfo();
-
-                var properties = typeof(ClimateDataModel).GetProperties();
-
-                foreach (var property in properties)
-                {
-                    var attribute = property.GetCustomAttribute<RevitParameterAttribute>();
-                    if (attribute == null) continue;
-
-                    string parameterName = property.Name;
-                    object value = property.GetValue(climateData);
-
-                    Parameter p = projectInfo.LookupParameter(parameterName);
-
-                    if (p != null)
-                    {
-                        if (value is string stringValue)
-                        {
-                            p.Set(stringValue);
-                        }
-                        else if (value is double doubleValue && p.StorageType == StorageType.Double)
-                        {
-                            p.Set(doubleValue);
-                        }
-                    }
-                }
-                t.Commit();
+                p.Set(stringValue);
+            }
+            else if (value is double doubleValue && p.StorageType == StorageType.Double)
+            {
+                p.Set(doubleValue);
             }
         }
+        t.Commit();
+    }
+    private static ObservableCollection<BuildingCategoryItem> LoadBuildingCategories()
+    {
+        var categories = new ObservableCollection<BuildingCategoryItem>();
+        var buildingCategoryType = typeof(BuildingCategory);
+
+        foreach (var property in buildingCategoryType.GetProperties(BindingFlags.Public | BindingFlags.Static))
+        {
+            if (property.PropertyType == typeof(BuildingCategoryItem) && property.GetValue(null) is BuildingCategoryItem categoryItem)
+            {
+                categories.Add(categoryItem);
+            }
+        }
+        return categories;
+    }
     
     private void UpdateClimateDataRows()
     {
         ClimateDataRows.Clear();
         if (string.IsNullOrEmpty(SelectedCity)) return;
 
-        var data = _repository.GetClimateData(SelectedRegion, SelectedCity);
+        ClimateDataModel data = _dbHandler.GetClimateData(SelectedRegion, SelectedCity);
         if (data == null) return;
         var properties = typeof(ClimateDataModel).GetProperties();
-
+        // Конвертация TinSelected в double
+        if (double.TryParse(TinSelected, out double tinValue))
+        {
+            data.Tin = tinValue; // Обновляем Tin в модели
+        }
+        else
+        {
+            // Обработка ошибки (например, установка значения по умолчанию)
+            data.Tin = 0; 
+            Debug.WriteLine("Ошибка: Некорректное значение температуры.");
+        }
         foreach (var property in properties)
         {
             var attribute = property.GetCustomAttribute<RevitParameterAttribute>();
@@ -176,7 +252,23 @@ public class ClimateDataViewModel : ViewModelBase
             var propertyName = property.Name;
             var value = property.GetValue(data);
             var description = data.GetDescription(propertyName);
+            
+            if (property.Name == nameof(ClimateDataModel.BuildingCategory)
+                && SelectedCategory != null)
+            {
+                propertyName = nameof(ClimateDataModel.BuildingCategory);
+                value = SelectedCategory.Value;
+                description = SelectedCategory.Description;
+            }
 
+            if (property.Name == nameof(ClimateDataModel.Gsop)
+                && TinSelected != null)
+            {
+                propertyName = nameof(ClimateDataModel.Gsop);
+                value = AddGsopRow(data);
+                description =  data.GetDescription(propertyName);
+            }
+            
             ClimateDataRows.Add(new ClimateDataRow
             {
                 PropertyName = propertyName,
@@ -186,4 +278,31 @@ public class ClimateDataViewModel : ViewModelBase
         }
     }
 
+    private double AddGsopRow(ClimateDataModel data)
+    {
+        try
+        {
+            var tin = data.Tin;
+            var t8 = data.heatingPeriodAvgTemperature8C;
+            var t10 = data.heatingPeriodAvgTemperature10C;
+            var z8 = data.heatingPeriodDuration8C;
+            var z10 = data.HeatingPeriodDuration10C;
+
+            var gsop = GsopCalculator.CalculateGsop(
+                SelectedCategory?.Value,
+                tin,
+                t8,
+                t10,
+                z8,
+                z10
+            );
+            return gsop;
+
+        }
+        catch (InvalidOperationException ex)
+        {
+            Debug.WriteLine($"Ошибка расчета ГСОП: {ex.Message}");
+            return double.NaN;
+        }
+    }
 }

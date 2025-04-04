@@ -10,10 +10,23 @@ public static class Logger
 {
     public static bool IsDebugEnabled { get; set; } = true;
 
+    [Conditional("DEBUG")] // Этот метод будет скомпилирован только в DEBUG-сборке
     public static void Log(string message)
     {
-        if (IsDebugEnabled) 
-            Debug.WriteLine(message);
+        Debug.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + ": " + message);
+    }
+
+    [Conditional("DEBUG")]
+    public static void Log(string message, params object[] args)
+    {
+        Log(string.Format(message, args));
+    }
+
+    [Conditional("DEBUG")]
+    public static void LogException(Exception ex, string context = "")
+    {
+        Log("Exception: " + ex.Message + (string.IsNullOrEmpty(context) ? "" : " Context: " + context));
+        Log("Stack Trace: " + ex.StackTrace);
     }
 
     public static void Error(string message, Exception ex = null)

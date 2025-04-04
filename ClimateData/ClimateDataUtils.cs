@@ -20,7 +20,6 @@ public static class ClimateDataUtils
         // Обработка Nullable-типов
         Type targetType = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
         Type sourceType = dbValue.GetType();
-
         Debug.WriteLine($"Converting {dbValue} ({sourceType.Name}) → {targetType.Name}");
 
         // Специальная обработка числовых типов
@@ -34,7 +33,7 @@ public static class ClimateDataUtils
                 return result;
             }
             
-            TaskDialog.Show("Ошибка преобразования", 
+            Debug.Write("Ошибка преобразования", 
                 $"Некорректное значение: '{dbValue}'. Ожидается число.");
             return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
         }
@@ -49,7 +48,7 @@ public static class ClimateDataUtils
                 return result;
             }
             
-            TaskDialog.Show("Ошибка преобразования", 
+            Debug.Write("Ошибка преобразования", 
                 $"Некорректное значение: '{dbValue}'. Ожидается целое число.");
             return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
         }
@@ -76,8 +75,7 @@ public static class ClimateDataUtils
     }
     catch (Exception ex)
     {
-        Debug.WriteLine($"Ошибка преобразования: {ex.Message}");
-        TaskDialog.Show("Ошибка данных", 
+       Debug.Write("Ошибка данных", 
             $"Не удалось преобразовать '{dbValue}': {ex.Message}");
         return propertyType.IsValueType ? Activator.CreateInstance(propertyType) : null;
     }

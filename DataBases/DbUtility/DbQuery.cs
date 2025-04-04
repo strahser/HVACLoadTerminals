@@ -6,7 +6,7 @@ using System.Windows;
 using HVACLoadTerminals.Models;
 using LiteDB;
 
-namespace HVACLoadTerminals.Utils.DbUtility
+namespace HVACLoadTerminals.DataBases.DbUtility
 {
     public class DbQuery
     {

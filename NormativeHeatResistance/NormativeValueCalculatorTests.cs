@@ -1,5 +1,6 @@
 using System;
 using HVACLoadTerminals.ModelsStatic;
+using HVACLoadTerminals.ProjectSettings;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace HVACLoadTerminals.NormativeHeatResistance;
 

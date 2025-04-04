@@ -57,7 +57,6 @@ public static class NormativeValueCalculator
             return r0Values[gsopValues.Length - 1];
         }
 
-
         for (int i = 0; i < gsopValues.Length - 1; i++)
         {
             if (gsop >= gsopValues[i] && gsop <= gsopValues[i + 1])
@@ -71,7 +70,6 @@ public static class NormativeValueCalculator
                 return y0 + (gsop - x0) * (y1 - y0) / (x1 - x0);
             }
         }
-
         return 0; // В крайнем случае
     }
 
