@@ -11,12 +11,13 @@ namespace HVACLoadTerminals.HeatLoss.HeatLossResult.Reports.Schedules;
 // Пример использования для вашего случая
 public class ScheduleCreator
 {
-    
+    public string FullSpecificationName = "Полная спецификация конструкций";
+    public string ShortSpecificationName = "Сводная спецификация конструкций";
     public void CreateGenericModelSchedule(Document doc)
     {
         var config = new ScheduleConfiguration
         {
-            ScheduleName = "Полная спецификация конструкций",
+            ScheduleName = FullSpecificationName,
             IncludedParameters = GetRevitParameterProperties(),
             GroupByFields = { nameof(ConstructionSurfaceModel.SpaceId) },
             SummaryFields = { nameof(ConstructionSurfaceModel.TotalHeatLoad) }
@@ -38,20 +39,20 @@ public class ScheduleCreator
     {
         var config = new ScheduleConfiguration
         {
-            ScheduleName = "Сводная спецификация конструкций",
-            IncludedParameters = new List<string>
-            {
+            ScheduleName = ShortSpecificationName,
+            IncludedParameters =
+            [
                 nameof(ConstructionSurfaceModel.EnclosureType),
                 nameof(ConstructionSurfaceModel.ConstructionName),
                 nameof(ConstructionSurfaceModel.ShortConstructionName),
                 nameof(ConstructionSurfaceModel.TransferCoefficient),
                 nameof(ConstructionSurfaceModel.NormativeTransferThermalCoefficient)
-            },
-            GroupByFields = new List<string>
-            {
+            ],
+            GroupByFields =
+            [
                 nameof(ConstructionSurfaceModel.EnclosureType),
                 nameof(ConstructionSurfaceModel.ConstructionName)
-            },
+            ],
         };
 
         ScheduleFactory.CreateSchedule(doc, config);

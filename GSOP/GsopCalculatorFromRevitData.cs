@@ -15,21 +15,24 @@ public static class GsopCalculatorFromRevitData
     /// </summary>
     /// <param name="document">Текущий документ Revit.</param>
     /// <returns>Значение ГСОП (°C·сут/год).</returns>
- public static double CalculateGsop(Document document)
+ public static double CalculateGsop(Document document,string buildingCategory=null)
     {
         try
         {
             // Проверка наличия параметра BuildingCategory
-            string buildingCategory = null;
-            try
+            if (buildingCategory == null)
             {
-                buildingCategory = document.GetProjectInfoString(nameof(BuildingCategory));
+                try
+                {
+                    buildingCategory = document.GetProjectInfoString(nameof(BuildingCategory));
+                }
+                catch
+                {
+                    Debug.Write("Параметр 'BuildingCategory' не найден.");
+                    return 0;
+                }
             }
-            catch
-            {
-                Debug.Write("Параметр 'BuildingCategory' не найден.");
-                return 0;
-            }
+
 
             // Получение остальных параметров
             double tin = GetParameterOrDefault(document, nameof(ClimateDataModel.Tin));

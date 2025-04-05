@@ -106,9 +106,21 @@ namespace HVACLoadTerminals.HeatLoss
         public double NormativeTransferThermalCoefficient { get; set; }
         
 
+        private double _normativeTransferCoefficient { get; set; }
+
         [Description("Норм. Коэф. Тепл-чи")]
         [RevitParameter]
-        public double NormativeTransferCoefficient { get; set; }
+        public double NormativeTransferCoefficient
+        {
+            get => _normativeTransferCoefficient;
+
+            set
+            {
+                if(_normativeTransferCoefficient==value) return;
+                _normativeTransferCoefficient = value;
+                OnPropertyChanged();
+            }
+        }
 
         [ColumnOrder(14)]
         [Description("Угл.пом")]

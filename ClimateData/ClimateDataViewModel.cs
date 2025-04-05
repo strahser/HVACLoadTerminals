@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using DynamicData;
@@ -16,16 +17,7 @@ using HVACLoadTerminals.Utils.HVACLoadTerminals.Utils;
 
 
 namespace HVACLoadTerminals.ClimateData;
-public static class AssemblyPathResolver
-{
-    public static string GetAssemblyDirectory()
-    {
-        string codeBase = Assembly.GetExecutingAssembly().CodeBase;
-        UriBuilder uri = new UriBuilder(codeBase);
-        string path = Uri.UnescapeDataString(uri.Path);
-        return Path.GetDirectoryName(path);
-    }
-}
+
 
 public class ClimateDataViewModel : ViewModelBase
 {    private RelayCommand _onConfirmCommand;
@@ -38,19 +30,63 @@ public class ClimateDataViewModel : ViewModelBase
         }
     }
     private readonly Document _document;
-    private readonly ClimateDataDbHandler _dbHandler;
     private string _selectedRegion;
     private string _selectedCity;
     private string  _TinSelected;
     private readonly string _dbPath;
     private BuildingCategoryItem _selectedCategory;
-    private static readonly string RelativeDbPath = Path.Combine("ClimateData", "ProjectData.db"); 
+    private static readonly string RelativeDbPath = Path.Combine("ClimateData", "ClimateData.json"); 
     public ObservableCollection<ClimateDataRow> ClimateDataRows { get; } = new();
     public ObservableCollection<string> Regions { get; } = new();
     public ObservableCollection<string> Cities { get; } = new();
     
     public ObservableCollection<BuildingCategoryItem> BuildingCategories { get; set; }
 
+    private List<ClimateDataJson> _climateData;
+
+    public void LoadClimateData()
+    {
+        string jsonPath = _dbPath;
+        string jsonContent = File.ReadAllText(jsonPath);
+        _climateData = JsonSerializer.Deserialize<List<ClimateDataJson>>(jsonContent);
+    }
+    public List<string> GetRegions()
+    {
+        return _climateData.Select(d => d.Region).Distinct().ToList();
+    }
+
+    public List<string> GetCities(string region)
+    {
+        return _climateData.Where(d => d.Region == region)
+            .Select(d => d.City).Distinct().ToList();
+    }
+
+    public ClimateDataModel GetClimateData(string region, string city)
+    {
+        var jsonData = _climateData.FirstOrDefault(d => 
+            d.Region == region && d.City == city);
+
+        if (jsonData == null) return null;
+
+        // Маппинг данных из JSON в модель
+        return new ClimateDataModel
+        {
+            Region = jsonData.Region,
+            City = jsonData.City,
+            TWinterOut092Max = jsonData.TWinterOut092Max,
+            TWinterOut098Max = jsonData.TWinterOut098Max,
+            TWinterOut092 = jsonData.TWinterOut092,
+            TWinterOut098 = jsonData.TWinterOut098,
+            heatingPeriodDuration8C = jsonData.heatingPeriodDuration8C,
+            HeatingPeriodDuration10C = jsonData.HeatingPeriodDuration10C,
+            heatingPeriodAvgTemperature8C = jsonData.heatingPeriodAvgTemperature8C,
+            heatingPeriodAvgTemperature10C = jsonData.heatingPeriodAvgTemperature10C,
+            WinterRelativeHumidity = jsonData.WinterRelativeHumidity,
+            WinterWindSpeed = jsonData.WinterWindSpeed,
+        };
+    }
+
+ 
     public string SelectedRegion
     {
         get => _selectedRegion;
@@ -113,7 +149,7 @@ public class ClimateDataViewModel : ViewModelBase
             return;
         }
 
-        _dbHandler = new ClimateDataDbHandler(_dbPath);
+        LoadClimateData();
         LoadRegions();
         if (Regions.Count > 0) SelectedRegion = Regions[0];
         
@@ -166,18 +202,18 @@ public class ClimateDataViewModel : ViewModelBase
     private void LoadRegions()
     {
         Regions.Clear();
-        foreach (var region in _dbHandler.GetRegions()) 
+        foreach (var region in GetRegions()) 
             Regions.Add(region);
+
     }
 
     private void LoadCities()
     {
         Cities.Clear();
         if (string.IsNullOrEmpty(SelectedRegion)) return;
-            
-        foreach (var city in _dbHandler.GetCities(SelectedRegion)) 
+        
+        foreach (var city in GetCities(SelectedRegion)) 
             Cities.Add(city);
-        SelectedCity = Cities.Count > 0 ? Cities[0] : null;
     }
     
     private void UpdateProjectParameters(ClimateDataModel climateData)
@@ -230,7 +266,7 @@ public class ClimateDataViewModel : ViewModelBase
         ClimateDataRows.Clear();
         if (string.IsNullOrEmpty(SelectedCity)) return;
 
-        ClimateDataModel data = _dbHandler.GetClimateData(SelectedRegion, SelectedCity);
+        ClimateDataModel data = GetClimateData(SelectedRegion, SelectedCity);
         if (data == null) return;
         var properties = typeof(ClimateDataModel).GetProperties();
         // Конвертация TinSelected в double
@@ -305,4 +341,32 @@ public class ClimateDataViewModel : ViewModelBase
             return double.NaN;
         }
     }
+}
+
+
+public static class AssemblyPathResolver
+{
+    public static string GetAssemblyDirectory()
+    {
+        string codeBase = Assembly.GetExecutingAssembly().CodeBase;
+        UriBuilder uri = new UriBuilder(codeBase);
+        string path = Uri.UnescapeDataString(uri.Path);
+        return Path.GetDirectoryName(path);
+    }
+}
+
+public class ClimateDataJson
+{
+    public string Region { get; set; }
+    public string City { get; set; }
+    public double TWinterOut092Max { get; set; }
+    public double TWinterOut098Max { get; set; }
+    public double TWinterOut092 { get; set; }
+    public double TWinterOut098 { get; set; }
+    public double heatingPeriodDuration8C { get; set; }
+    public double HeatingPeriodDuration10C { get; set; }
+    public double heatingPeriodAvgTemperature8C { get; set; }
+    public double heatingPeriodAvgTemperature10C { get; set; }
+    public double WinterRelativeHumidity { get; set; }
+    public double WinterWindSpeed { get; set; }
 }

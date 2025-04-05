@@ -101,7 +101,7 @@ public static class ProjectInfoRevitExtensions
     /// </summary>
     /// <param name="document">Текущий документ Revit.</param>
     /// <returns>Элемент OST_ProjectInformation.</returns>
-    private static Element GetProjectInformationElement(Document document)
+    public static Element GetProjectInformationElement(Document document)
     {
         var projectInfoFilter = new ElementCategoryFilter(BuiltInCategory.OST_ProjectInformation);
         var collector = new FilteredElementCollector(document).WherePasses(projectInfoFilter);

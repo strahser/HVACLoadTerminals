@@ -1,13 +1,17 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Reactive;
 using System.Reflection;
 using System.Text;
 using System.Windows.Input;
 using Autodesk.Revit.DB;
+using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.GSOP;
 using HVACLoadTerminals.HeatLoss;
 using HVACLoadTerminals.ProjectSettings;
@@ -20,7 +24,7 @@ namespace HVACLoadTerminals.NormativeHeatResistance;
 
 public class NormativeHeatViewModel : ViewModelBase
 {
-
+    
     private readonly Document _doc = RevitConfig.Document; // Добавляем ссылку на документ Revit
     public ReactiveCommand<string, Unit> UpdateGroupCheckBoxStateCommand { get; }
     // Свойства с автоматическим уведомлением об изменениях
@@ -29,6 +33,18 @@ public class NormativeHeatViewModel : ViewModelBase
         
     private BuildingCategoryItem _selectedCategory;
     public string UpdateSummary { get; set; }
+    private double _gsop;
+
+    public double GSOP
+    {
+        get => _gsop;
+        set
+        {
+            if (value == _gsop) return;
+            _gsop = value;
+            OnPropertyChanged();
+        }
+    }
     public BuildingCategoryItem SelectedCategory
     {
         get => _selectedCategory;
@@ -41,6 +57,7 @@ public class NormativeHeatViewModel : ViewModelBase
                 // Вызов метода обновления коэффициентов при изменении категории
                 OnPropertyChanged();
                 UpdateNormativeTransferCoefficients();
+                GSOP = GsopCalculatorFromRevitData.CalculateGsop(_doc, SelectedCategory.Value);
             }
         }
     }
@@ -250,7 +267,7 @@ public class NormativeHeatViewModel : ViewModelBase
         foreach (var enclosure in EnclosureElements)
         {
             var calculateR0 = NormativeValueCalculator.GetNormativeCalculator(SelectedCategory.Value, enclosure.EnclosureType);
-            var normativeTransferThermalCoefficient = calculateR0(GsopCalculatorFromRevitData.CalculateGsop(_doc));
+            var normativeTransferThermalCoefficient = calculateR0(GSOP);
             var normativeTransferCoefficient = 1 / normativeTransferThermalCoefficient;
             var updatedEnclosure = (ConstructionSurfaceModel)enclosure.Clone();
             updatedEnclosure.NormativeTransferThermalCoefficient = normativeTransferThermalCoefficient;
@@ -258,78 +275,113 @@ public class NormativeHeatViewModel : ViewModelBase
             updatedEnclosureElements.Add(updatedEnclosure);
         }
         EnclosureElements = updatedEnclosureElements;
+
     }
     // Применение нормативных значений к элементам Revit
-    private void ApplyNormativeValuesToRevit()
+private void ApplyNormativeValuesToRevit()
+{
+    var updateCounts = new Dictionary<string, int>();
+    var directShapeElements = GetDirectShapeElements(_doc);
+
+    var groupSettings = EnclosureElements
+        .GroupBy(e => (e.EnclosureType, ConstructionType: e.ConstructionName))
+        .ToDictionary(
+            g => g.Key,
+            g => g.First()
+        );
+
+    using Transaction t = new Transaction(_doc, "Apply Group Values");
+    t.Start();
+    try
+    {
+        var projectInfo = ProjectInfoRevitExtensions.GetProjectInformationElement(_doc);
+        projectInfo.LookupParameter(nameof(ClimateDataModel.BuildingCategory)).Set(SelectedCategory.Value);
+        projectInfo.LookupParameter(nameof(ClimateDataModel.Gsop)).Set(GSOP);
+        // Фиксируем факт обновления параметров (значение не важно, важно наличие ключа)
+        updateCounts[nameof(ClimateDataModel.BuildingCategory)] = 1; 
+        updateCounts[nameof(ClimateDataModel.Gsop)] = 1;
+    }
+    catch (Exception e)
+    {
+        Debug.Write($"Ошибка при обновлении GSOP или BuildingCategory: {e.Message}");
+    }
+
+    foreach (Element element in directShapeElements)
+    {
+        if (!(element is DirectShape ds)) continue;
+
+        var enclosureType = GetParameterValueAsString(element, nameof(ConstructionSurfaceModel.EnclosureType));
+        var constructionType = GetParameterValueAsString(element, nameof(ConstructionSurfaceModel.ConstructionName));
+        var key = (enclosureType, constructionType);
+
+        if (!groupSettings.TryGetValue(key, out var setting)) continue;
+
+        bool isUpdated = false;
+        isUpdated |= UpdateParameter(element, nameof(setting.TransferCoefficient), setting.TransferCoefficient);
+        isUpdated |= UpdateParameter(element, nameof(setting.NormativeTransferCoefficient), setting.NormativeTransferCoefficient);
+        isUpdated |= UpdateParameter(element, nameof(setting.NormativeTransferThermalCoefficient), setting.NormativeTransferThermalCoefficient);
+        isUpdated |= UpdateParameter(element, nameof(setting.ShortConstructionName), setting.ShortConstructionName);
+
+        if (isUpdated)
         {
-            var updateCounts = new Dictionary<string, int>();
-            var directShapeElements = GetDirectShapeElements(_doc);
-
-            // Создаем словарь эталонных значений по ключу (EnclosureType, ConstructionName)
-            var groupSettings = EnclosureElements
-                .GroupBy(e => (e.EnclosureType, ConstructionType: e.ConstructionName))
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.First()
-                );
-
-            using Transaction t = new Transaction(_doc, "Apply Group Values");
-            t.Start();
-
-            foreach (Element element in directShapeElements)
-            {
-                if (!(element is DirectShape ds)) continue;
-
-                // Получаем параметры элемента
-                var enclosureType = GetParameterValueAsString(element, nameof(ConstructionSurfaceModel.EnclosureType));
-                var constructionType = GetParameterValueAsString(element, nameof(ConstructionSurfaceModel.ConstructionName));
-                var key = (enclosureType, constructionType);
-
-                if (!groupSettings.TryGetValue(key, out var setting)) continue;
-
-                bool isUpdated = false;
-
-                // Обновление TransferCoefficient
-                isUpdated |= UpdateParameter(element, nameof(setting.TransferCoefficient), setting.TransferCoefficient);
-                
-                // Обновление NormativeTransferCoefficient
-                isUpdated |= UpdateParameter(element, nameof(setting.NormativeTransferCoefficient), setting.NormativeTransferCoefficient);
-                
-                // Обновление NormativeTransferCoefficient
-                isUpdated |= UpdateParameter(element, nameof(setting.NormativeTransferThermalCoefficient), setting.NormativeTransferThermalCoefficient);
-                
-                // Обновление ShortConstructionName
-                isUpdated |= UpdateParameter(element, nameof(setting.ShortConstructionName), setting.ShortConstructionName);
-                
-                // Обновление ConstructionName
-                //isUpdated |= UpdateParameter(element, nameof(setting.ConstructionName), setting.ConstructionName);
-
-                if (isUpdated)
-                {
-                    updateCounts.TryGetValue(enclosureType, out var count);
-                    updateCounts[enclosureType] = count + 1;
-                }
-            }
-            t.Commit();
-            // Обновление UI с результатами
-            UpdateSummary = BuildSummaryText(updateCounts);
-    } 
-    
-    private static string BuildSummaryText(Dictionary<string, int> updateCounts)
-        {
-            if (updateCounts == null || updateCounts.Count == 0)
-            {
-                return "Обновленные элементы не найдены";
-            }
-
-            var summaryBuilder = new StringBuilder();
-            summaryBuilder.AppendLine("Обновление значений в Revit завершено:");
-        
-            foreach (var kvp in updateCounts)
-            {
-                summaryBuilder.AppendLine($"• Тип ограждения: {kvp.Key}, Обновлено элементов: {kvp.Value}");
-            }
-            return summaryBuilder.ToString();
+            updateCounts.TryGetValue(enclosureType, out var count);
+            updateCounts[enclosureType] = count + 1;
         }
+    }
+    t.Commit();
+    UpdateSummary = BuildSummaryText(updateCounts, 
+                    GSOP.ToString(CultureInfo.InvariantCulture), 
+                    SelectedCategory.Value); // Передаем значения явно
+}
+
+private static string BuildSummaryText(
+    Dictionary<string, int> updateCounts, 
+    string gsopValue, 
+    string buildingCategoryValue
+)
+{
+    if (updateCounts == null || updateCounts.Count == 0)
+    {
+        return "Обновленные элементы не найдены";
+    }
+
+    var summaryBuilder = new StringBuilder();
+    summaryBuilder.AppendLine("Обновление значений в Revit завершено:");
+
+    // Секция параметров проекта
+    bool hasProjectUpdates = false;
+    summaryBuilder.AppendLine("• Параметры проекта:");
+    if (updateCounts.ContainsKey(nameof(ClimateDataModel.BuildingCategory)))
+    {
+        summaryBuilder.AppendLine($"  - Категория здания: {buildingCategoryValue}");
+        hasProjectUpdates = true;
+    }
+    if (updateCounts.ContainsKey(nameof(ClimateDataModel.Gsop)))
+    {
+        summaryBuilder.AppendLine($"  - ГСОП: {gsopValue}");
+        hasProjectUpdates = true;
+    }
+    if (!hasProjectUpdates)
+    {
+        summaryBuilder.Length -= Environment.NewLine.Length; // Удаление пустой секции
+    }
+
+    // Секция ограждающих конструкций
+    var enclosureEntries = updateCounts
+        .Where(kvp => kvp.Key != nameof(ClimateDataModel.BuildingCategory) && 
+                      kvp.Key != nameof(ClimateDataModel.Gsop))
+        .ToList();
+
+    if (enclosureEntries.Any())
+    {
+        summaryBuilder.AppendLine("• Ограждающие конструкции:");
+        foreach (var kvp in enclosureEntries)
+        {
+            summaryBuilder.AppendLine($"  - Тип: {kvp.Key}, Обновлено элементов: {kvp.Value}");
+        }
+    }
+
+    return summaryBuilder.ToString();
+}
 }
 
