@@ -25,8 +25,34 @@ namespace HVACLoadTerminals.NormativeHeatResistance;
 
 public class NormativeHeatViewModel : ViewModelBase
 {
+    // Конструктор
+    public NormativeHeatViewModel()
+    {
+        BuildingCategories = LoadBuildingCategories();
+        EnclosureElements = LoadEnclosureElements();
+        EnclosureElements.CollectionChanged += EnclosureElements_CollectionChanged;
+        SelectedCategory = BuildingCategories.First();
+        UpdateSurfacesCommand = ReactiveCommand.Create(ApplyNormativeValuesToRevit);
+        UpdateGroupCheckBoxStateCommand = ReactiveCommand.Create<string>(enclosureType => 
+        {
+            var firstItem = EnclosureElements
+                .FirstOrDefault(x => x.EnclosureType == enclosureType);
+            if (firstItem == null) return;
+
+            bool newState = !firstItem.UseNormative;
+            UpdateGroupCheckBoxState(enclosureType, newState);
+        });
+            
+    }
     
     private readonly Document _doc = RevitConfig.Document; // Добавляем ссылку на документ Revit
+    
+    private BuildingCategoryItem _selectedCategory;
+    
+    private double _gsop;
+    
+    private bool _masterCheckBoxState;
+    
     public ReactiveCommand<string, Unit> UpdateGroupCheckBoxStateCommand { get; }
     // Свойства с автоматическим уведомлением об изменениях
     public ObservableCollection<ConstructionSurfaceModel> EnclosureElements { get; set; }
@@ -34,10 +60,8 @@ public class NormativeHeatViewModel : ViewModelBase
     public ObservableCollection<BuildingCategoryItem> BuildingCategories { get; set; }
     
     public ObservableCollection<CalculationDetail> CalculationDetails { get; set; }
-        
-    private BuildingCategoryItem _selectedCategory;
+    
     public string UpdateSummary { get; set; }
-    private double _gsop;
 
     public double GSOP
     {
@@ -65,43 +89,21 @@ public class NormativeHeatViewModel : ViewModelBase
         }
     }
     public ICommand UpdateSurfacesCommand { get; }
-    // Конструктор
-    public NormativeHeatViewModel()
-    {
-        BuildingCategories = LoadBuildingCategories();
-        EnclosureElements = LoadEnclosureElements();
-        EnclosureElements.CollectionChanged += EnclosureElements_CollectionChanged;
-        SelectedCategory = BuildingCategories.First();
-        UpdateSurfacesCommand = ReactiveCommand.Create(ApplyNormativeValuesToRevit);
-        UpdateGroupCheckBoxStateCommand = ReactiveCommand.Create<string>(enclosureType => 
-        {
-            var firstItem = EnclosureElements
-                .FirstOrDefault(x => x.EnclosureType == enclosureType);
-            if (firstItem == null) return;
 
-            bool newState = !firstItem.UseNormative;
-            UpdateGroupCheckBoxState(enclosureType, newState);
-        });
-            
-    }
     public bool IsGroupChecked { get; set; }
-        
-    private bool _masterCheckBoxState;
     public bool MasterCheckBoxState
     {
         get => _masterCheckBoxState;
         set
         {
-            if (_masterCheckBoxState != value)
-            {
-                _masterCheckBoxState = value;
-                OnPropertyChanged(nameof(MasterCheckBoxState));
+            if (_masterCheckBoxState == value) return;
+            _masterCheckBoxState = value;
+            OnPropertyChanged();
 
-                // Установка состояния UseNormative для всех элементов
-                foreach (var enclosure in EnclosureElements)
-                {
-                    enclosure.UseNormative = value;
-                }
+            // Установка состояния UseNormative для всех элементов
+            foreach (var enclosure in EnclosureElements)
+            {
+                enclosure.UseNormative = value;
             }
         }
     }
@@ -185,35 +187,6 @@ public class NormativeHeatViewModel : ViewModelBase
         return new ObservableCollection<ConstructionSurfaceModel>(constructionSurfaces
             .GroupBy(x => new { x.EnclosureType, ConstructionType = x.ConstructionName })
             .Select(g => g.First()));
-    }
-
-
-    private bool UpdateParameter(Element element, string paramName, object value)
-    {
-        try
-        {
-            var param = element.LookupParameter(paramName);
-            if (param == null || param.IsReadOnly) return false;
-
-            switch (param.StorageType)
-            {
-                case StorageType.Double when value is double doubleValue:
-                    return param.Set(doubleValue);
-            
-                case StorageType.Integer when value is int intValue:
-                    return param.Set(intValue);
-            
-                case StorageType.String when value is string stringValue:
-                    return param.Set(stringValue);
-            
-                default:
-                    return false;
-            }
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     // Получение элементов DirectShape из документа Revit
@@ -312,7 +285,6 @@ public class NormativeHeatViewModel : ViewModelBase
     OnPropertyChanged(nameof(CalculationDetails));
 }
     
-    
     // Применение нормативных значений к элементам Revit
     private void ApplyNormativeValuesToRevit()
     {
@@ -352,10 +324,10 @@ public class NormativeHeatViewModel : ViewModelBase
             if (!groupSettings.TryGetValue(key, out var setting)) continue;
 
             bool isUpdated = false;
-            isUpdated |= UpdateParameter(element, nameof(setting.TransferCoefficient), setting.TransferCoefficient);
-            isUpdated |= UpdateParameter(element, nameof(setting.NormativeTransferCoefficient), setting.NormativeTransferCoefficient);
-            isUpdated |= UpdateParameter(element, nameof(setting.NormativeTransferThermalCoefficient), setting.NormativeTransferThermalCoefficient);
-            isUpdated |= UpdateParameter(element, nameof(setting.ShortConstructionName), setting.ShortConstructionName);
+            isUpdated |= ParametersHandler.UpdateParameter(element, nameof(setting.TransferCoefficient), setting.TransferCoefficient);
+            isUpdated |= ParametersHandler.UpdateParameter(element, nameof(setting.NormativeTransferCoefficient), setting.NormativeTransferCoefficient);
+            isUpdated |= ParametersHandler.UpdateParameter(element, nameof(setting.NormativeTransferThermalCoefficient), setting.NormativeTransferThermalCoefficient);
+            isUpdated |= ParametersHandler.UpdateParameter(element, nameof(setting.ShortConstructionName), setting.ShortConstructionName);
 
             if (isUpdated)
             {
@@ -450,6 +422,34 @@ public class ParametersHandler
         }
 
         return 0;
+    }
+    
+    public static bool UpdateParameter(Element element, string paramName, object value)
+    {
+        try
+        {
+            var param = element.LookupParameter(paramName);
+            if (param == null || param.IsReadOnly) return false;
+
+            switch (param.StorageType)
+            {
+                case StorageType.Double when value is double doubleValue:
+                    return param.Set(doubleValue);
+            
+                case StorageType.Integer when value is int intValue:
+                    return param.Set(intValue);
+            
+                case StorageType.String when value is string stringValue:
+                    return param.Set(stringValue);
+            
+                default:
+                    return false;
+            }
+        }
+        catch
+        {
+            return false;
+        }
     }
 
 }
