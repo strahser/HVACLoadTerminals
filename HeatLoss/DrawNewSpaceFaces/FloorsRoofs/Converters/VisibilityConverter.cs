@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs;
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs.Converters;
 
 
 // Конвертер для видимости элементов

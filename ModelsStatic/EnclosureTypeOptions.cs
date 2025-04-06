@@ -1,26 +1,38 @@
-﻿namespace HVACLoadTerminals.ModelsStatic
+﻿using System.Collections.Generic;
+
+namespace HVACLoadTerminals.ModelsStatic;
+
+public static class EnclosureTypeOptions
 {
-    public static class EnclosureTypeOptions
-    {
-        [Description("Стены, включая стены в грунте")]
-        public static string Wall => "Стена";
+    [Description("Стены, включая стены в грунте")]
+    public static string Wall => "Стена";
     
-        [Description("Покрытия и перекрытия над проездами")]
-        public static string Roof => "Кровля";
+    [Description("Покрытия и перекрытия над проездами")]
+    public static string Roof => "Кровля";
     
-        [Description("Перекрытия чердачные, над неотапливаемыми подпольями и подвалами, полы по грунту")]
-        public static string Floor => "Пол";
+    [Description("Перекрытия чердачные, над неотапливаемыми подпольями и подвалами, полы по грунту")]
+    public static string Floor => "Пол";
     
-        [Description("Окна, светопрозрачные фасадные конструкции")]
-        public static string Window => "Окно";
+    [Description("Окна, светопрозрачные фасадные конструкции")]
+    public static string Window => "Окно";
     
-        [Description("Фонари")]
-        public static string Skylight => "Фонарь";
+    [Description("Фонари")]
+    public static string Skylight => "Фонарь";
     
-        [Description("Двери и витражи")]
-        public static string Curtain => "Витраж";
+    [Description("Двери и витражи")]
+    public static string Curtain => "Витраж";
         
-        [Description("Двери и витражи")]
-        public static string Door => "Дверь";
+    [Description("Двери и витражи")]
+    public static string Door => "Дверь";
+    
+    public static IEnumerable<string> GetAll()
+    {
+        yield return Wall;
+        yield return Roof;
+        yield return Floor;
+        yield return Window;
+        yield return Skylight;
+        yield return Curtain;
+        yield return Door;
     }
 }

@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:floorsRoofs="clr-namespace:HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs"
-        xmlns:local="clr-namespace:HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs" 
+        xmlns:converters="clr-namespace:HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs.Converters"
         mc:Ignorable="d"
         Title="Создание перекрытий/кровли" Height="500" Width="600"
         WindowStartupLocation="CenterScreen"
@@ -19,9 +19,9 @@
                 <ResourceDictionary Source="pack://application:,,,/HVACLoadTerminals;component/Resources/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         
-            <local:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
-            <local:VisibilityConverter x:Key="VisibilityConverter"/>
-            <local:StringToBooleanConverter x:Key="StringToBooleanConverter"/>
+            <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
+            <converters:VisibilityConverter x:Key="VisibilityConverter"/>
+            <converters:StringToBooleanConverter x:Key="StringToBooleanConverter"/>
         </ResourceDictionary>
     </Window.Resources>
 

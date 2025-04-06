@@ -100,14 +100,14 @@
     <Compile Include="HeatLoss\ConstructionSurfaceModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapesForEachElement.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\ConvertToDirectShapeCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\EnumToBooleanConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\StringToBooleanConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\VisibilityConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloors.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsViewModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsWindow.xaml.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\EnumToBooleanConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\SpaceSelectionFilter.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\StringToBooleanConverter.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\VisibilityConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\MainCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\MainViewModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\MainWindow.xaml.cs" />

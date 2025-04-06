@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Windows.Data;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs;
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs.Converters;
 
 // Конвертер для RadioButton
 public class EnumToBooleanConverter : IValueConverter
