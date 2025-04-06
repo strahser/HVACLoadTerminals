@@ -4,148 +4,234 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
-using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
 
 
-namespace HVACLoadTerminals.DrawNewSpaceFaces.FloorsRoofs
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs;
+
+public class DrawFloorsViewModel : ReactiveObject
 {
-     public class DrawFloorsViewModel : ReactiveObject
+    private readonly Document _hvacDocument = RevitConfig.Document;
+    private readonly UIDocument _uiDocument = RevitConfig.UiDocument;
+
+    // Режимы работы
+    public List<MainMode> MainModes { get; } =
+    [
+        new(ModeType.Mode1, "Режим 1: По уровням"),
+        new(ModeType.Mode2, "Режим 2: Ручной выбор")
+    ];
+
+    public List<SubMode> SubModes { get; } =
+    [
+        new(SubModeType.SubMode1, "2.1: По уровню пространств"),
+        new(SubModeType.SubMode2, "2.2: Указать уровень")
+    ];
+
+    // Свойства выбора
+    [Reactive] public ObservableCollection<Level> Levels { get; set; }
+    [Reactive] public Level SelectedLevelForDrawing { get; set; }
+    [Reactive] public Level SelectedSpaceLevel { get; set; }
+    [Reactive] public List<Space> SelectedSpaces { get; set; } = [];
+    [Reactive] public string SelectedEnclosureType { get; set; }
+    [Reactive] public MainMode SelectedMainMode { get; set; }
+    [Reactive] public SubMode SelectedSubMode { get; set; }
+    [Reactive] public string Message { get; set; } // Сообщение для пользователя
+    [Reactive] public Brush MessageColor { get; set; } // Цвет сообщения
+
+    // Команды
+    public ICommand PickSpacesCommand { get; }
+    public ICommand DrawEnclosureCommand { get; }
+
+    public DrawFloorsViewModel()
     {
-        private Document _hvacDocument=RevitConfig.Document;
-        private UIDocument _uiDocument = RevitConfig.UiDocument;
+        Levels = new ObservableCollection<Level>(GetLevels(_hvacDocument));
+        SelectedLevelForDrawing = Levels.FirstOrDefault();
+        SelectedSpaceLevel = Levels.FirstOrDefault();
+        SelectedMainMode = MainModes.First();
+        SelectedSubMode = SubModes.First();
 
-        [Reactive] public List<Space> SelectedSpaces { get; set; } = [];
+        DrawEnclosureCommand = new RelayCommand(DrawEnclosureCommandExecute);
+        PickSpacesCommand = new RelayCommand(PickSpacesExecute);
+    }
 
-        [Reactive] public Level SelectedLevel { get; set; }  //Уровень для отрисовки
-        
-        [Reactive] public Level SpaceLevel { get; set; } //Уровень для фильтрации пространств
-
-        [Reactive] public ObservableCollection<Level> Levels { get; set; }
-
-        public ICommand PickSpacesCommand { get; }
-
-        public DrawFloorsViewModel()
-        {
-
-            Levels = new ObservableCollection<Level>(GetLevels(_hvacDocument));
-            SelectedLevel = Levels.FirstOrDefault(); // По умолчанию нижний уровень для отрисовки
-            SpaceLevel = Levels.FirstOrDefault(); // По умолчанию нижний уровень для выбора Space
-            DrawFloorCommand = new RelayCommand(DrawFloorsCommandData);
-            DrawRoofCommand = new RelayCommand(DrawRoofsCommandData);
-            PickSpacesCommand = new RelayCommand(PickSpaces);
-        }
-
-        public ICommand DrawFloorCommand { get; }
-
-        public ICommand DrawRoofCommand { get; }
-
-        private void DrawFloorsCommandData(object parameter)
+    private void DrawEnclosureCommandExecute(object parameter)
+    {
+        try
         {
             var floorType = GetFloorType(_hvacDocument);
             if (floorType == null)
             {
-                MessageBox.Show("Error", "Не найден тип перекрытия");
+                Message = "Не найден тип перекрытия";
+                MessageColor = Brushes.Red;
                 return;
             }
 
-            //Используем SpaceLevel для выбора пространств.  SelectedLevel - уровень отрисовки
-            var spaces = GetSpacesOnLevel(_hvacDocument, SpaceLevel.Id);
+            var spaces = GetSpacesBasedOnMode();
+            var level = GetDrawingLevelBasedOnMode();
 
-            DrawFloors.DrawFloorsForSelectedSpaces(_hvacDocument, spaces,SelectedLevel, floorType, EnclosureTypeOptions.Floor);
+            // Вызываем метод и получаем количество созданных элементов
+            var enclosureType = SelectedEnclosureType == nameof(EnclosureTypeOptions.Roof) ? EnclosureTypeOptions.Roof : EnclosureTypeOptions.Floor;
+            int createdCount = DrawFloors.DrawFloorsForSelectedSpaces(
+                _hvacDocument,
+                spaces,
+                floorType,
+                enclosureType,
+                level
+            );
+
+            // Обновляем сообщение и цвет
+            
+            Message = createdCount > 0
+                ? $"Успешно создано {createdCount} элементов тип - {enclosureType}, " +
+                  $"уровень отрисовки {(level!=null?level.Name:spaces?.FirstOrDefault()?.Level.Name)}"
+                : "Нет созданных элементов";
+            MessageColor = createdCount > 0 ? Brushes.Green : Brushes.Orange;
+
+            SelectedSpaces.Clear();
         }
-
-        private void DrawRoofsCommandData(object parameter)
+        catch (Exception ex)
         {
-
-            var roofType = GetFloorType(_hvacDocument);
-            if (roofType == null)
-            {
-                MessageBox.Show("Error", "Не найден тип кровли");
-                return;
-            }
-            //Используем SpaceLevel для выбора пространств.  SelectedLevel - уровень отрисовки
-            var spaces = GetSpacesOnLevel(_hvacDocument, SpaceLevel.Id);
-            DrawFloors.DrawFloorsForSelectedSpaces(_hvacDocument, spaces,SelectedLevel, roofType, EnclosureTypeOptions.Roof);
-
-        }
-
-        private void PickSpaces(object parameter)
-        {
-            try
-            {
-                var referenceList = _uiDocument.Selection.PickObjects(ObjectType.Element,
-                    new SpaceSelectionFilter(), "Выберите пространства (Space)");
-
-                var selectedSpaces = referenceList.Select(r => _uiDocument.Document.GetElement(r.ElementId) as Space)
-                    .Where(s => s != null)
-                    .ToList();
-
-                SelectedSpaces = selectedSpaces;
-                MessageBox.Show(selectedSpaces.Count.ToString());
-
-            }
-            catch (Autodesk.Revit.Exceptions.OperationCanceledException)
-            {
-                // Пользователь отменил выбор
-            }
-            catch (Exception ex)
-            {
-                TaskDialog.Show("Ошибка", $"Не удалось выбрать пространства: {ex.Message}");
-            }
-        }
-
-        private static FloorType GetFloorType(Document document)
-        {
-            return new FilteredElementCollector(document)
-                .OfClass(typeof(FloorType))
-                .FirstOrDefault() as FloorType;
-        }
-
-
-        private static RoofType GetRoofType(Document document)
-        {
-            return new FilteredElementCollector(document)
-                .OfClass(typeof(RoofType))
-                .FirstOrDefault() as RoofType;
-        }
-
-        private static List<Level> GetLevels(Document document)
-        {
-            return new FilteredElementCollector(document)
-                .OfClass(typeof(Level))
-                .Cast<Level>()
-                .OrderBy(l => l.Elevation)
-                .ToList();
-        }
-        
-        private static List<Space> GetSpacesOnLevel(Document doc, ElementId levelId)
-        {
-            return new FilteredElementCollector(doc)
-                .OfCategory(BuiltInCategory.OST_MEPSpaces)
-                .Where(e => e.LevelId == levelId)
-                .Cast<Space>()
-                .ToList();
+            Message = $"Ошибка создания: {ex.Message}";
+            MessageColor = Brushes.Red;
         }
     }
 
-    public class SpaceSelectionFilter : ISelectionFilter
+    private List<Space> GetSpacesBasedOnMode()
     {
-        public bool AllowElement(Element elem)
+        return SelectedMainMode.Type switch
         {
-            return elem is Space;
-        }
+            ModeType.Mode1 => GetSpacesOnLevel(_hvacDocument, SelectedSpaceLevel.Id),
+            ModeType.Mode2 => SelectedSpaces,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+    }
 
-        public bool AllowReference(Reference reference, XYZ position)
+    private Level GetDrawingLevelBasedOnMode()
+    {
+        return SelectedMainMode.Type switch
         {
-            return false;
+            ModeType.Mode1 => SelectedLevelForDrawing,
+            ModeType.Mode2 => SelectedSubMode.Type == SubModeType.SubMode1 ? 
+                SelectedSpaces.FirstOrDefault()?.Level : 
+                SelectedLevelForDrawing,
+            _ => null
+        };
+    }
+
+    private void PickSpacesExecute(object parameter)
+    {
+        try
+        {
+            RaiseHideRequest();
+            var references = _uiDocument.Selection.PickObjects(
+                ObjectType.Element,
+                new SpaceSelectionFilter(),
+                "Выберите пространства"
+            );
+                
+            SelectedSpaces = references
+                .Select(r => (Space)_hvacDocument.GetElement(r))
+                .ToList();
+        }
+        catch (Autodesk.Revit.Exceptions.OperationCanceledException)
+        {
+            // Выбор отменен
+        }
+        finally
+        {
+            RaiseShowRequest();
         }
     }
+
+    #region Вспомогательные методы
+    private static List<Level> GetLevels(Document doc)
+    {
+        return new FilteredElementCollector(doc)
+            .OfClass(typeof(Level))
+            .Cast<Level>()
+            .OrderBy(l => l.Elevation)
+            .ToList();
+    }
+
+    private static List<Space> GetSpacesOnLevel(Document doc, ElementId levelId)
+    {
+        return new FilteredElementCollector(doc)
+            .OfCategory(BuiltInCategory.OST_MEPSpaces)
+            .WhereElementIsNotElementType()
+            .Where(e => e.LevelId == levelId)
+            .Cast<Space>()
+            .ToList();
+    }
+// Методы для получения конкретных типов
+    private FloorType GetFloorType(Document doc)
+    {
+        return new FilteredElementCollector(doc)
+            .OfClass(typeof(FloorType))
+            .FirstOrDefault() as FloorType;
+    }
+
+    private RoofType GetRoofType(Document doc)
+    {
+        return new FilteredElementCollector(doc)
+            .OfClass(typeof(RoofType))
+            .FirstOrDefault() as RoofType;
+    }
+
+    #endregion
+
+    #region События управления окном
+    public event EventHandler HideRequest;
+    private void RaiseHideRequest() => HideRequest?.Invoke(this, EventArgs.Empty);
+
+    public event EventHandler ShowRequest;
+    private void RaiseShowRequest() => ShowRequest?.Invoke(this, EventArgs.Empty);
+    
+    public event EventHandler CloseRequest;
+
+    private void RaiseCloseRequest()
+    {
+        CloseRequest?.Invoke(this, EventArgs.Empty);
+    }
+
+
+    #endregion
+
+    #region Вложенные типы
+
+    public class MainMode
+    {
+        public ModeType Type { get; }
+        public string Description { get; }
+
+        public MainMode(ModeType type, string description)
+        {
+            Type = type;
+            Description = description;
+        }
+    }
+
+    public class SubMode
+    {
+        public SubModeType Type { get; }
+        public string Description { get; }
+
+        public SubMode(SubModeType type, string description)
+        {
+            Type = type;
+            Description = description;
+        }
+    }
+
+    public enum ModeType { Mode1, Mode2 }
+    public enum SubModeType { SubMode1, SubMode2 }
+    
+    #endregion
 }

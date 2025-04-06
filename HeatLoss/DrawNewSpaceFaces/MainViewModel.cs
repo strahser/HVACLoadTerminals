@@ -2,8 +2,8 @@ using System;
 using System.Windows.Forms;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using HVACLoadTerminals.DrawNewSpaceFaces.FloorsRoofs;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape;
+using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors;
 using HVACLoadTerminals.Utils;
@@ -101,7 +101,9 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces
                 {
                     DataContext = floorsViewModel
                 };
-
+                floorsViewModel.CloseRequest += (s, e) => drawFloorsWindow.Close();
+                floorsViewModel.HideRequest += (s, e) => drawFloorsWindow.Hide();
+                floorsViewModel.ShowRequest += (s, e) => drawFloorsWindow.ShowDialog();
                 // Отображаем окно
                 drawFloorsWindow.ShowDialog();
             }

@@ -104,6 +104,10 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsViewModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsWindow.xaml.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\EnumToBooleanConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\SpaceSelectionFilter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\StringToBooleanConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\VisibilityConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\MainCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\MainViewModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\MainWindow.xaml.cs" />

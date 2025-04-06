@@ -4,7 +4,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.DrawNewSpaceFaces.FloorsRoofs
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs
 {
     [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
     public class DrawFloorsCommand : IExternalCommand
@@ -15,9 +15,9 @@ namespace HVACLoadTerminals.DrawNewSpaceFaces.FloorsRoofs
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             RevitConfig.Initialize(commandData);
-            ExecuteDrawFloorsCommand();
             _hvacDocument = RevitConfig.Document;
              _uiDocument = RevitConfig.UiDocument;
+            ExecuteDrawFloorsCommand();
             return Result.Succeeded;
         }
         
@@ -29,11 +29,13 @@ namespace HVACLoadTerminals.DrawNewSpaceFaces.FloorsRoofs
                 var floorsViewModel = new DrawFloorsViewModel();
 
                 // Создаем WPF окно и устанавливаем ему DataContext
-                var drawFloorsWindow = new HeatLoss.DrawNewSpaceFaces.FloorsRoofs.DrawFloorsWindow()
+                var drawFloorsWindow = new DrawFloorsWindow()
                 {
                     DataContext = floorsViewModel
                 };
-
+                floorsViewModel.CloseRequest += (s, e) => drawFloorsWindow.Close();
+                floorsViewModel.HideRequest += (s, e) => drawFloorsWindow.Hide();
+                floorsViewModel.ShowRequest += (s, e) => drawFloorsWindow.ShowDialog();
                 // Отображаем окно
                 drawFloorsWindow.ShowDialog();
             }
