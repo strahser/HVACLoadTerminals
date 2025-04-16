@@ -1,4 +1,4 @@
-using HVACLoadTerminals.Utils.HVACLoadTerminals.Utils;
+using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.ClimateData;
 

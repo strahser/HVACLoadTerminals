@@ -12,10 +12,8 @@ public class CreateSpecificationCommand : IExternalCommand
        var creator =  new ScheduleCreator();
        creator.CreateSummaryModelSchedule(doc);
        creator.CreateGenericModelSchedule(doc);
-       TaskDialog.Show("", $"{creator.FullSpecificationName},{creator.ShortSpecificationName}");
+       TaskDialog.Show("Успех", $"{creator.FullSpecificationName},{creator.ShortSpecificationName}");
 
         return Result.Succeeded;
     }
-    
-    
 }

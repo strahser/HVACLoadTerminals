@@ -40,6 +40,9 @@
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="ReachFramework" />
+    <Reference Include="Renga.WPF.Styles">
+      <HintPath>..\RengaWpfStyles\Renga.WPF.Styles\bin\Debug\Renga.WPF.Styles.dll</HintPath>
+    </Reference>
     <Reference Include="RevitAPI">
       <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll</HintPath>
       <Private>False</Private>
@@ -112,13 +115,26 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\MainViewModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\MainWindow.xaml.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\ParametersHandler.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\DrawFaceGeometry.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Calculators\OrientationCalculator.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Calculators\UndergroundZoneCalculator.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Calculators\VerticalWallFacesCalculator.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\DrawWalls.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\DrawWallsCommand.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\VerticalWallFaces.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Interface\IWallParametersStrategy.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\ApplyParametersHandler.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\BaseWallParametersStrategy.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\CompositeWallParametersStrategy.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\UndergroundWallParametersStrategy.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\WallParametersStrategyFactory.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\StringEqualsConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\WallHandler.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\WallOrientationViewModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\WallOrientationWindow.xaml.cs">
       <DependentUpon>WallOrientationWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\ConstructionSurfaceModelExtensions.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\TestWallZonesCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\WallZonesCreator.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\Zone.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\DrawWindowsAndDoorsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\OpensHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\WindowsAndDoorsSelectionWindow.xaml.cs" />
@@ -136,7 +152,6 @@
     <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\ScheduleCreator.cs" />
     <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\ScheduleFactory.cs" />
     <Compile Include="HeatLoss\SpaceDataModel.cs" />
-    <Compile Include="InvokeCommandAction.cs" />
     <Compile Include="ModelsStatic\OrientationMapping.cs" />
     <Compile Include="ModelsStatic\RevitDescriptionAttribute.cs" />
     <Compile Include="Models\ParameterFields.cs" />
@@ -148,13 +163,12 @@
     <Compile Include="CalculateSpaceDevice\SpaceBoundaryCurveModel.cs" />
     <Compile Include="ModelsStatic\OrientationOptions.cs" />
     <Compile Include="ModelsStatic\EnclosureTypeOptions.cs" />
+    <Compile Include="NormativeHeatResistance\Core\NormativeValueCalculator.cs" />
+    <Compile Include="NormativeHeatResistance\Core\StaticCoefficientStructures.cs" />
     <Compile Include="NormativeHeatResistance\GroupViewModelConverter.cs" />
     <Compile Include="NormativeHeatResistance\NormativeHeatCommand.cs" />
     <Compile Include="NormativeHeatResistance\NormativeHeatViewModel.cs" />
-    <Compile Include="NormativeHeatResistance\NormativeValueCalculator.cs" />
-    <Compile Include="NormativeHeatResistance\NormativeValueCalculatorTests.cs" />
     <Compile Include="NormativeHeatResistance\NormativeWindow.xaml.cs" />
-    <Compile Include="NormativeHeatResistance\StaticCoefficientStructures.cs" />
     <Compile Include="PipeSewageHandler\FamilyManagerParameterHelper.cs" />
     <Compile Include="PipeSewageHandler\InsertTeeAtFloorCommand.cs" />
     <Compile Include="PipeSewageHandler\Logger.cs" />
@@ -167,6 +181,7 @@
     <Compile Include="Utils\CanvasHelper.cs" />
     <Compile Include="Utils\CollectorGeometry.cs" />
     <Compile Include="CalculateSpaceDevice\InsertTerminal.cs" />
+    <Compile Include="Utils\DrawFaceGeometry.cs" />
     <Compile Include="Utils\InfiltrationCalculator.cs" />
     <Compile Include="Utils\ParametersUtility.cs" />
     <Compile Include="Utils\RevitApiUtils.cs" />
@@ -261,6 +276,9 @@
     </PackageReference>
     <PackageReference Include="LiteDB">
       <Version>5.0.21</Version>
+    </PackageReference>
+    <PackageReference Include="MahApps.Metro">
+      <Version>3.0.0-rc0516</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.CodeDom.Providers.DotNetCompilerPlatform">
       <Version>4.1.0</Version>

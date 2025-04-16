@@ -3,32 +3,29 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.ServiceModel.Channels;
 using System.Windows.Forms;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
-using HVACLoadTerminals.Utils.HVACLoadTerminals.Utils;
-using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
+
 
 namespace HVACLoadTerminals.HeatLoss
 {
     public class ConstructionSurfaceModel : ViewModelBase, ICloneable
     {
+        private double _transferCoefficient{ get; set; }
+        
+        private bool _useNormative;
+        
         public Room _Room { get; set; }
         public Face _Face { get; set; }
         public string RevitElementId { get; set; }
-        
-
         public string FaceId { get; set; }
         public double FullWallArea { get; set; }
         public double BuildingHeight { get; set; }
         public double OpenInstanceHeight { get; set; }
-        
-        private bool _useNormative;
         public bool UseNormative
         {
             get => _useNormative;
@@ -38,8 +35,10 @@ namespace HVACLoadTerminals.HeatLoss
                 _useNormative = value;
                 OnPropertyChanged();
                 UpdateTransferCoefficient();
+                Debug.WriteLine($"UseNormative changed to {value}");
             }
         }
+
         
         [Description("ID Помещения")]
         [RevitParameter]
@@ -98,14 +97,21 @@ namespace HVACLoadTerminals.HeatLoss
         [ColumnOrder(11)]
         [Description("Коэф. Теплопередачи")]
         [RevitParameter]
-        public double TransferCoefficient { get; set; }
+        public double TransferCoefficient
+        {
+            get => _transferCoefficient;
+            set
+            {
+                if (_transferCoefficient == value) return;
+                _transferCoefficient = value;
+                OnPropertyChanged();
+            }
+        }
         
         
         [Description("Норм. Терм. Сопр.")]
         [RevitParameter]
         public double NormativeTransferThermalCoefficient { get; set; }
-        
-
         private double _normativeTransferCoefficient { get; set; }
 
         [Description("Норм. Коэф. Тепл-чи")]
@@ -116,11 +122,11 @@ namespace HVACLoadTerminals.HeatLoss
 
             set
             {
-                if(_normativeTransferCoefficient==value) return;
+                if(_normativeTransferCoefficient == value) return;
                 _normativeTransferCoefficient = value;
                 OnPropertyChanged();
             }
-        }
+        } 
 
         [ColumnOrder(14)]
         [Description("Угл.пом")]
@@ -138,10 +144,6 @@ namespace HVACLoadTerminals.HeatLoss
         public double SurfaceHeatLoss
         {
             get => Math.Round(ConstructionArea * TransferCoefficient * (TemperatureInSpace - TemperatureOut) * OrientationValue* CornerValue);
-            set
-            {
-                if (value < 0) throw new ArgumentOutOfRangeException(nameof(value));
-            }
         }
         
         [ColumnOrder(17)]
@@ -179,12 +181,23 @@ namespace HVACLoadTerminals.HeatLoss
                 }
                 else { return 0.0; }
             }
+            set{}
         }
         
         [ColumnOrder(18)]
         [Description("Итого, Вт")]
         [RevitParameter]
         public double TotalHeatLoad => SurfaceHeatLoss+ InfiltrationLoad;
+        
+        [ColumnOrder(19)]
+        [Description("Номер зоны в Грунте")]
+        [RevitParameter]
+        public string UndergroundZoneNumber { get; set; }
+
+        [ColumnOrder(20)]
+        [Description("Терм. Сопр. Констр. в грунте , (м2*0С)/Вт")]
+        [RevitParameter]
+        public double UndergroundZoneValue { get; set; }
 
         public static List<ConstructionSurfaceModel> SetCornerValue(List<ConstructionSurfaceModel> data)
         {
@@ -255,9 +268,14 @@ namespace HVACLoadTerminals.HeatLoss
 
         private void UpdateTransferCoefficient()
         {
-            TransferCoefficient = UseNormative 
-                ? NormativeTransferCoefficient 
-                : TransferCoefficient;
+            if (UseNormative)
+            {
+                TransferCoefficient = NormativeTransferCoefficient;
+            }
+            else
+            {
+                TransferCoefficient =TransferCoefficient;  
+            }
         }
     }
 }

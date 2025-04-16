@@ -17,6 +17,9 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/HVACLoadTerminals;component/Resources/Styles.xaml"/>
+                <!--<ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />-->
             </ResourceDictionary.MergedDictionaries>
             
             <!-- Стили для вкладок -->
@@ -39,8 +42,8 @@
                                 <Expander.Header>
                                     <DockPanel>
                                         <CheckBox IsChecked="{Binding IsGroupChecked, Mode=TwoWay}"
-                                                  Command="{Binding DataContext.UpdateGroupCheckBoxStateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                  CommandParameter="{Binding Name}"
+                                                  Checked="GroupCheckBox_Checked"
+                                                  Unchecked="GroupCheckBox_Unchecked"
                                                   Margin="5,0"/>
                                         <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
                                         <TextBlock Text="{Binding ItemCount}" Margin="10,0" Foreground="DarkBlue"/>
@@ -52,7 +55,6 @@
                     </Setter.Value>
                 </Setter>
             </Style>
-
             <CollectionViewSource x:Key="GroupedElements" Source="{Binding EnclosureElements}">
                 <CollectionViewSource.GroupDescriptions>
                     <PropertyGroupDescription PropertyName="EnclosureType"/>
@@ -99,7 +101,11 @@
                           ItemsSource="{Binding Source={StaticResource GroupedElements}}"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
-                          Margin="0 0 0 10">
+                          Margin="0 0 0 10"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
+                          IsSynchronizedWithCurrentItem="False"
+                          >
                     <DataGrid.GroupStyle>
                         <GroupStyle ContainerStyle="{StaticResource GroupHeaderStyle}"/>
                     </DataGrid.GroupStyle>
@@ -129,6 +135,8 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <CheckBox IsChecked="{Binding UseNormative, Mode=TwoWay}"
+                                              Checked="CheckBox_Checked"
+                                              Unchecked="CheckBox_Unchecked"
                                               HorizontalAlignment="Center"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>

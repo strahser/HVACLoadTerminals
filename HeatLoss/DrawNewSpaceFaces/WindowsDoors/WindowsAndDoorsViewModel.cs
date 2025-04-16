@@ -5,7 +5,6 @@ using System.Windows.Input;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.Utils;
-using HVACLoadTerminals.Utils.HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
 {
@@ -15,7 +14,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
         
         private Document _selectedRoomDocument;
         
-        private ObservableCollection<Document> _linkedDocuments = new ObservableCollection<Document>();
+        private ObservableCollection<Document> _linkedDocuments = [];
 
         public WindowsAndDoorsViewModel(Document hvacDocument)
         {
@@ -33,15 +32,8 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
         
         public ICommand DrawDoorsCommand { get; }
 
-        public ObservableCollection<Document> LinkedDocuments
-        {
-            get { return _linkedDocuments; }
-            set
-            {
-                _linkedDocuments = value;
-                OnPropertyChanged(nameof(LinkedDocuments));
-            }
-        }
+        public ObservableCollection<Document> LinkedDocuments 
+        { get => _linkedDocuments; set=>SetField(ref _linkedDocuments, value);}
 
         public Document SelectedRoomDocument
         {

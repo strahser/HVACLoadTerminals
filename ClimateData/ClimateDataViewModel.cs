@@ -8,12 +8,11 @@ using System.Reflection;
 using System.Text.Json;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using DynamicData;
 using HVACLoadTerminals.GSOP;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.ProjectSettings;
 using HVACLoadTerminals.Utils;
-using HVACLoadTerminals.Utils.HVACLoadTerminals.Utils;
+
 
 
 namespace HVACLoadTerminals.ClimateData;

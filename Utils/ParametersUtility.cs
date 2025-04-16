@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 
@@ -116,7 +117,7 @@ namespace HVACLoadTerminals.Utils
                     parameterValue = parameter.AsInteger().ToString();
                     break;
                 case StorageType.Double:
-                    parameterValue = parameter.AsDouble().ToString();
+                    parameterValue = parameter.AsDouble().ToString(CultureInfo.InvariantCulture);
                     break;
                 case StorageType.ElementId:
                     ElementId elementId = parameter.AsElementId();

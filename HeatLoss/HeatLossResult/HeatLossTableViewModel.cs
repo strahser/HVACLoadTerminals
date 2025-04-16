@@ -28,6 +28,7 @@ namespace HVACLoadTerminals.HeatLoss.HeatLossResult
 
         [Reactive] 
         public bool IsExpanded { get; set; } = true;
+        
         private Document HvacDocument=>RevitConfig.Document;
 
         #region Commands
@@ -135,7 +136,7 @@ namespace HVACLoadTerminals.HeatLoss.HeatLossResult
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Метод {nameof(CreateFromRevitElement)}-Ошибка при установке параметра {paramName}: {ex.Message}");
+                    Debug.WriteLine($"Метод {nameof(HeatLossTableViewModel)} - {nameof(CreateFromRevitElement)}-Ошибка при установке параметра {paramName}: {ex.Message}");
                 }
             }
 

@@ -62,14 +62,11 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces
         {
             try
             {
-                var selectionWindow = new WallOrientationWindow(_hvacDocument);
+                var selectionWindow = new WallOrientationWindow();
                 bool? result = selectionWindow.ShowDialog();
                 if (result == true)
                 {
-                    string selectedDirection = selectionWindow.SelectedDirection;
-                    Document selectedRoomDocument = selectionWindow.SelectedRoomDocument;
-                    var walls = new DrawWalls(_hvacDocument, selectedRoomDocument);
-                    walls.DrawWallsForSelectedSpaces(selectedDirection);
+
                 }
             }
             catch (Exception e)

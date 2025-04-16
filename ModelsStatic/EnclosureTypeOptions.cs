@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace HVACLoadTerminals.ModelsStatic;
 
@@ -27,12 +29,9 @@ public static class EnclosureTypeOptions
     
     public static IEnumerable<string> GetAll()
     {
-        yield return Wall;
-        yield return Roof;
-        yield return Floor;
-        yield return Window;
-        yield return Skylight;
-        yield return Curtain;
-        yield return Door;
+        return typeof(EnclosureTypeOptions)
+            .GetProperties(BindingFlags.Public | BindingFlags.Static)
+            .Where(p => p.PropertyType == typeof(string) && p.CanRead)
+            .Select(p => (string)p.GetValue(null)!);
     }
 }
