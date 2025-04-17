@@ -3,7 +3,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.HeatLoss.MetadataHandler;
+namespace HVACLoadTerminals.ClimateData;
 
 [Transaction(TransactionMode.Manual)]
 public class ClimateDataCommand : IExternalCommand

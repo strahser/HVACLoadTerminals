@@ -2,17 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape;
+
+public static class CreateDirectShapesForEachElement 
 {
-
-    public static class CreateDirectShapesForEachElement 
-    {
-
     public static void ConvertArchToThermalModel(Document doc)
     {
         // Получаем все элементы модели.
@@ -26,40 +25,36 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape
 
         int createdElementCount = 0; // Счетчик созданных элементов
 
-        using (Transaction tx = new Transaction(doc, "Create Thermal Model"))
+        using Transaction tx = new Transaction(doc, "Create Thermal Model");
+        tx.Start();
+
+        // Конвертация стен с автоматическим учетом проемов
+        foreach (var element in structureElementsList)
         {
-            tx.Start();
-
-            // Конвертация стен с автоматическим учетом проемов
-            foreach (var wall in structureElementsList)
+            if (CreateThermalElementFromExisting(element, "Тепловая Модель", doc))
             {
-                if (CreateThermalElementFromExisting(wall, "Тепловая Модель", doc))
-                {
-                    createdElementCount++; // Увеличиваем счетчик, если элемент был успешно создан
-                }
-
+                createdElementCount++; // Увеличиваем счетчик, если элемент был успешно создан
             }
 
-            // удаляем элементы модели
-            foreach (var element in listWalls.Concat(listFloors)) // Объединяем для более эффективного удаления
-            {
-                try
-                {
-                    doc.Delete(element.Id);
-                }
-                catch (Exception e)
-                {
-                    Debug.Write("Error", $"Failed to delete element with ID: {element.Id.IntegerValue}. Error: {e.Message}");
-                }
-            }
-            tx.Commit();
-
-            // Показываем сообщение с количеством созданных элементов
-            TaskDialog.Show("Создана энергетическая модель здания", $" Создана энергетическая модель здания. Создано {createdElementCount} элементов поверхности.");
         }
+
+        // удаляем элементы модели
+        foreach (var element in listWalls.Concat(listFloors)) // Объединяем для более эффективного удаления
+        {
+            try
+            {
+                doc.Delete(element.Id);
+            }
+            catch (Exception e)
+            {
+                Debug.Write("Error", $"Failed to delete element with ID: {element.Id.IntegerValue}. Error: {e.Message}");
+            }
+        }
+        tx.Commit();
+
+        // Показываем сообщение с количеством созданных элементов
+        TaskDialog.Show("Создана энергетическая модель здания", $" Создана энергетическая модель здания. Создано {createdElementCount} элементов поверхности.");
     }
- 
- 
 
     private static bool CreateThermalElementFromExisting(Element elem, string familyName, Document doc)
     {
@@ -102,9 +97,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape
                 ds.SetShape(validGeometries);
                 //устанавливаем параметры
                 TransferParameters(elem, ds);
-                var enclosureType = elem.LookupParameter(nameof(ConstructionSurfaceModel.EnclosureType)).AsValueString();
-                var calculateArea = CalculateAreaFactory(elem,enclosureType );
-                ParametersUtility.SetParameterByValueAndName(ds, nameof(ConstructionSurfaceModel.ConstructionArea), ParameterDisplayConvertor.SquareMeters(calculateArea));
+                var enclosureType =AddAreaValueToElement(elem, ds);
                 OverrideGraphicDirectShape(doc, ds, enclosureType);
                 return true; // Элемент успешно создан
             }
@@ -116,22 +109,18 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error creating thermal element from element {elem.Id.IntegerValue}: {ex.Message}");
-            TaskDialog.Show("Error", $"Error creating thermal element from element {elem.Id.IntegerValue}: {ex.Message}");
+            HandleError(elem, ex);
             return false; // Произошла ошибка - элемент не создан
         }
     }
 
-    static void OverrideGraphicDirectShape(Document doc, Autodesk.Revit.DB.DirectShape ds, string enclosureType)
+    private static void OverrideGraphicDirectShape(Document doc, Autodesk.Revit.DB.DirectShape ds, string enclosureType)
     {
-        Color enclosureColor = GetEnclosureColor(enclosureType);
+        Color  enclosureColor = EnclosureColorManager.GetColor(enclosureType, ds);
         OverrideGraphicSettings settings = new OverrideGraphicSettings();
 
-        // Получаем сплошной паттерн
-        FillPatternElement solidPattern = new FilteredElementCollector(doc)
-            .OfClass(typeof(FillPatternElement))
-            .Cast<FillPatternElement>()
-            .FirstOrDefault(f => f.GetFillPattern().IsSolidFill);
+        // Получаем солид
+        FillPatternElement solidPattern = GetSolidFillPattern(doc);
 
         if (solidPattern == null) return;
 
@@ -141,7 +130,14 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape
         settings.SetProjectionLineColor(enclosureColor);
 
         // Индивидуальные настройки
-        switch (enclosureType)
+        ApplyEnclosureSpecificSettings(enclosureType, settings);
+        // Применяем настройки
+        doc.ActiveView.SetElementOverrides(ds.Id, settings);
+
+    }
+    
+    private static void ApplyEnclosureSpecificSettings(string enclosureType, OverrideGraphicSettings settings)
+    {        switch (enclosureType)
         {
             case var _ when enclosureType == EnclosureTypeOptions.Window:
                 settings.SetSurfaceTransparency(0); // Полная непрозрачность
@@ -156,148 +152,152 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape
                 settings.SetSurfaceTransparency(0); // По умолчанию непрозрачные
                 break;
         }
-        // Применяем настройки
-        doc.ActiveView.SetElementOverrides(ds.Id, settings);
-
+    }
+    
+    private static FillPatternElement GetSolidFillPattern(Document doc)
+    {
+        return  new FilteredElementCollector(doc)
+            .OfClass(typeof(FillPatternElement))
+            .Cast<FillPatternElement>()
+            .FirstOrDefault(f => f.GetFillPattern().IsSolidFill);
+    }
+    
+    private static string AddAreaValueToElement(Element elem, Autodesk.Revit.DB.DirectShape ds)
+    {
+        var enclosureType = elem.LookupParameter(nameof(ConstructionSurfaceModel.EnclosureType)).AsValueString();
+        var calculateArea = CalculateAreaFactory(elem,enclosureType );
+                
+        ParametersUtility.SetParameterByValueAndName(ds, nameof(ConstructionSurfaceModel.ConstructionArea), ParameterDisplayConvertor.SquareMeters(calculateArea));
+        return enclosureType;
     }
 
-    private static void Create3DView(Document doc)
+    private static (double height, double width) GetWindowDimensionsFromBoundingBox(Element window)
     {
-        View newView = View3D.CreateIsometric(doc, new FilteredElementCollector(doc)
-            .OfClass(typeof(ViewFamilyType))
-            .Cast<ViewFamilyType>()
-            .First(x => x.ViewFamily == ViewFamily.ThreeDimensional).Id);
-        using Transaction t = new Transaction(doc, "Test View");
-        t.Start();
-        newView.DisplayStyle = DisplayStyle.ShadingWithEdges;
-        t.Commit();
-    }
-    static Color GetEnclosureColor(string enclosureType)
-    {
-        var colorMap = new Dictionary<string, Color>
+        var bb = window.get_BoundingBox(RevitConfig.Document.ActiveView);
+        if (bb == null)
         {
-            { EnclosureTypeOptions.Wall, new Color(255, 0, 0) },     // Красный
-            { EnclosureTypeOptions.Roof, new Color(0, 0, 255) },     // Синий
-            { EnclosureTypeOptions.Floor, new Color(0, 255, 0) },     // Зеленый
-            { EnclosureTypeOptions.Window, new Color(30, 30, 150) },  // Темно-синий
-            { EnclosureTypeOptions.Skylight, new Color(80, 0, 80) },  // Темно-пурпурный
-            { EnclosureTypeOptions.Curtain, new Color(0, 150, 150) },// Темно-голубой
-            { EnclosureTypeOptions.Door, new Color(80, 0, 40) }      // Темно-бордовый
+            return (0, 0);
+        }
+
+        var min = bb.Min;
+        var max = bb.Max;
+
+        var height = Math.Abs(max.Z - min.Z);
+
+        // Проектируем BoundingBox на плоскость XY
+        var corners = new XYZ[]
+        {
+            new XYZ(min.X, min.Y, 0), // Минимальная точка на XY
+            new XYZ(max.X, min.Y, 0), // Максимальная X, минимальная Y
+            new XYZ(max.X, max.Y, 0), // Максимальная X, максимальная Y
+            new XYZ(min.X, max.Y, 0) // Минимальная X, максимальная Y
         };
-        return colorMap.TryGetValue(enclosureType, out Color color) ? color : new Color(60, 60, 60);
+
+        // Получаем максимальную ширину через проекции на плоскость XY
+        double width = 0;
+        for (var i = 0; i < corners.Length; i++)
+        {
+            for (var j = i + 1; j < corners.Length; j++)
+            {
+                width = Math.Max(width, corners[i].DistanceTo(corners[j]));
+            }
+        }
+
+        return (height, width);
     }
 
-        //расчет площади в зависимости от типа конструкции.
-        private static double CalculateAreaFactory(Element element, string enclosureType)
+    private static void TransferParameters(Element elem, Element ds)
+    {
+        // Получаем список всех параметров из класса Surfaces
+        List<string> transferParameters = ConstructionSurfaceModel.GetAllSurfaceParameters();
+
+        foreach (string parameterName in transferParameters)
         {
-            //для стен и витражей   
-            if (enclosureType == EnclosureTypeOptions.Wall || enclosureType == EnclosureTypeOptions.Curtain)
+            try
             {
-                return element.get_Parameter(BuiltInParameter.HOST_AREA_COMPUTED).AsDouble();
-            }
+                Parameter sourceParameter = elem.LookupParameter(parameterName);
 
-            //для пола и стен   
-            if (enclosureType == EnclosureTypeOptions.Floor || enclosureType == EnclosureTypeOptions.Roof)
-            {
-                return element.get_Parameter(BuiltInParameter.HOST_AREA_COMPUTED).AsDouble();
-            }
-
-            if (enclosureType == EnclosureTypeOptions.Window || enclosureType == EnclosureTypeOptions.Door)
-            {
-                var height = element.get_Parameter(BuiltInParameter.CASEWORK_HEIGHT).AsDouble();
-                var width = element.get_Parameter(BuiltInParameter.GENERIC_WIDTH).AsDouble();
-                if (height > 0 && width > 0)
+                if (sourceParameter != null)
                 {
-                    return height * width;
-                }
-
-                else
-                {
-                    var (bbHeight, bbWidth) = GetWindowDimensionsFromBoundingBox(element);
-                    Debug.Write($" Не определено значение высоты  и ширины через параметры, принято {element.Name}" +
-                                $"-bbHeight{bbHeight * 0.304}-bbWidth{bbWidth * 0.304}");
-                    var area = bbHeight * bbWidth;
-                    return area;
-                }
-            }
-            else return 0;
-        }
-
-        private static (double height, double width) GetWindowDimensionsFromBoundingBox(Element window)
-        {
-            var bb = window.get_BoundingBox(RevitConfig.Document.ActiveView);
-            if (bb == null)
-            {
-                return (0, 0);
-            }
-
-            var min = bb.Min;
-            var max = bb.Max;
-
-            var height = Math.Abs(max.Z - min.Z);
-
-            // Проектируем BoundingBox на плоскость XY
-            var corners = new XYZ[]
-            {
-                new XYZ(min.X, min.Y, 0), // Минимальная точка на XY
-                new XYZ(max.X, min.Y, 0), // Максимальная X, минимальная Y
-                new XYZ(max.X, max.Y, 0), // Максимальная X, максимальная Y
-                new XYZ(min.X, max.Y, 0) // Минимальная X, максимальная Y
-            };
-
-            // Получаем максимальную ширину через проекции на плоскость XY
-            double width = 0;
-            for (var i = 0; i < corners.Length; i++)
-            {
-                for (var j = i + 1; j < corners.Length; j++)
-                {
-                    width = Math.Max(width, corners[i].DistanceTo(corners[j]));
-                }
-            }
-
-            return (height, width);
-        }
-
-        private static void TransferParameters(Element elem, Element ds)
-        {
-            // Получаем список всех параметров из класса Surfaces
-            List<string> transferParameters = ConstructionSurfaceModel.GetAllSurfaceParameters();
-
-            foreach (string parameterName in transferParameters)
-            {
-                try
-                {
-                    Parameter sourceParameter = elem.LookupParameter(parameterName);
-
-                    if (sourceParameter != null)
+                    // Получаем тип свойства через рефлексию
+                    PropertyInfo propertyInfo = typeof(ConstructionSurfaceModel).GetProperty(parameterName);
+                    if (propertyInfo != null)
                     {
-                        // Читаем значение параметра в зависимости от типа
-                        string parameterValue = ParametersUtility.GetParameterValueAsString(sourceParameter);
+                        Type targetType = propertyInfo.PropertyType;
 
+                        // Получаем значение параметра с учетом типа свойства
+                        object parameterValue = ParametersUtility.GetParamValueFromPropertyType(sourceParameter, targetType);
 
                         // Передаем значение параметра
-                        if (!string.IsNullOrEmpty(parameterValue)) //проверка, что значение параметра не пустое,
+                        if (parameterValue != null && !string.IsNullOrEmpty(parameterValue.ToString()))
                         {
                             ParametersUtility.SetParameterByValueAndName(ds, parameterName, parameterValue);
                         }
                         else
                         {
-                            // Если значение параметра пустое, выводим сообщение об этом,  или можно пропустить итерацию.
-                            Debug.Write("Warning",$"Parameter '{parameterName}' is empty on element {elem.Id.IntegerValue}");
+                            // Если значение параметра пустое, выводим сообщение об этом
+                            Debug.Write("Warning", $"Parameter '{parameterName}' is empty on element {elem.Id.IntegerValue}");
                         }
                     }
                     else
                     {
-                        // Если параметр не найден, выводим сообщение, но продолжаем перебор.
-                        Debug.Write("Warning",
-                            $"Parameter '{parameterName}' not found on element {elem.Id.IntegerValue}");
+                        Debug.Write("Warning", $"Property '{parameterName}' not found in ConstructionSurfaceModel");
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    Debug.Write("Error", $"Error transferring parameter '{parameterName}': {ex.Message}");
+                    // Если параметр не найден, выводим сообщение, но продолжаем перебор.
+                    Debug.Write("Warning", $"Parameter '{parameterName}' not found on element {elem.Id.IntegerValue}");
                 }
+            }
+            catch (Exception ex)
+            {
+                Debug.Write("Error", $"Error transferring parameter '{parameterName}': {ex.Message}");
             }
         }
     }
+    
+    //расчет площади в зависимости от типа конструкции.
+    private static double CalculateAreaFactory(Element element, string enclosureType)
+    {
+        //для стен и витражей   
+        if (enclosureType == EnclosureTypeOptions.Wall || enclosureType == EnclosureTypeOptions.Curtain)
+        {
+            return element.get_Parameter(BuiltInParameter.HOST_AREA_COMPUTED).AsDouble();
+        }
+
+        //для пола и стен   
+        if (enclosureType == EnclosureTypeOptions.Floor || enclosureType == EnclosureTypeOptions.Roof)
+        {
+            return element.get_Parameter(BuiltInParameter.HOST_AREA_COMPUTED).AsDouble();
+        }
+
+        if (enclosureType == EnclosureTypeOptions.Window || enclosureType == EnclosureTypeOptions.Door)
+        {
+            var height = element.get_Parameter(BuiltInParameter.CASEWORK_HEIGHT).AsDouble();
+            var width = element.get_Parameter(BuiltInParameter.GENERIC_WIDTH).AsDouble();
+            if (height > 0 && width > 0)
+            {
+                return height * width;
+            }
+
+            else
+            {
+                var (bbHeight, bbWidth) = GetWindowDimensionsFromBoundingBox(element);
+                Debug.Write($" Не определено значение высоты  и ширины через параметры, принято {element.Name}" +
+                            $"-bbHeight{bbHeight * 0.304}-bbWidth{bbWidth * 0.304}");
+                var area = bbHeight * bbWidth;
+                return area;
+            }
+        }
+        else return 0;
+    }
+    
+    private static void HandleError(Element elem, Exception ex)
+    {
+        Debug.WriteLine($"Error processing {elem.Id}: {ex}");
+        TaskDialog.Show("Ошибка", $"Элемент {elem.Id}: {ex.Message}");
+    }
 }
+
+

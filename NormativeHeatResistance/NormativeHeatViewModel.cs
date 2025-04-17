@@ -226,7 +226,7 @@ public class NormativeHeatViewModel : ViewModelBase
     }
 }
 
-public class LoadNormativeData
+public static class LoadNormativeData
 {
         // Загрузка категорий зданий
     public static ObservableCollection<BuildingCategoryItem> LoadBuildingCategories()

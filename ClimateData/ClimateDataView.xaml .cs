@@ -1,7 +1,6 @@
 // ClimateDataView.xaml.cs
 
 using System.Windows;
-using HVACLoadTerminals.HeatLoss.MetadataHandler;
 
 namespace HVACLoadTerminals.ClimateData;
 

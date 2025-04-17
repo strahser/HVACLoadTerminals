@@ -103,6 +103,7 @@
     <Compile Include="HeatLoss\ConstructionSurfaceModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapesForEachElement.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\ConvertToDirectShapeCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\EnclosureColorManager.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\EnumToBooleanConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\StringToBooleanConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\VisibilityConverter.cs" />
@@ -111,9 +112,9 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsViewModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsWindow.xaml.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\SpaceSelectionFilter.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\MainCommand.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\MainViewModel.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\MainWindow.xaml.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\MainDrawCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\MainDrawViewModel.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\MainDrawWindow.xaml.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\ParametersHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Calculators\OrientationCalculator.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Calculators\UndergroundZoneCalculator.cs" />
@@ -142,16 +143,19 @@
     <Compile Include="HeatLoss\HeatLossResult\HeatBalanceParametersMappings.cs" />
     <Compile Include="HeatLoss\HeatLossResult\HeatLossTableCommand.cs" />
     <Compile Include="HeatLoss\HeatLossResult\HeatLossTableViewModel.cs" />
-    <Compile Include="HeatLoss\HeatLossResult\HeatLossWindow.xaml.cs">
-      <DependentUpon>HeatLossWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="HeatLoss\HeatLossResult\Reports\CreateDocxReport.cs" />
     <Compile Include="HeatLoss\HeatLossResult\Reports\CreateJsonReport.cs" />
     <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\CreateSpecificationCommand.cs" />
     <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\GenericModelSpecification.cs" />
     <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\ScheduleCreator.cs" />
     <Compile Include="HeatLoss\HeatLossResult\Reports\Schedules\ScheduleFactory.cs" />
+    <Compile Include="HeatLoss\HeatLossResult\View\HeatLossWindow.xaml.cs">
+      <DependentUpon>HeatLossWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="HeatLoss\SpaceDataModel.cs" />
+    <Compile Include="Main\MainViewModel.cs" />
+    <Compile Include="Main\MainWindow.xaml.cs" />
+    <Compile Include="Main\ShowMainWindowCommand.cs" />
     <Compile Include="ModelsStatic\OrientationMapping.cs" />
     <Compile Include="ModelsStatic\RevitDescriptionAttribute.cs" />
     <Compile Include="Models\ParameterFields.cs" />
@@ -165,7 +169,6 @@
     <Compile Include="ModelsStatic\EnclosureTypeOptions.cs" />
     <Compile Include="NormativeHeatResistance\Core\NormativeValueCalculator.cs" />
     <Compile Include="NormativeHeatResistance\Core\StaticCoefficientStructures.cs" />
-    <Compile Include="NormativeHeatResistance\GroupViewModelConverter.cs" />
     <Compile Include="NormativeHeatResistance\NormativeHeatCommand.cs" />
     <Compile Include="NormativeHeatResistance\NormativeHeatViewModel.cs" />
     <Compile Include="NormativeHeatResistance\NormativeWindow.xaml.cs" />
@@ -215,15 +218,16 @@
     <Page Include="ClimateData\ClimateDataView.xaml" />
     <Page Include="CreateParameters\ReportWindow.xaml" />
     <Page Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsWindow.xaml" />
-    <Page Include="HeatLoss\DrawNewSpaceFaces\MainWindow.xaml" />
+    <Page Include="HeatLoss\DrawNewSpaceFaces\MainDrawWindow.xaml" />
     <Page Include="HeatLoss\DrawNewSpaceFaces\Walls\WallOrientationWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\WindowsAndDoorsSelectionWindow.xaml" />
-    <Page Include="HeatLoss\HeatLossResult\HeatLossWindow.xaml">
+    <Page Include="HeatLoss\HeatLossResult\View\HeatLossWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Main\MainWindow.Xaml" />
     <Page Include="NormativeHeatResistance\NormativeWindow.xaml" />
     <Page Include="PipeSewageHandler\TeeConfigWindow.xaml" />
     <Page Include="Resources\Styles.xaml" />

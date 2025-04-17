@@ -242,7 +242,7 @@ namespace HVACLoadTerminals.HeatLoss
         /// <returns></returns>
         public static List<string> GetAllSurfaceParameters()
         {
-            List<string> parameters = new List<string>();
+            List<string> parameters = [];
 
             // Получаем все свойства класса ConstructionSurfaceModel
             PropertyInfo[] properties = typeof(ConstructionSurfaceModel).GetProperties();
@@ -263,7 +263,7 @@ namespace HVACLoadTerminals.HeatLoss
         
         public object Clone()
         {
-            return this.MemberwiseClone(); // Поверхностное клонирование
+            return MemberwiseClone(); // Поверхностное клонирование
         }
 
         private void UpdateTransferCoefficient()

@@ -104,7 +104,7 @@ namespace HVACLoadTerminals.Utils
         }
     }
         
-        public static string GetParameterValueAsString(Parameter parameter)
+        public static string GetParameterValue(Parameter parameter)
         {
             string parameterValue = string.Empty;
 
@@ -127,7 +127,6 @@ namespace HVACLoadTerminals.Utils
                     {
                         parameterValue = elementId.IntegerValue.ToString(); // Возвращаем ID элемента
                     }
-
                     break;
                 default:
                     parameterValue = "Unsupported parameter type.";

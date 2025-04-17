@@ -1,0 +1,34 @@
+<Window x:Class="HVACLoadTerminals.Main.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Main Window" Height="600" Width="1000">
+    <Grid>
+        <!-- Разделение на две колонки -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/> <!-- Меню -->
+            <ColumnDefinition Width="*"/>   <!-- Контент -->
+        </Grid.ColumnDefinitions>
+
+        <!-- Левая панель: Меню -->
+        <TreeView x:Name="MenuTreeView" Grid.Column="0" Margin="10">
+            <TreeViewItem Header="Настройки проекта">
+                <TreeViewItem Header="Общие настройки"/>
+                <TreeViewItem Header="Пользовательские настройки"/>
+            </TreeViewItem>
+            <TreeViewItem Header="Отрисовка конструкций">
+                <TreeViewItem Header="Стены"/>
+                <TreeViewItem Header="Перекрытия"/>
+            </TreeViewItem>
+            <TreeViewItem Header="Отчеты">
+                <TreeViewItem Header="Отчет по материалам"/>
+                <TreeViewItem Header="Отчет по конструкциям"/>
+            </TreeViewItem>
+        </TreeView>
+
+        <!-- Правая панель: Контент -->
+        <ContentControl Grid.Column="1" Content="{Binding SelectedView}" Margin="10"/>
+    </Grid>
+</Window>

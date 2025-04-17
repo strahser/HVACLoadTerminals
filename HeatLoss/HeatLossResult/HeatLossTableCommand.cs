@@ -4,6 +4,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
+using HVACLoadTerminals.HeatLoss.HeatLossResult.View;
 using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.HeatLoss.HeatLossResult

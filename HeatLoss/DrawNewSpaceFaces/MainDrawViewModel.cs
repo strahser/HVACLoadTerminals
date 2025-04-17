@@ -4,7 +4,6 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs;
-using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors;
 using HVACLoadTerminals.Utils;
 using ReactiveUI;
@@ -16,7 +15,7 @@ using WindowsAndDoorsSelectionWindow = HVACLoadTerminals.HeatLoss.DrawNewSpaceFa
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces
 {
  // ViewModel для главного окна
- public class MainViewModel : ReactiveObject
+ public class MainDrawViewModel : ReactiveObject
     {
         private Document _hvacDocument = RevitConfig.Document;
         private UIDocument _uiDocument = RevitConfig.UiDocument;

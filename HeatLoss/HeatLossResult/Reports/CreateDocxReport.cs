@@ -18,6 +18,7 @@ public class CreateDocxReport( List<ConstructionSurfaceModel> faceDataList)
 {
     private List<ConstructionSurfaceModel> FaceDataList { get; } = faceDataList;
     private static string FolderPath { get; set; } =  CreateReportFolder();
+    
     private static readonly string TemplatePath = Path.Combine(FolderPath, "Template.docx");
     // Получаем свойства с атрибутом Description
     private static List<PropertyInfo> GetPropertiesWithDescription()
@@ -76,6 +77,7 @@ public class CreateDocxReport( List<ConstructionSurfaceModel> faceDataList)
             .OrderBy(p => p.MetadataToken) // Ключевое изменение для порядка объявления
             .ToList();
     }
+    
     public void ExportToDocx()
         {
         string message = "";

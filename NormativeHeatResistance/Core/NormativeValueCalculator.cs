@@ -5,18 +5,9 @@ using HVACLoadTerminals.ModelsStatic;
 
 namespace HVACLoadTerminals.NormativeHeatResistance.Core;
 
-public class NormativeValueCalculator
+public class NormativeValueCalculator(string categoryValue, double gsop)
 {
-    private readonly string _categoryValue;
-    private readonly double _gsop;
-    private readonly List<CalculationDetail> _calculationDetails;
-
-    public NormativeValueCalculator(string categoryValue, double gsop)
-    {
-        _categoryValue = categoryValue;
-        _gsop = gsop;
-        _calculationDetails = new List<CalculationDetail>();
-    }
+    private readonly List<CalculationDetail> _calculationDetails = [];
 
     public double CalculateNormativeTransferThermalCoefficient(string enclosureType)
     {
@@ -41,9 +32,9 @@ public class NormativeValueCalculator
         }
 
         // Сначала поиск коэффициентов a и b
-        if (StaticCoefficientValues.Coefficients.TryGetValue((_categoryValue, enclosureType), out var coeffs))
+        if (StaticCoefficientValues.Coefficients.TryGetValue((_categoryValue: categoryValue, enclosureType), out var coeffs))
         {
-            double effectiveGsop = Math.Min(_gsop, GetMaxGSOP(enclosureType));
+            double effectiveGsop = Math.Min(gsop, GetMaxGSOP(enclosureType));
             double normativeValue = coeffs.A * effectiveGsop + coeffs.B;
 
             detail.Coefficients = $"A = {coeffs.A:F5}, B = {coeffs.B:F2}";
@@ -55,13 +46,13 @@ public class NormativeValueCalculator
         }
 
         // Если коэффициенты не найдены, поиск в табличных данных
-        if (StaticCoefficientValues.TableValues.TryGetValue((_categoryValue, enclosureType), out var table))
+        if (StaticCoefficientValues.TableValues.TryGetValue((_categoryValue: categoryValue, enclosureType), out var table))
         {
-            double normativeValue = CalculateFromTable(table.GSOP, table.R0, _gsop, enclosureType);
+            double normativeValue = CalculateFromTable(table.GSOP, table.R0, gsop, enclosureType);
 
             var pairedValues = table.GSOP.Zip(table.R0, (g, r) => $"{g:F0}/{r:F2}").ToArray();
             detail.TableData = $"Таблица ГСОП/R₀:  {string.Join(", ", pairedValues)}";
-            detail.CurrentCalculation = $"Интерполяция: {normativeValue:F2} (ГСОП = {_gsop})";
+            detail.CurrentCalculation = $"Интерполяция: {normativeValue:F2} (ГСОП = {gsop})";
 
             _calculationDetails.Add(detail);
             return normativeValue;
