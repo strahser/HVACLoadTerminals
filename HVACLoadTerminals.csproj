@@ -100,6 +100,13 @@
     <Compile Include="GSOP\GsopCalculator.cs" />
     <Compile Include="GSOP\GsopCalculatorFromRevitData.cs" />
     <Compile Include="GSOP\ProjectInfoRevitExtensions.cs" />
+    <Compile Include="HeatLoss\Commands\CreateAllWallsComand.cs" />
+    <Compile Include="HeatLoss\Commands\DrawExteriorSurfacesCommand.cs" />
+    <Compile Include="HeatLoss\Commands\_AnalyzeSpaceBoundariesCommand.cs" />
+    <Compile Include="HeatLoss\Commands\_AnalyzeWallNormalsCommand.cs" />
+    <Compile Include="HeatLoss\Commands\_ConvexHullAnalysisCommand.cs" />
+    <Compile Include="HeatLoss\Commands\CreateExteriorWallsCommand.cs" />
+    <Compile Include="HeatLoss\Commands\CreateExteriorWallsConvexHullCommand.cs" />
     <Compile Include="HeatLoss\ConstructionSurfaceModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapesForEachElement.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\ConvertToDirectShapeCommand.cs" />
@@ -126,6 +133,12 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\CompositeWallParametersStrategy.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\UndergroundWallParametersStrategy.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\WallParametersStrategyFactory.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\BoundaryProcessor.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\CreateRaycastingWallsCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\GeometryUtility.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\LoggingService.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\SpaceAnalyzer.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\WallCreator.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\StringEqualsConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\WallHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\WallOrientationViewModel.cs" />

@@ -1,17 +1,11 @@
-using System.Windows.Controls;
+using System.Windows;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces
 {
-    public partial class MainDrawControl : UserControl
+    public partial class MainDrawWindow : Window
     {
-        public MainDrawControl()
+        public MainDrawWindow()
         {
-            // Создаем ViewModel и UserControl
-            var viewModel = new MainDrawViewModel();
-
-
-            // Устанавливаем DataContext
-            this.DataContext = viewModel;
             InitializeComponent();
         }
     }

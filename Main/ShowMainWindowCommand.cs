@@ -18,7 +18,7 @@ public class ShowMainWindowCommand : IExternalCommand
             var mainWindow = new MainWindow();
 
             // Показываем главное окно
-            mainWindow.Show();
+            mainWindow.ShowDialog();
 
             return Result.Succeeded; // Команда выполнена успешно
         }

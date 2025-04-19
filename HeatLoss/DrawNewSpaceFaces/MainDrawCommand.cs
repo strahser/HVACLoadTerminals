@@ -13,11 +13,11 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces
             RevitConfig.Initialize(commandData);
             // Создаем ViewModel и окно
             var viewModel = new MainDrawViewModel();
-            var mainWindow = new MainDrawControl();
+            var mainWindow = new MainDrawWindow();
             mainWindow.DataContext = viewModel;
 
             // Отображаем окно (не модально, чтобы не блокировать Revit)
-            //mainWindow.ShowDialog(); // или mainWindow.ShowDialog(); если нужно модальное окно
+            mainWindow.ShowDialog(); // или mainWindow.ShowDialog(); если нужно модальное окно
             return Result.Succeeded;
         }
     }

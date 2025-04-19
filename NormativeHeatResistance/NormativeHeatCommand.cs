@@ -11,8 +11,8 @@ public class NormativeHeatCommand: IExternalCommand
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
         RevitConfig.Initialize(commandData);
-        var window = new NormativeHeatControl();
-        //window.ShowDialog();
+        var window = new NormativeHeatWindow();
+        window.ShowDialog();
         return Result.Succeeded;
     }
 }

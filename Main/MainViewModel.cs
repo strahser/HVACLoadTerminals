@@ -30,12 +30,12 @@ public class MainViewModel : ViewModelBase
     {
         switch (parameter.ToString())
         {
-            case "Общие настройки":
+            /*case "Общие настройки":
                 SelectedView = new  MainDrawControl();
                 break;
             case "Пользовательские настройки":
                 SelectedView = new NormativeHeatControl();
-                break;
+                break;*/
             /*case "Стены":
                 SelectedView = new WallsView();
                 break;

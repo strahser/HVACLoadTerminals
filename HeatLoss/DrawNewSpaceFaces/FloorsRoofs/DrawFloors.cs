@@ -69,18 +69,42 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs
             return count;
         }
 
-        private List<Curve> GetDetailCurveLoops()
-        {
-            //вариант более детального получения кривых с удалением точек от стен.
-            /*var spaceBoundary = new SpaceBoundaryCurve(space);
-            var curves = spaceBoundary.GetCurves();
-            var curveLoop = new CurveLoop();
-            foreach (var curve in curves)
-            {
-                curveLoop.Append(curve);
-            }*/
-            return [];
-        }
+             public static void DrawFloorsForSelectedSpaces(Document hvacDocument,List<Space> spaces,Level level, FloorType floorType)
+         {
+ 
+             foreach (var space in spaces.Cast<Space>())
+             {
+                 var spaceBoundary = new SpaceBoundaryCurve(space as Space);
+                 var curves = spaceBoundary.GetCurves();
+                 var curveLoop = new CurveLoop();
+                 foreach (var curve in curves)
+                 {
+                     curveLoop.Append(curve);
+                 }
+ 
+                 IList<CurveLoop> curveLoops = new List<CurveLoop>() { curveLoop };
+ 
+                 if (floorType == null)
+                 {
+                     TaskDialog.Show("Error", "Не найден тип перекрытия");
+                 }
+
+                 using var transaction = new Transaction(hvacDocument, $"Create Floor in {space.Number}");
+                 transaction.Start();
+                 try
+                 {
+                     var floor = Floor.Create(hvacDocument, curveLoops, floorType.Id, level.Id);
+                     var calculateArea = ParameterDisplayConvertor.SquareMeters(floor.get_Parameter(BuiltInParameter.HOST_AREA_COMPUTED).AsDouble());
+
+                     transaction.Commit();
+                 }
+                 catch (Exception ex)
+                 {
+                     transaction.RollBack();
+                     TaskDialog.Show("Error", $"Ошибка при создании перекрытия: {ex.Message}");
+                 }
+             }
+         }
         private static  void AddParametersToFloor(Floor floor, Space space, string enclosureType )
         {
             var calculateArea = ParameterDisplayConvertor.SquareMeters(floor.get_Parameter(BuiltInParameter.HOST_AREA_COMPUTED).AsDouble());

@@ -1,27 +1,38 @@
-<UserControl x:Class="HVACLoadTerminals.NormativeHeatResistance.NormativeHeatControl"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:normativeHeatResistance="clr-namespace:HVACLoadTerminals.NormativeHeatResistance"
-             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
-             Background="#FFF0F0F0"
-             FontFamily="Segoe UI">
-    <UserControl.DataContext>
+<Window x:Class="HVACLoadTerminals.NormativeHeatResistance.NormativeHeatWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:normativeHeatResistance="clr-namespace:HVACLoadTerminals.NormativeHeatResistance"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        Title="Нормативное сопротивление" 
+        WindowState="Maximized"
+        WindowStartupLocation="CenterScreen"
+        Background="#FFF0F0F0"
+        FontFamily="Segoe UI">
+    
+    <Window.DataContext>
         <normativeHeatResistance:NormativeHeatViewModel/>
-    </UserControl.DataContext>
-    <UserControl.Resources>
+    </Window.DataContext>
+
+    <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/HVACLoadTerminals;component/Resources/Styles.xaml"/>
+                <!--<ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />-->
             </ResourceDictionary.MergedDictionaries>
+            
             <!-- Стили для вкладок -->
             <Style TargetType="TabControl">
                 <Setter Property="Margin" Value="0 10"/>
                 <Setter Property="FontSize" Value="14"/>
             </Style>
+
             <Style TargetType="TabItem">
                 <Setter Property="Padding" Value="15 5"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
             </Style>
+
             <!-- Стиль группировки -->
             <Style x:Key="GroupHeaderStyle" TargetType="GroupItem">
                 <Setter Property="Template">
@@ -50,7 +61,8 @@
                 </CollectionViewSource.GroupDescriptions>
             </CollectionViewSource>
         </ResourceDictionary>
-    </UserControl.Resources>
+    </Window.Resources>
+
     <TabControl>
         <!-- Вкладка с конструкциями -->
         <TabItem Header="Конструкции">
@@ -62,6 +74,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
+
                 <!-- Секция выбора категории -->
                 <StackPanel Grid.Row="0">
                     <TextBlock Text="Выберите Категорию Здания"/>
@@ -70,6 +83,7 @@
                               Margin="0 0 0 15"/>
                     <TextBlock Text="{Binding GSOP, StringFormat=Расчетное ГСОП {0}}" Foreground="Blue"/>
                 </StackPanel>
+
                 <!-- Секция групп конструкций -->
                 <StackPanel Grid.Row="1">
                     <Grid>
@@ -81,6 +95,7 @@
                                   Margin="0 0 10 0"/>
                     </Grid>
                 </StackPanel>
+
                 <!-- DataGrid с конструкциями -->
                 <DataGrid Grid.Row="2" 
                           ItemsSource="{Binding Source={StaticResource GroupedElements}}"
@@ -89,10 +104,12 @@
                           Margin="0 0 0 10"
                           SelectionMode="Single"
                           SelectionUnit="FullRow"
-                          IsSynchronizedWithCurrentItem="False">
+                          IsSynchronizedWithCurrentItem="False"
+                          >
                     <DataGrid.GroupStyle>
                         <GroupStyle ContainerStyle="{StaticResource GroupHeaderStyle}"/>
                     </DataGrid.GroupStyle>
+
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Тип Конструкции" 
                                             Binding="{Binding EnclosureType}"
@@ -126,12 +143,14 @@
                         </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
+
                 <!-- Секция с результатами -->
                 <TextBox Grid.Row="3"
                          Text="{Binding UpdateSummary}"
                          IsReadOnly="True"
                          Margin="0 0 0 10"
                          Style="{StaticResource SummaryTextBoxStyle}"/>
+
                 <!-- Кнопки -->
                 <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="Обновить поверхности" 
@@ -139,19 +158,23 @@
                             Width="150" 
                             Margin="0 0 10 0"
                             Style="{StaticResource DrawFloorsButtonStyle}"/>
-                    <Button Content="Закрыть" 
+                    
+                    <Button Content="Закрыть окно" 
+                            Click="CloseWindow_Click"
                             Width="100"
                             Style="{StaticResource DrawRoofsButtonStyle}"/>
                 </StackPanel>
             </Grid>
         </TabItem>
+
         <!-- Вкладка с расчетами -->
         <TabItem Header="Расчеты">
             <Grid Margin="10">
                 <DataGrid ItemsSource="{Binding CalculationDetails}"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
-                          IsReadOnly="True">
+                          IsReadOnly="True"
+                          >
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Тип" 
                                             Binding="{Binding EnclosureType}" 
@@ -167,6 +190,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
+
                         <!-- Формула -->
                         <DataGridTemplateColumn Header="Формула" Width="300">
                             <DataGridTemplateColumn.CellTemplate>
@@ -189,7 +213,8 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Результат" 
-                                            Binding="{Binding CurrentCalculation}" />
+                                            Binding="{Binding CurrentCalculation}" 
+                                            />
                     </DataGrid.Columns>
                     <!-- Стиль для автоматической высоты строк -->
                     <DataGrid.RowStyle>
@@ -201,4 +226,4 @@
             </Grid>
         </TabItem>
     </TabControl>
-</UserControl>
+</Window>
