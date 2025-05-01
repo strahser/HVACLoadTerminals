@@ -7,7 +7,7 @@ using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls;
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Zones;
 
 public class WallHandler
 {

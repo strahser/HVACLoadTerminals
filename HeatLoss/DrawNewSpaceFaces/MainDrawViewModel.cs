@@ -8,7 +8,7 @@ using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors;
 using HVACLoadTerminals.Utils;
 using ReactiveUI;
 using DrawFloorsWindow = HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs.DrawFloorsWindow;
-using WallOrientationWindow = HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.WallOrientationWindow;
+using WallOrientationWindow = HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.View.WallOrientationWindow;
 using WindowsAndDoorsSelectionWindow = HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors.WindowsAndDoorsSelectionWindow;
 
 

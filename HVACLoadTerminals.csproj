@@ -116,18 +116,19 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\MainDrawViewModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\MainDrawWindow.xaml.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\ParametersHandler.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Utils\FailureProcessor.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Calculators\OrientationCalculator.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Calculators\UndergroundZoneCalculator.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Calculators\VerticalWallFacesCalculator.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\CreateAllWallsComand.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\CreateExteriorWallsCommand.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\CreateExteriorWallsConvexHullCommand.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\CreateWallsFromBoundariesCommand.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\DrawExteriorSurfacesCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_CreateExteriorWallsConvexHullCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_EnergyModelFromBoundariesCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\EnergyModelExteriorSurfacesCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_AnalyzeSpaceBoundariesCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_AnalyzeWallNormalsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_ConvexHullAnalysisCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\DrawWalls.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\EnclosureCacheManager.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Models\WallTypeWrapper.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Interface\IWallParametersStrategy.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\ApplyParametersHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\BaseWallParametersStrategy.cs" />
@@ -135,19 +136,23 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\UndergroundWallParametersStrategy.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\WallParametersStrategyFactory.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\BoundaryProcessor.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\CreateRaycastingWallsCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\commands\CreateRaycastingExteriorWallsCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\CreateRaycastingSingleSpaceWallsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\GeometryUtility.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\LoggingService.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\SpaceAnalyzer.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\WallCreator.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\StringEqualsConverter.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\WallHandler.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\WallOrientationViewModel.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\WallOrientationWindow.xaml.cs">
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\BoolToCollapsedConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\BoolToVisibilityConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\InverseBoolConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\MultiSelectBehavior.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\StringEqualsConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\WallOrientationWindow.xaml.cs">
       <DependentUpon>WallOrientationWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\MainViewModel.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\ConstructionSurfaceModelExtensions.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\TestWallZonesCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\WallHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\WallZonesCreator.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\Zone.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\DrawWindowsAndDoorsCommand.cs" />
@@ -200,6 +205,7 @@
     <Compile Include="CalculateSpaceDevice\InsertTerminal.cs" />
     <Compile Include="Utils\DrawFaceGeometry.cs" />
     <Compile Include="Utils\InfiltrationCalculator.cs" />
+    <Compile Include="Utils\LoggingService.cs" />
     <Compile Include="Utils\ParametersUtility.cs" />
     <Compile Include="Utils\RevitApiUtils.cs" />
     <Compile Include="Utils\RoomAndSpaceCollectorQuery.cs" />
@@ -233,7 +239,7 @@
     <Page Include="CreateParameters\ReportWindow.xaml" />
     <Page Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\DrawFloorsWindow.xaml" />
     <Page Include="HeatLoss\DrawNewSpaceFaces\MainDrawWindow.xaml" />
-    <Page Include="HeatLoss\DrawNewSpaceFaces\Walls\WallOrientationWindow.xaml">
+    <Page Include="HeatLoss\DrawNewSpaceFaces\Walls\View\WallOrientationWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\WindowsAndDoorsSelectionWindow.xaml" />

@@ -8,16 +8,16 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
     public class BoundaryProcessor
     {
         public Document _doc;
-        private readonly List<Curve> _allBoundaries = new List<Curve>();
+        private readonly List<BoundaryData> _boundaryData = new List<BoundaryData>();
 
         public BoundaryProcessor(Document doc)
         {
             _doc = doc;
         }
 
-        public List<Curve> GetAllBoundaries()
+        public List<BoundaryData> GetAllBoundaryData()
         {
-            _allBoundaries.Clear();
+            _boundaryData.Clear();
             var spaces = new FilteredElementCollector(_doc)
                 .OfCategory(BuiltInCategory.OST_MEPSpaces)
                 .WhereElementIsNotElementType()
@@ -33,12 +33,24 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
                         Curve curve = segment.GetCurve();
                         if (curve != null && curve.Length > 0.001)
                         {
-                            _allBoundaries.Add(curve);
+                            _boundaryData.Add(new BoundaryData(curve, space));
                         }
                     }
                 }
             }
-            return _allBoundaries;
+            return _boundaryData;
+        }
+    }
+
+    public class BoundaryData
+    {
+        public Curve CurveData { get; }
+        public Space SpaceData { get; }
+
+        public BoundaryData(Curve curveData, Space spaceData)
+        {
+            CurveData = curveData;
+            SpaceData = spaceData;
         }
     }
 }

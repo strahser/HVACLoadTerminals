@@ -8,7 +8,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
 
-namespace HVACLoadTerminals.HeatLoss.Commands
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Commands
 {
     [Transaction(TransactionMode.Manual)]
     public class VisualizeConvexHullCommand : IExternalCommand

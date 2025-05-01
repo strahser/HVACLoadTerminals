@@ -1,80 +1,182 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
+
+public static class VerticalWallFacesCalculator
 {
-    public static class VerticalWallFacesCalculator
+    private const int InteriorWallFunctionId = 1;
+    
+    /// <summary>
+    /// Определяем наружные грани каждого помещения 
+    /// </summary>
+   public static List<ConstructionSurfaceModel> GetRoomExternalVerticalFaces(Document doc, Room room, HashSet<ElementId> selectedTypes = null)
+{
+    var faces = new List<ConstructionSurfaceModel>();
+    var logger = new LoggingService();
+
+    if (room == null || !room.IsValidObject || room.Area <= 0)
     {
-            /// <summary>
-            /// Определяем наружные грани каждого помещения 
-            /// </summary>
-            /// <param name="doc"></param>
-            /// <param name="room"></param>
-            /// <returns></returns>
-        public static List<ConstructionSurfaceModel> GetRoomExternalVerticalFaces(Document doc, Room room)
+        logger.Log($"Ошибка: Некорректная комната (RoomId: {room?.Id})");
+        return faces;
+    }
+
+    try
+    {
+        var calculator = new SpatialElementGeometryCalculator(doc);
+        var geometry = calculator.CalculateSpatialElementGeometry(room);
+        var solid = geometry.GetGeometry();
+        logger.Log($"Начало обработки Room {room.Id}. Граней: {solid?.Faces.Size ?? 0}");
+
+        // Логирование выбранных типов
+        if (selectedTypes != null)
         {
-            var faceDataList = new List<ConstructionSurfaceModel>(); 
-            var boundaryOptions = new SpatialElementBoundaryOptions();
-            var calculator = new SpatialElementGeometryCalculator(doc);
-            if (room == null || !(room.Area > 0)) return faceDataList;
-            var geometryResults = calculator.CalculateSpatialElementGeometry(room);
-            var roomSolid = geometryResults.GetGeometry();
-            var roomFaces = roomSolid.Faces;
-            foreach (Face face in roomFaces)
+            logger.Log($"Выбранные типы стен для Room {room.Id}: {string.Join(", ", selectedTypes.Select(id => id.IntegerValue))}");
+        }
+
+        foreach (Face face in solid.Faces)
+        {
+            foreach (var boundary in geometry.GetBoundaryFaceInfo(face))
             {
-                var boundaryFaceInfo = geometryResults.GetBoundaryFaceInfo(face);
-                foreach (var boundarySubFace in boundaryFaceInfo)
+                if (boundary.SubfaceType != SubfaceType.Side)
                 {
-                    if (boundarySubFace.SubfaceType != SubfaceType.Side) continue;
-                    //ненужные сейчас данные, но могут потребоваться при работе с ссылками
-                    var sbeId = boundarySubFace.SpatialBoundaryElement;
-                    long hostId = sbeId.HostElementId.IntegerValue;
-                    var linkId = sbeId.LinkedElementId;
-                    var linkInstanceId = sbeId.LinkInstanceId;
-                    //преобразуем часть грани в стену
-                    var verticalFace = doc.GetElement(boundarySubFace.SpatialBoundaryElement.HostElementId) as Wall;
-                    //получаем наружные стены
-                    if (verticalFace == null ||
-                        verticalFace.WallType.get_Parameter(BuiltInParameter.FUNCTION_PARAM).AsInteger() != 1) continue;
-                    // Создаем ConstructionSurfaceModel для стены
-                    var wallFaceData = new ConstructionSurfaceModel
+                    logger.Log($"Пропуск: грань {face.Id} не является боковой (тип: {boundary.SubfaceType})");
+                    continue;
+                }
+
+                // Получаем стену и её тип
+                var wall = doc.GetElement(boundary.SpatialBoundaryElement.HostElementId) as Wall;
+                if (wall == null || wall.WallType == null)
+                {
+                    logger.Log($"Пропуск: элемент {boundary.SpatialBoundaryElement.HostElementId} не является стеной");
+                    continue;
+                }
+                var wallTypeId = wall.WallType.Id;
+
+                // Детальное логирование сравнения
+                logger.Log($"Обработка стены: HostElementId={wall.Id}, TypeId={wallTypeId.IntegerValue}");
+
+                // Проверка выбранных типов
+                bool isTypeValid = selectedTypes?.Contains(wallTypeId) ?? 
+                                 (wall.WallType.get_Parameter(BuiltInParameter.FUNCTION_PARAM)?.AsInteger() == InteriorWallFunctionId);
+
+                if (!isTypeValid)
+                {
+                    logger.Log(selectedTypes == null
+                        ? $"Авторежим: пропуск внутренней стены (TypeId: {wallTypeId.IntegerValue})"
+                        : $"Ручной режим: TypeId {wallTypeId.IntegerValue} не выбран (ожидаемые: {string.Join(", ", selectedTypes.Select(id => id.IntegerValue))})");
+                    continue;
+                }
+
+                faces.Add(CreateFaceModel(face, room, wall));
+                logger.Log($"Добавлена грань: WallId={wall.Id}, TypeId={wallTypeId.IntegerValue}");
+            }
+        }
+
+        logger.Log($"Успешно: Room {room.Id}. Создано {faces.Count} граней");
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"Критическая ошибка в Room {room.Id}: {ex}");
+    }
+
+    return faces;
+}
+
+
+    // возвращаем id стен которые являются ограждением для всех комнат в документе
+    public static HashSet<ElementId> GetUsedWallTypes(Document doc)
+    {
+        var usedTypes = new HashSet<ElementId>();
+        var rooms = new FilteredElementCollector(doc)
+            .OfCategory(BuiltInCategory.OST_Rooms)
+            .WhereElementIsNotElementType()
+            .Cast<Room>()
+            .Where(r => r.IsValidObject && r.Area > 0);
+
+        foreach (var room in rooms)
+        {
+            var types = GetRoomEnclosureWallTypes(doc, room);
+            foreach (var id in types)
+            {
+                usedTypes.Add(id);
+            }
+        }
+        return usedTypes;
+    }
+    // возвращаем id стен которые являются ограждением для одной комнаты в документе
+    private static HashSet<ElementId> GetRoomEnclosureWallTypes(Document doc, Room room)
+    {
+        var enclosureTypes = new HashSet<ElementId>();
+    
+        // Проверка на null и валидность комнаты
+        if (room == null || !room.IsValidObject || room.Area <= 0)
+        {
+            Debug.WriteLine("Пропущена некорректная комната.");
+            return enclosureTypes;
+        }
+
+        try
+        {
+            var calculator = new SpatialElementGeometryCalculator(doc);
+            var geometry = calculator.CalculateSpatialElementGeometry(room);
+            var solid = geometry.GetGeometry();
+
+            foreach (Face face in solid.Faces)
+            {
+                foreach (var boundary in geometry.GetBoundaryFaceInfo(face))
+                {
+                    if (boundary.SubfaceType != SubfaceType.Side) continue;
+
+                    var wall = doc.GetElement(boundary.SpatialBoundaryElement.HostElementId) as Wall;
+                    if (wall?.WallType != null)
                     {
-                        _Face = face,
-                        FaceId = verticalFace.Id.ToString(),
-                        _Room = room,
-                        SpaceNumber = room.Number,
-                        RevitElementId = verticalFace.WallType.Id.ToString(),
-                        FullWallArea = ParameterDisplayConvertor.SquareMeters(face.Area),
-                        ConstructionName = verticalFace.WallType.Name,
-                        EnclosureType = verticalFace.WallType.Kind == WallKind.Curtain ? EnclosureTypeOptions.Curtain  : EnclosureTypeOptions.Wall,
-                        Orientation = OrientationNames.GetSideFromOrientationAzimuth(verticalFace.Orientation),
-                        TransferCoefficient = CheckTransferCoefficient(verticalFace),
-                    };
-                    faceDataList.Add(wallFaceData);
+                        enclosureTypes.Add(wall.WallType.Id);
+                    }
                 }
             }
-            return faceDataList;
         }
-
-        private static double CheckTransferCoefficient(Wall verticalFace)
+        catch (ArgumentNullException ex)
         {
-            var transferCoefficientParam = verticalFace.WallType.get_Parameter(BuiltInParameter.ANALYTICAL_HEAT_TRANSFER_COEFFICIENT);
-            double uValue;
-            // Проверка, существует ли параметр
-            if (transferCoefficientParam != null)
-            {
-                // Получение значения параметра
-                uValue = transferCoefficientParam.AsDouble();
-            }
-            else
-            {
-                uValue = 0;
-            }
-            return uValue;
-
+            Debug.WriteLine($"Ошибка геометрии комнаты {room.Id}: {ex.Message}");
         }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Ошибка обработки комнаты {room.Id}: {ex}");
+        }
+    
+        return enclosureTypes;
+    }
+    private static ConstructionSurfaceModel CreateFaceModel(Face face, Room room, Wall verticalWall)
+    {
+        return new ConstructionSurfaceModel
+        {
+            _Face = face,
+            FaceId = verticalWall.Id.ToString(),
+            _Room = room,
+            SpaceNumber = room.Number,
+            RevitElementId = verticalWall.WallType.Id.ToString(),
+            FullWallArea = ParameterDisplayConvertor.SquareMeters(face.Area),
+            ConstructionName = verticalWall.WallType.Name,
+            EnclosureType = verticalWall.WallType.Kind == WallKind.Curtain 
+                ? EnclosureTypeOptions.Curtain  
+                : EnclosureTypeOptions.Wall,
+            Orientation = OrientationNames.GetSideFromOrientationAzimuth(verticalWall.Orientation),
+            TransferCoefficient = CheckTransferCoefficient(verticalWall),
+        };
+    }
+
+    private static double CheckTransferCoefficient(Wall verticalFace)
+    {
+        var transferCoefficientParam = verticalFace.WallType
+            .get_Parameter(BuiltInParameter.ANALYTICAL_HEAT_TRANSFER_COEFFICIENT);
+        
+        return transferCoefficientParam?.AsDouble() ?? 0;
     }
 }

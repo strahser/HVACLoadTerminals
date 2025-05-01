@@ -1,104 +1,140 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Windows.Forms;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using HVACLoadTerminals.ClimateData;
+using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Utils;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.ParametersHandlersStrategy;
-using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls;
 
 public class DrawWalls(Document hvacDocument, Document roomDocument)
 {
-    public List<Wall> WallList = [];
-    private List<Element> Spaces => CollectorQuery.GetAllSpaces(hvacDocument);
-    private List<Element> Rooms => CollectorQuery.GetAllRooms(roomDocument);
+    private readonly Document _hvacDocument = hvacDocument ?? throw new ArgumentNullException(nameof(hvacDocument));
+    private readonly Document _roomDocument = roomDocument ?? throw new ArgumentNullException(nameof(roomDocument));
+    private readonly ILogger _logger = new LoggingService();
+    
+    public bool IsReady => _hvacDocument != null && _roomDocument != null && _roomDocument.IsValidObject;
+    public List<Wall> WallList { get; } = [];
+    
+    private List<Element> Spaces => CollectorQuery.GetAllSpaces(_hvacDocument);
+    private List<Element> Rooms => CollectorQuery.GetAllRooms(_roomDocument);
 
-    public void DrawWallsForSelectedSpaces(string northDirection, Level groundLevel)
+    public void DrawWallsForSelectedSpaces(string northDirection, Level groundLevel, HashSet<ElementId> selectedTypes = null)
     {
+        ValidateInputParameters(northDirection, groundLevel);
 
         foreach (var space in Spaces.Cast<Space>())
         {
-            var selectedRoom =
-                RoomAndSpaceCollectorQuery.GetRoomByNumber(space.Number, Rooms); // TODO: не безопасный выбор
-            var faceDataList = VerticalWallFacesCalculator.GetRoomExternalVerticalFaces(roomDocument, selectedRoom);
-            foreach (var faceData in faceDataList)
+            ProcessSpaceWalls(space, northDirection, groundLevel, selectedTypes);
+        }
+    }
+
+    private static void ValidateInputParameters(string northDirection, Level groundLevel)
+    {
+        if (string.IsNullOrWhiteSpace(northDirection))
+            throw new ArgumentException("Направление не задано");
+
+        if (groundLevel == null)
+            throw new ArgumentNullException(nameof(groundLevel));
+    }
+
+    private void ProcessSpaceWalls(Space space, string northDirection, Level groundLevel, HashSet<ElementId> selectedTypes)
+    {
+        var selectedRoom = RoomAndSpaceCollectorQuery.GetRoomByNumber(space.Number, Rooms);
+        var faceDataList = VerticalWallFacesCalculator.GetRoomExternalVerticalFaces(_roomDocument, selectedRoom, selectedTypes);
+
+        foreach (var faceData in faceDataList)
+        {
+            try
             {
-                try
+                var newWall = DrawWallBySpaceAndFace(space, faceData, northDirection, groundLevel);
+                if (newWall != null)
                 {
-                    var newWall = DrawWallBySpaceAndFace(space, faceData, northDirection, groundLevel);
-                    Debug.Write($"стена  в пространстве {space.Number} создана");
+                    _logger.Log($"Стена в пространстве {space.Number} создана");
                     WallList.Add(newWall);
                 }
-                catch (Exception ex)
-                {
-                    Debug.Write($"ошибка при создании стены в пространстве {space.Number} {ex}");
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Log($"Ошибка при создании стены в пространстве {space.Number}: {ex.Message}");
             }
         }
     }
 
-    private Wall DrawWallBySpaceAndFace(Space space, 
-        ConstructionSurfaceModel faceModel, 
-        string northDirection,
-        Level groundLevel)
+    private Wall DrawWallBySpaceAndFace(Space space, ConstructionSurfaceModel faceModel, string northDirection, Level groundLevel)
     {
-        // Проверка на null space, faceModel или face
-        if (space == null || faceModel == null || faceModel._Face == null)
-        {
-            Debug.WriteLine($"Предупреждение: Пропущен вызов DrawWallBySpaceAndFace из-за null аргументов.");
+        if (!ValidateInput(space, faceModel))
             return null;
+
+        using var transaction = new Transaction(_hvacDocument, $"Создать стену {space.Name}-{space.Number}");
+        return ExecuteWallCreationTransaction( space, faceModel, northDirection, groundLevel);
+    }
+
+    private bool ValidateInput(Space space, ConstructionSurfaceModel faceModel)
+    {
+        if (space == null || faceModel?._Face == null)
+        {
+            _logger.Log("Предупреждение: Пропущен вызов DrawWallBySpaceAndFace из-за null аргументов");
+            return false;
+        }
+        return true;
+    }
+
+    private Wall ExecuteWallCreationTransaction(Space space, ConstructionSurfaceModel faceModel, string northDirection, Level groundLevel)
+    {
+        Transaction transaction = new Transaction(_hvacDocument, "Create Wall");  // Create transaction here
+
+        try
+        {
+            transaction.Start();
+
+            // **Register the FailureProcessor within the transaction**
+            FailureHandlingOptions options = transaction.GetFailureHandlingOptions();
+            options.SetFailuresPreprocessor(new FailureProcessor());
+            transaction.SetFailureHandlingOptions(options);
+
+            var curve = GetValidWallCurve(faceModel._Face, space);
+            if (curve == null)
+            {
+                transaction.RollBack(); // Rollback transaction if curve is invalid
+                return null;
+            }
+
+            var wall = Wall.Create(_hvacDocument, curve, space.Level.Id, false);
+            SetWallParameters(space, faceModel, northDirection, curve, wall, groundLevel);
+
+            transaction.Commit();
+            return wall;
+        }
+        catch (Exception ex)
+        {
+            transaction.RollBack();
+            System.Diagnostics.Debug.WriteLine($"Error creating wall: {ex.Message}");
+            return null; 
         }
 
-        // Создаем транзакцию
-        using var transaction = new Transaction(hvacDocument, $"Создать стену {space.Name}-{space.Number}");
-        transaction.Start();
-        // Получаем CurveLoops из Face
-        var curveLoops = faceModel._Face.GetEdgesAsCurveLoops();
+    }
+
+    private Curve GetValidWallCurve(Face face, Space space)
+    {
+        var curveLoops = face.GetEdgesAsCurveLoops();
         if (curveLoops == null || curveLoops.Count == 0)
         {
-            Debug.WriteLine($"Предупреждение: Не найдены кривые для грани пространства {space.Name}.");
-            transaction.RollBack();
-            return null; // Если нет CurveLoops, завершаем
-        }
-
-        // Создаем CurveArray для определения стены
-        var curveArray = new CurveArray();
-        foreach (var loop in curveLoops)
-        {
-            if (loop == null) continue;
-            foreach (var curve in loop)
-            {
-                if (curve != null) curveArray.Append(curve);
-            }
-        }
-
-        if (curveArray.IsEmpty)
-        {
-            Debug.WriteLine(
-                $"Предупреждение: Не удалось сформировать CurveArray для стены в пространстве {space.Name}.");
-            transaction.RollBack();
+            _logger.Log($"Предупреждение: Не найдены кривые для грани пространства {space.Name}");
             return null;
         }
 
-        var wallCurve = curveArray.get_Item(0);
-        if (wallCurve == null)
+        foreach (var curve in curveLoops.SelectMany(loop => loop))
         {
-            Debug.WriteLine(
-                $"Предупреждение: Не удалось получить кривую для создания стены в пространстве {space.Name}.");
-            transaction.RollBack();
-            return null;
+            if (curve != null) return curve;
         }
 
-        var wall = Wall.Create(hvacDocument, wallCurve, space.Level.Id, structural: false);
-        SetWallParameters(space, faceModel, northDirection, wallCurve, wall, groundLevel);
-        transaction.Commit();
-        return wall;
+        _logger.Log($"Предупреждение: Не удалось получить кривую для создания стены в пространстве {space.Name}");
+        return null;
     }
 
     private void SetWallParameters(
@@ -111,31 +147,34 @@ public class DrawWalls(Document hvacDocument, Document roomDocument)
     {
         try
         {
-            var factory = new WallParametersStrategyFactory(hvacDocument,northDirection);
+            var factory = new WallParametersStrategyFactory(_hvacDocument, northDirection);
             var strategy = factory.CreateStrategy(space, groundLevel);
-
             strategy.ApplyParameters(wall, space, faceModel, wallCurve, groundLevel);
 
-            // Общие параметры
-            ParametersUtility.SetParameterByValueAndName(
-                wall,
-                nameof(faceModel.TemperatureInSpace),
-                ParametersHandler.GetSpaceSetHeatPoint(hvacDocument, space)
-            );
-
-            ParametersUtility.SetParameterByValueAndName(
-                wall,
-                nameof(faceModel.TemperatureOut),
-                ParametersHandler.GetProjectInformation(
-                    hvacDocument,
-                    nameof(ClimateDataModel.TWinterOut092)
-                )
-            );
+            SetCommonParameters(wall, faceModel, space);
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Critical error in SetWallParameters: {ex}");
+            _logger.Log($"Критическая ошибка в SetWallParameters: {ex.Message}");
         }
     }
+
+    private void SetCommonParameters(Wall wall, ConstructionSurfaceModel faceModel, Space space)
+    {
+        ParametersUtility.SetParameterByValueAndName(
+            wall,
+            nameof(faceModel.TemperatureInSpace),
+            ParametersHandler.GetSpaceSetHeatPoint(_hvacDocument, space)
+        );
+
+        ParametersUtility.SetParameterByValueAndName(
+            wall,
+            nameof(faceModel.TemperatureOut),
+            ParametersHandler.GetProjectInformation(
+                _hvacDocument,
+                nameof(ClimateDataModel.TWinterOut092)
+            )
+        );
+    }
 }
-    
+

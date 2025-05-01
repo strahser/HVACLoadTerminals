@@ -1,6 +1,6 @@
 using System.Windows.Data;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls;
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.View;
 
 public class StringEqualsConverter : IValueConverter
 {

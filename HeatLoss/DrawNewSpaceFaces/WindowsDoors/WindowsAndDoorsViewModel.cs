@@ -10,77 +10,43 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
 {
     public class WindowsAndDoorsViewModel : ViewModelBase
     {
-        private readonly Document _hvacDocument;
-        
+        // поля
         private Document _selectedRoomDocument;
-        
         private ObservableCollection<Document> _linkedDocuments = [];
+        private readonly List<Element> _walls; 
+        private readonly OpensHandler _opens; 
+        
+        //комманды
+        public ICommand DrawWindowsCommand { get; }
+        public ICommand DrawDoorsCommand { get; }
 
         public WindowsAndDoorsViewModel(Document hvacDocument)
         {
-            _hvacDocument = hvacDocument;
             LinkedDocuments = new ObservableCollection<Document>(GetLinkedDocuments(hvacDocument));
-            if (LinkedDocuments.Any())
-            {
-                SelectedRoomDocument = LinkedDocuments.First();
-            }
-
+            
+            //передаем первую ссылку по умолчанию
+            if (LinkedDocuments.Any()) { SelectedRoomDocument = LinkedDocuments.First();}
             DrawWindowsCommand = new RelayCommand(DrawWindows);
             DrawDoorsCommand = new RelayCommand(DrawDoors);
+            _walls =  CollectorQuery.GetAllWalls(hvacDocument);
+            _opens = new OpensHandler(hvacDocument, SelectedRoomDocument);
         }
-        public ICommand DrawWindowsCommand { get; }
         
-        public ICommand DrawDoorsCommand { get; }
-
+        
         public ObservableCollection<Document> LinkedDocuments 
         { get => _linkedDocuments; set=>SetField(ref _linkedDocuments, value);}
 
         public Document SelectedRoomDocument
-        {
-            get { return _selectedRoomDocument; }
-            set
-            {
-                _selectedRoomDocument = value;
-                OnPropertyChanged(nameof(SelectedRoomDocument));
-            }
-        }
-
+        { get => _selectedRoomDocument; set=>SetField(ref _selectedRoomDocument, value);}
+        
         private List<Document> GetLinkedDocuments(Document hvacDocument)
         {
             IList<RevitLinkInstance> linkedInstances = CollectorQuery.GetLinkedDocument(hvacDocument);
             return linkedInstances.Select(instance => instance.GetLinkDocument()).Where(doc => doc != null).ToList();
         }
+        
+        private void DrawWindows(object parameter) { _opens.DrawWindows(_walls);}
 
-        private void DrawWindows(object parameter)
-        {
-            DrawElements(true, false);
-        }
-
-        private void DrawDoors(object parameter)
-        {
-            DrawElements(false, true);
-        }
-
-        private void DrawElements(bool drawWindows, bool drawDoors)
-        {
-            if (SelectedRoomDocument == null)
-            {
-                TaskDialog.Show("Ошибка", "Пожалуйста, выберите связанный документ.");
-                return;
-            }
-
-            var walls = CollectorQuery.GetAllWalls(_hvacDocument);
-            var opens = new OpensHandler(_hvacDocument, SelectedRoomDocument);
-
-            if (drawWindows)
-            {
-                opens.DrawWindows(walls);
-            }
-
-            if (drawDoors)
-            {
-                opens.DrawDoors(walls);
-            }
-        }
+        private void DrawDoors(object parameter){ _opens.DrawDoors(_walls);}
     }
 }

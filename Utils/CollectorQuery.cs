@@ -13,45 +13,8 @@ namespace HVACLoadTerminals.Utils
     //https://spiderinnet.typepad.com/blog/2012/10/revit-net-api-get-all-family-symbolstypes-of-specific-category-eg-builtincategoryost_windows.html
 
     
-    public class CollectorQuery
+    public static class CollectorQuery
     {
-        public static List<SpatialElement> GetSpacesOnLowestLevel(Document doc)
-        {
-            if (doc == null)
-            {
-                TaskDialog.Show("Error", "Invalid document");
-                return null;
-            }
-            // Получаем все уровни, отсортированные по elevation
-            FilteredElementCollector levelCollector = new FilteredElementCollector(doc);
-            List<Level> levels = levelCollector.OfClass(typeof(Level)).Cast<Level>().OrderBy(l => l.Elevation).ToList();
-
-            if (levels.Count == 0)
-            {
-                TaskDialog.Show("Error", "No levels found in the document");
-                return null;
-            }
-            // Берем самый первый уровень (с наименьшей высотой)
-            Level lowestLevel = levels.First();
-
-            // Получаем все пространства в документе
-            FilteredElementCollector spaceCollector = new FilteredElementCollector(doc);
-            List<SpatialElement> allSpaces = spaceCollector.OfClass(typeof(SpatialElement)).Cast<SpatialElement>().ToList();
-
-            if (allSpaces.Count == 0)
-            {
-                TaskDialog.Show("Error", "No spaces found in the document");
-                return null;
-            }
-
-            // Фильтруем пространства по уровню.
-            List<SpatialElement> spacesOnLowestLevel = allSpaces
-                .Where(space => space.LevelId == lowestLevel.Id)
-                .ToList();
-
-            return spacesOnLowestLevel;
-        }
-
         public static List<Element> GetAllRooms(Document document)
         {
             return new FilteredElementCollector(document)
@@ -99,7 +62,53 @@ namespace HVACLoadTerminals.Utils
             .OfCategory(BuiltInCategory.OST_Walls)
             .WhereElementIsNotElementType().ToList();
         }
+        public static List<Element> GetAllSpacesOnFirstLevel(Document HvacDoc)
+        {
+            // Получаем первый уровень (с минимальной высотой)
+            Level firstLevel = new FilteredElementCollector(HvacDoc)
+                .OfCategory(BuiltInCategory.OST_Levels)
+                .WhereElementIsNotElementType()
+                .Cast<Level>()
+                .OrderBy(l => l.Elevation)
+                .ToList()[2];
 
+            if (firstLevel == null)
+                return new List<Element>(); // Если уровней нет
+
+            // Создаем фильтр по уровню
+            ElementLevelFilter levelFilter = new ElementLevelFilter(firstLevel.Id);
+
+            // Фильтруем пространства по категории и уровню
+            return new FilteredElementCollector(HvacDoc)
+                .OfCategory(BuiltInCategory.OST_MEPSpaces)
+                .WhereElementIsNotElementType()
+                .WherePasses(levelFilter)
+                .ToList();
+        }
+        public static List<Element> GetAllRoomsOnFirstLevel(Document HvacDoc)
+        {
+            // Получаем первый уровень (с минимальной высотой)
+            Level firstLevel = new FilteredElementCollector(HvacDoc)
+                .OfCategory(BuiltInCategory.OST_Levels)
+                .WhereElementIsNotElementType()
+                .Cast<Level>()
+                .OrderBy(l => l.Elevation)
+                .ToList()[2];
+
+            if (firstLevel == null)
+                return new List<Element>(); // Если уровней нет
+
+            // Создаем фильтр по уровню
+            ElementLevelFilter levelFilter = new ElementLevelFilter(firstLevel.Id);
+
+            // Фильтруем пространства по категории и уровню
+            return new FilteredElementCollector(HvacDoc)
+                .OfCategory(BuiltInCategory.OST_Rooms)
+                .WhereElementIsNotElementType()
+                .WherePasses(levelFilter)
+                .ToList();
+        }
+        
         public static  List<Element> GetAllSpaces(Document HvacDoc)
         {
             return new FilteredElementCollector(HvacDoc)
@@ -114,7 +123,7 @@ namespace HVACLoadTerminals.Utils
             /// </summary>
             /// <param name="doc">Текущий документ Revit.</param>
             /// <returns>Список объектов RevitLinkInstance.</returns>
-            public static IList<RevitLinkInstance> GetLinkedDocument(Document doc)
+        public static IList<RevitLinkInstance> GetLinkedDocument(Document doc)
         {
             return new FilteredElementCollector(doc) // Создаем экземпляр FilteredElementCollector
                 .OfClass(typeof(RevitLinkInstance)) // Фильтруем по типу RevitLinkInstance

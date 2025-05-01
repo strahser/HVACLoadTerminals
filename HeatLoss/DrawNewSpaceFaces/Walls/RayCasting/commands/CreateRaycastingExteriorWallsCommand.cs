@@ -5,12 +5,12 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
-using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting;
+using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.HeatLoss.Commands
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting.commands
 {
     [Transaction(TransactionMode.Manual)]
-    public class CreateExteriorWallsCommand : IExternalCommand
+    public class CreateRaycastingExteriorWallsCommand : IExternalCommand
     {
         private Document _doc;
         private View3D _view3D;
@@ -20,7 +20,7 @@ namespace HVACLoadTerminals.HeatLoss.Commands
         private readonly LoggingService _logger;
         private readonly GeometryUtility _geometryUtility;
 
-        public CreateExteriorWallsCommand()
+        public CreateRaycastingExteriorWallsCommand()
         {
             _boundaryProcessor = new BoundaryProcessor(null);
             _wallCreator = new WallCreator(null);
@@ -56,7 +56,7 @@ namespace HVACLoadTerminals.HeatLoss.Commands
                     tx.Start();
 
                     // Сбор всех границ
-                    var allBoundaries = _boundaryProcessor.GetAllBoundaries();
+                    var allBoundaries = _boundaryProcessor.GetAllBoundaryData();
 
                     // Обработка всех помещений
                     var spaces = new FilteredElementCollector(_doc)
@@ -66,7 +66,7 @@ namespace HVACLoadTerminals.HeatLoss.Commands
 
                     foreach (var space in spaces)
                     {
-                        ProcessSpace(space, allBoundaries);
+                        ProcessSpace(space, allBoundaries.Select(x=>x.CurveData).ToList());
                     }
 
                     tx.Commit();
