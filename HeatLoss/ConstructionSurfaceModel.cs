@@ -183,6 +183,10 @@ namespace HVACLoadTerminals.HeatLoss
             }
             set{}
         }
+
+
+        [RevitParameter]
+        public bool IsExternalWall { get; set; }
         
         [ColumnOrder(18)]
         [Description("Итого, Вт")]

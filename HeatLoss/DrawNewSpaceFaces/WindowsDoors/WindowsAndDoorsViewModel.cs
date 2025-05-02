@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
 using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors

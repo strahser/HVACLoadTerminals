@@ -7,43 +7,73 @@ using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Utils;
 
+// Класс для управления обработкой ошибок
+
+// Класс для управления обработкой ошибок
 public class FailureProcessor : IFailuresPreprocessor
 {
-    private readonly ILogger _logger = new LoggingService();
-    private static readonly HashSet<FailureDefinitionId> _allowedWarnings = new()
-    {
-        // Разрешаем конфликты стен
-        BuiltInFailures.OverlapFailures.WallsOverlap,
-        
-        // Добавьте другие разрешенные предупреждения по необходимости
-    };
+    private int _processingAttempts = 0;
+    private const int MaxProcessingAttempts = 1;
 
     public FailureProcessingResult PreprocessFailures(FailuresAccessor failuresAccessor)
     {
-        var messages = failuresAccessor.GetFailureMessages();
-        if (messages.Count == 0) return FailureProcessingResult.Continue;
+        var _logger = new LoggingService();
+        IList<FailureMessageAccessor> failureMessages = failuresAccessor.GetFailureMessages();
 
-        foreach (var message in messages.ToList())
+        if (failureMessages.Count == 0 || _processingAttempts++ > MaxProcessingAttempts)
         {
-            var id = message.GetFailureDefinitionId();
-            
-            if (_allowedWarnings.Contains(id))
+            return FailureProcessingResult.Continue;
+        }
+
+        bool hasCriticalErrors = false;
+        var handledFailures = new List<FailureMessageAccessor>();
+
+        foreach (FailureMessageAccessor failure in failureMessages)
+        {
+            try
             {
-                try
+                // Проверяем тип ошибки
+                if (failure.GetSeverity() == FailureSeverity.Warning)
                 {
-                    failuresAccessor.DeleteWarning(message);
+                    // Автоматическое разрешение для предупреждений
+                    failuresAccessor.ResolveFailure(failure);
+                    handledFailures.Add(failure);
                 }
-                catch
+                else
                 {
-                    failuresAccessor.ResolveFailure(message);
+                    // Обработка критических ошибок
+                    _logger.Log($"Critical error: {failure.GetDescriptionText()}", LogLevel.Error);
+                    hasCriticalErrors = true;
                 }
             }
-            else
+            catch (Exception ex)
             {
-                _logger.Log($"Unhandled Revit warning: {message.GetDescriptionText()}");
+                _logger.Log($"Resolution error: {ex.Message} | {failure.GetDescriptionText()}", LogLevel.Error);
+                handledFailures.Add(failure);
+                hasCriticalErrors = true;
             }
         }
 
-        return FailureProcessingResult.ProceedWithCommit;
+        // Удаляем обработанные предупреждения
+        foreach (var failure in handledFailures)
+        {
+            failuresAccessor.DeleteWarning(failure);
+        }
+
+        return hasCriticalErrors 
+            ? FailureProcessingResult.ProceedWithRollBack 
+            : FailureProcessingResult.ProceedWithCommit;
+    }
+}
+
+public class SilentFailureProcessor : IFailuresPreprocessor
+{
+    public FailureProcessingResult PreprocessFailures(FailuresAccessor failuresAccessor)
+    {
+        foreach (var failure in failuresAccessor.GetFailureMessages())
+        {
+            failuresAccessor.DeleteWarning(failure);
+        }
+        return FailureProcessingResult.Continue;
     }
 }
