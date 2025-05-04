@@ -65,15 +65,3 @@ public class FailureProcessor : IFailuresPreprocessor
             : FailureProcessingResult.ProceedWithCommit;
     }
 }
-
-public class SilentFailureProcessor : IFailuresPreprocessor
-{
-    public FailureProcessingResult PreprocessFailures(FailuresAccessor failuresAccessor)
-    {
-        foreach (var failure in failuresAccessor.GetFailureMessages())
-        {
-            failuresAccessor.DeleteWarning(failure);
-        }
-        return FailureProcessingResult.Continue;
-    }
-}

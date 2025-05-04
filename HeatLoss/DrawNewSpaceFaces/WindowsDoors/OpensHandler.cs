@@ -108,7 +108,6 @@ internal class OpensHandler(Document hvacDocument, Document roomDocument)
                 Debug.Write($"Непредвиденная ошибка при создании {openingType}: {ex.Message}");
             }
         }
-
         MessageBox.Show($"Создано {count} {openingType}");
     }
         

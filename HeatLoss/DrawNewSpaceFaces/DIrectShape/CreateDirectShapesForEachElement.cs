@@ -114,7 +114,7 @@ public static class CreateDirectShapesForEachElement
         }
     }
 
-    private static void OverrideGraphicDirectShape(Document doc, Autodesk.Revit.DB.DirectShape ds, string enclosureType)
+    public static void OverrideGraphicDirectShape(Document doc, Autodesk.Revit.DB.DirectShape ds, string enclosureType)
     {
         Color  enclosureColor = EnclosureColorManager.GetColor(enclosureType, ds);
         OverrideGraphicSettings settings = new OverrideGraphicSettings();
@@ -295,8 +295,7 @@ public static class CreateDirectShapesForEachElement
     
     private static void HandleError(Element elem, Exception ex)
     {
-        Debug.WriteLine($"Error processing {elem.Id}: {ex}");
-        TaskDialog.Show("Ошибка", $"Элемент {elem.Id}: {ex.Message}");
+        Debug.WriteLine("Ошибка", $"Элемент {elem.Id}: {ex.Message}");
     }
 }
 

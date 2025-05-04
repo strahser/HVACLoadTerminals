@@ -204,11 +204,7 @@ public class MainViewModel : ReactiveObject
                         + $"Подземный уровень: {SelectedGroundLevel.Name}, "
                         + $"Количество выбранных стен: {AvailableWallTypes.Count(t => t.IsSelected)}");
 
-            _wallsDrawer.DrawWallsForSelectedSpaces(
-                SelectedDirection,
-                SelectedGroundLevel,
-                UseAutoMode ? null : GetSelectedWallIds()
-            );
+            _wallsDrawer.DrawWallsForSelectedSpaces(SelectedDirection, SelectedGroundLevel, UseAutoMode ? null : GetSelectedWallIds());
 
             WallCountInfo = $"Успешно создано стен: {_wallsDrawer.WallList.Count}";
 

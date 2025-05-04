@@ -101,6 +101,7 @@
     <Compile Include="GSOP\GsopCalculatorFromRevitData.cs" />
     <Compile Include="GSOP\ProjectInfoRevitExtensions.cs" />
     <Compile Include="HeatLoss\ConstructionSurfaceModel.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapeFromAnalyticalOpensCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapesForEachElement.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\ConvertToDirectShapeCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\EnclosureColorManager.cs" />

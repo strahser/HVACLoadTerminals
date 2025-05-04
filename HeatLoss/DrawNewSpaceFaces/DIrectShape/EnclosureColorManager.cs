@@ -7,7 +7,7 @@ using HVACLoadTerminals.ModelsStatic;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape;
 
-class EnclosureColorManager
+internal static class EnclosureColorManager
 {
     private static readonly Dictionary<string, Color> BaseColorMap = new()
     {

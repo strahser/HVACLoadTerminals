@@ -60,12 +60,8 @@ public class EnergyModelExteriorSurfacesCommand : IExternalCommand
     }
 }
 
-public class EnergyModelService
+public class EnergyModelService(ILogger logger)
 {
-    private readonly ILogger _logger;
-
-    public EnergyModelService(ILogger logger) => _logger = logger;
-
     public EnergyAnalysisDetailModel GetEnergyModel(Document doc)
     {
         var model = new FilteredElementCollector(doc)
@@ -73,7 +69,7 @@ public class EnergyModelService
             .Cast<EnergyAnalysisDetailModel>()
             .FirstOrDefault();
 
-        _logger.Log(model != null 
+        logger.Log(model != null 
             ? $"Найдена энергетическая модель: {model.Id}" 
             : "Энергетическая модель не найдена");
         
@@ -81,18 +77,10 @@ public class EnergyModelService
     }
 }
 
-public class WallCreationService
+public class WallCreationService(ILogger logger)
 {
-    private readonly ILogger _logger;
-    private readonly SurfaceProcessor _surfaceProcessor;
-    private readonly ElementService _elementService;
-
-    public WallCreationService(ILogger logger)
-    {
-        _logger = logger;
-        _surfaceProcessor = new SurfaceProcessor(logger);
-        _elementService = new ElementService(logger);
-    }
+    private readonly SurfaceProcessor _surfaceProcessor = new(logger);
+    private readonly ElementService _elementService = new(logger);
 
     public Result CreateWallsFromEnergyModel(Document doc, EnergyAnalysisDetailModel energyModel)
     {
@@ -107,84 +95,75 @@ public class WallCreationService
 
         foreach (var surface in surfaces)
         {
-            _surfaceProcessor.ProcessSurface(doc, surface, wallType);
+            SurfaceProcessor.ProcessSurface(doc, surface, wallType);
         }
         return Result.Succeeded;
     }
 
     private Result HandleWarning(string message)
     {
-        _logger.Log($"Предупреждение: {message}");
+        logger.Log($"Предупреждение: {message}");
         TaskDialog.Show("Предупреждение", message);
         return Result.Succeeded;
     }
 }
 
-public class OpeningCreationService
+public class OpeningCreationService(ILogger logger)
 {
-    private readonly ILogger _logger;
-    private readonly HashSet<ElementId> _processedOpenings = new();
-
-    public OpeningCreationService(ILogger logger) => _logger = logger;
+    private readonly HashSet<ElementId> _processedOpenings = [];
 
     public void CreateOpenings(Document doc, EnergyAnalysisSurface surface, Level level, List<BoundingBoxXYZ> wallsGeometry)
     {
         try
         {
-            _logger.Log("Запуск создания проемов...");
-            var openings = surface.GetAnalyticalOpenings()?.ToList() ?? new List<EnergyAnalysisOpening>();
-            _logger.Log($"Обнаружено {openings.Count} проемов");
+            logger.Log("Запуск создания проемов...");
+            var openings = surface.GetAnalyticalOpenings()?.ToList() ?? [];
+            logger.Log($"Обнаружено {openings.Count} проемов");
 
             foreach (var opening in openings)
             {
-                if (opening == null || _processedOpenings.Contains(opening.Id))
+                if (opening == null || !_processedOpenings.Add(opening.Id))
                 {
-                    _logger.Log($"Пропуск проема {opening?.Id}");
+                    logger.Log($"Пропуск проема {opening?.Id}");
                     continue;
                 }
-                
-                _processedOpenings.Add(opening.Id);
-                _logger.Log($"Обработка проема {opening.Id}");
+
+                logger.Log($"Обработка проема {opening.Id}");
                 ProcessSingleOpening(doc, opening, level, wallsGeometry);
             }
         }
         catch (Exception ex)
         {
-            _logger.Log($"Ошибка создания проемов: {ex.Message}");
+            logger.Log($"Ошибка создания проемов: {ex.Message}");
         }
     }
 
-   private void ProcessSingleOpening(
-        Document doc,
-        EnergyAnalysisOpening opening,
-        Level level,
-        List<BoundingBoxXYZ> wallsGeometry)
+   private void ProcessSingleOpening(Document doc, EnergyAnalysisOpening opening, Level level, List<BoundingBoxXYZ> wallsGeometry)
     {
         try
         {
             // Проверка входных параметров
             if (opening == null || level == null) //|| wallsGeometry == null)
             {
-                _logger.Log("Обнаружены null-параметры");
+                logger.Log("Обнаружены null-параметры");
                 return;
             }
 
             // Логирование параметров уровня
-            _logger.Log($"Уровень: {level.Name} (Высота: {level.Elevation:F3})");
+            logger.Log($"Уровень: {level.Name} (Высота: {level.Elevation:F3})");
 
             // 1. Проверка типа проема
-            if (opening.OpeningType != EnergyAnalysisOpeningType.Window && 
-                opening.OpeningType != EnergyAnalysisOpeningType.Door)
+            if (opening.OpeningType != EnergyAnalysisOpeningType.Window || opening.OpeningType != EnergyAnalysisOpeningType.Door)
             {
-                _logger.Log($"Пропущен проем типа {opening.OpeningType}");
+                logger.Log($"Пропущен проем типа {opening.OpeningType}");
                 return;
             }
 
             // 2. Получение геометрии проема
-            var polyloops = opening.GetPolyloops()?.ToList() ?? new List<Polyloop>();
+            var polyloops = opening.GetPolyloops()?.ToList() ?? [];
             if (polyloops.Count == 0)
             {
-                _logger.Log("Нет полилопов");
+                logger.Log("Нет полилопов");
                 return;
             }
 
@@ -194,22 +173,22 @@ public class OpeningCreationService
                 .Where(p => p != null)
                 .ToList();
 
-            _logger.Log($"Найдено {allPoints.Count} точек проема");
+            logger.Log($"Найдено {allPoints.Count} точек проема");
             if (allPoints.Count < 3)
             {
-                _logger.Log("Недостаточно точек");
+                logger.Log("Недостаточно точек");
                 return;
             }
 
             // 4. Расчет параметров с логированием
             var (location, width, height) = CalculateOpeningParameters(allPoints);
-            _logger.Log($"Расчетные параметры: " +
+            logger.Log($"Расчетные параметры: " +
                        $"Location=[X:{location?.X:F2}, Y:{location?.Y:F2}, Z:{location?.Z:F2}], " +
                        $"Width={width:F2}, Height={height:F2}");
 
             if (location == null || width <= 0.01 || height <= 0.01)
             {
-                _logger.Log($"Некорректные параметры: {GetInvalidReason(location, width, height)}");
+                logger.Log($"Некорректные параметры: {GetInvalidReason(location, width, height)}");
                 return;
             }
 
@@ -226,7 +205,7 @@ public class OpeningCreationService
                 : CollectorQuery.GetAllDoorsFamilySymbols(doc);
             
             var symbol = GetActivatedSymbol(doc, symbols);
-            _logger.Log($"Выбранный символ: {symbol?.Name ?? "Не найден"}");
+            logger.Log($"Выбранный символ: {symbol?.Name ?? "Не найден"}");
 
             if (symbol == null) return;
 
@@ -234,32 +213,27 @@ public class OpeningCreationService
 
             try
             {
-                var instance = doc.Create.NewFamilyInstance(
-                    location,
-                    symbol,
-                    level,
-                    Autodesk.Revit.DB.Structure.StructuralType.NonStructural
-                );
+                var instance = doc.Create.NewFamilyInstance(location, symbol, level, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                 
                 //SetInstanceParameters(instance, width, height);
-                _logger.Log($"Успешно создан проем {instance.Id}");
+                logger.Log($"Успешно создан проем {instance.Id}");
             }
             catch (Exception ex)
             {
-                _logger.Log($"Ошибка создания проема: {ex.Message}");
+                logger.Log($"Ошибка создания проема: {ex.Message}");
             }
         }
         catch (NullReferenceException nre)
         {
-            _logger.Log($"NullReference: {nre.TargetSite?.Name}");
+            logger.Log($"NullReference: {nre.TargetSite?.Name}");
         }
         catch (Exception ex)
         {
-            _logger.Log($"Ошибка обработки проема: {ex.Message}");
+            logger.Log($"Ошибка обработки проема: {ex.Message}");
         }
     }
    
-    private string GetInvalidReason(XYZ location, double width, double height)
+    private static string GetInvalidReason(XYZ location, double width, double height)
     {
         var reasons = new List<string>();
         if (location == null) reasons.Add("location is null");
@@ -274,15 +248,15 @@ public class OpeningCreationService
         {
             if (points == null || points.Count < 3)
             {
-                _logger.Log("Недостаточно точек для расчета");
+                logger.Log("Недостаточно точек для расчета");
                 return (null, 0, 0);
             }
 
             // Логирование координат
-            _logger.Log("Координаты точек проема:");
+            logger.Log("Координаты точек проема:");
             foreach (var point in points)
             {
-                _logger.Log($"X:{point.X:F2}, Y:{point.Y:F2}, Z:{point.Z:F2}");
+                logger.Log($"X:{point.X:F2}, Y:{point.Y:F2}, Z:{point.Z:F2}");
             }
 
             var minX = points.Min(p => p.X);
@@ -300,7 +274,7 @@ public class OpeningCreationService
         }
         catch (Exception ex)
         {
-            _logger.Log($"Ошибка расчета параметров: {ex.Message}");
+            logger.Log($"Ошибка расчета параметров: {ex.Message}");
             return (null, 0, 0);
         }
     }
@@ -314,7 +288,7 @@ public class OpeningCreationService
         );
     }
 
-    private FamilySymbol GetActivatedSymbol(Document doc, IEnumerable<Element> symbols)
+    private static FamilySymbol GetActivatedSymbol(Document doc, IEnumerable<Element> symbols)
     {
         var symbol = symbols
             .Cast<FamilySymbol>()
@@ -340,16 +314,9 @@ public class OpeningCreationService
     }
 }
 
-public class SurfaceProcessor
+public class SurfaceProcessor(ILogger logger)
 {
-    private readonly ILogger _logger;
-    private readonly GeometryHelper _geometryHelper;
-
-    public SurfaceProcessor(ILogger logger)
-    {
-        _logger = logger;
-        _geometryHelper = new GeometryHelper(logger);
-    }
+    private readonly GeometryHelper _geometryHelper = new(logger);
 
     public bool IsExteriorWall(EnergyAnalysisSurface surface)
     {
@@ -360,15 +327,12 @@ public class SurfaceProcessor
         }
         catch
         {
-            _logger.Log($"Ошибка определения типа поверхности {surface.Id}");
+            logger.Log($"Ошибка определения типа поверхности {surface.Id}");
             return false;
         }
     }
 
-    public void ProcessSurface(
-        Document doc, 
-        EnergyAnalysisSurface surface, 
-        WallType wallType)
+    public static void ProcessSurface(Document doc, EnergyAnalysisSurface surface, WallType wallType)
     {
         var logger = new LoggingService();
         var levelService = new LevelService(logger);
@@ -389,8 +353,7 @@ public class SurfaceProcessor
                 
                 try
                 {
-                    var wall = new GeometryHelper(logger)
-                        .CreateWallFromPolyloop(doc, polyloop, level, wallType);
+                    var wall = new GeometryHelper(logger).CreateWallFromPolyloop(doc, polyloop, level, wallType);
 
                     if (wall?.Id == null) continue;
                     logger.Log($"Создана стена {wall.Id}");
@@ -402,8 +365,7 @@ public class SurfaceProcessor
                         //continue;
                     }
                     // Создание проемов только для текущей стены
-                    new OpeningCreationService(logger)
-                        .CreateOpenings(doc, surface, level, new List<BoundingBoxXYZ> { bbox });
+                    new OpeningCreationService(logger).CreateOpenings(doc, surface, level, new List<BoundingBoxXYZ> { bbox });
                 }
                 catch (Exception ex)
                 {
@@ -419,12 +381,8 @@ public class SurfaceProcessor
     }
 }
 
-public class ElementService
+public class ElementService(ILogger logger)
 {
-    private readonly ILogger _logger;
-
-    public ElementService(ILogger logger) => _logger = logger;
-
     public WallType GetFirstWallType(Document doc)
     {
         var wallType = new FilteredElementCollector(doc)
@@ -432,7 +390,7 @@ public class ElementService
             .Cast<WallType>()
             .FirstOrDefault();
 
-        _logger.Log(wallType != null 
+        logger.Log(wallType != null 
             ? $"Найден тип стены: {wallType.Name}" 
             : "Типы стен не найдены");
         
@@ -440,47 +398,41 @@ public class ElementService
     }
 }
 
-public class LevelService
+public class LevelService(ILogger logger)
 {
-    private readonly ILogger _logger;
-
-    public LevelService(ILogger logger) => _logger = logger;
-
     public Level GetSurfaceLevel(Document doc, EnergyAnalysisSurface surface)
     {
         var space = surface.GetAnalyticalSpace();
         if (space == null)
         {
-            _logger.Log("Пространство не найдено");
+            logger.Log("Пространство не найдено");
             return GetDefaultLevel(doc);
         }
 
         // Получаем параметр "Этаж" через BuiltInParameter
-        Parameter levelParam = space.get_Parameter(
-            BuiltInParameter.SPACE_REFERENCE_LEVEL_PARAM
-        );
+        Parameter levelParam = space.get_Parameter(BuiltInParameter.SPACE_REFERENCE_LEVEL_PARAM);
 
         if (levelParam == null || levelParam.StorageType != StorageType.ElementId)
         {
-            _logger.Log("Параметр уровня не найден");
+            logger.Log("Параметр уровня не найден");
             return GetDefaultLevel(doc);
         }
 
         ElementId levelId = levelParam.AsElementId();
         if (levelId == ElementId.InvalidElementId)
         {
-            _logger.Log("ID уровня недействителен");
+            logger.Log("ID уровня недействителен");
             return GetDefaultLevel(doc);
         }
 
         Level level = doc.GetElement(levelId) as Level;
         if (level != null) return level;
 
-        _logger.Log($"Уровень с ID {levelId} не найден");
+        logger.Log($"Уровень с ID {levelId} не найден");
         return GetDefaultLevel(doc);
     }
 
-    private Level GetDefaultLevel(Document doc)
+    private static Level GetDefaultLevel(Document doc)
     {
         return new FilteredElementCollector(doc)
             .OfClass(typeof(Level))
@@ -490,31 +442,19 @@ public class LevelService
     }
 }
 
-public class GeometryHelper
+public class GeometryHelper(ILogger logger)
 {
-    private readonly ILogger _logger;
-    private readonly ProfileValidator _validator;
-    private readonly SurfaceNormalCalculator _normalCalculator;
+    private readonly ProfileValidator _validator = new(logger);
+    private readonly SurfaceNormalCalculator _normalCalculator = new();
 
-    public GeometryHelper(ILogger logger)
-    {
-        _logger = logger;
-        _validator = new ProfileValidator(logger);
-        _normalCalculator = new SurfaceNormalCalculator();
-    }
-
-    public Wall CreateWallFromPolyloop(
-        Document doc, 
-        Polyloop polyloop, 
-        Level level, 
-        WallType wallType)
+    public Wall CreateWallFromPolyloop(Document doc, Polyloop polyloop, Level level, WallType wallType)
     {
         try
         {
             // Проверка входных параметров
             if (doc == null || polyloop == null || level == null || wallType?.Id == null)
             {
-                _logger.Log("Некорректные параметры для создания стены");
+                logger.Log("Некорректные параметры для создания стены");
                 return null;
             }
 
@@ -522,7 +462,7 @@ public class GeometryHelper
             IList<XYZ> points = polyloop.GetPoints();
             if (points == null || points.Count < 3)
             {
-                _logger.Log("Недостаточно точек для создания стены");
+                logger.Log("Недостаточно точек для создания стены");
                 return null;
             }
 
@@ -530,15 +470,15 @@ public class GeometryHelper
             List<Curve> curves = CreateCurvesFromPoints(points);
             if (curves.Count < 3 || !_validator.IsValidProfile(curves))
             {
-                _logger.Log("Профиль стены невалиден");
+                logger.Log("Профиль стены невалиден");
                 return null;
             }
 
             // Вычисление нормали
-            XYZ normal = _normalCalculator.ComputeNormal(points);
+            XYZ normal = SurfaceNormalCalculator.ComputeNormal(points);
             if (normal == null || normal.IsZeroLength())
             {
-                _logger.Log("Не удалось вычислить нормаль");
+                logger.Log("Не удалось вычислить нормаль");
                 return null;
             }
 
@@ -547,12 +487,12 @@ public class GeometryHelper
         }
         catch (Exception ex)
         {
-            _logger.Log($"Ошибка создания стены: {ex.Message}");
+            logger.Log($"Ошибка создания стены: {ex.Message}");
             return null;
         }
     }
 
-    private List<Curve> CreateCurvesFromPoints(IList<XYZ> points)
+    private static List<Curve> CreateCurvesFromPoints(IList<XYZ> points)
     {
         var curves = new List<Curve>();
         for (int i = 0; i < points.Count; i++)
@@ -565,23 +505,16 @@ public class GeometryHelper
     }
 }
 
-public class ProfileValidator
+public class ProfileValidator(ILogger logger)
 {
-    private readonly ILogger _logger;
-
-    public ProfileValidator(ILogger logger) => _logger = logger;
-
     public bool IsValidProfile(List<Curve> curves)
     {
-        if (curves.Count < 3)
-        {
-            _logger.Log("Недостаточно кривых для профиля");
-            return false;
-        }
-        return IsClosed(curves);
+        if (curves.Count >= 3) return IsClosed(curves);
+        logger.Log("Недостаточно кривых для профиля");
+        return false;
     }
 
-    private bool IsClosed(List<Curve> curves)
+    private static bool IsClosed(List<Curve> curves)
     {
         var first = curves.First().GetEndPoint(0);
         var last = curves.Last().GetEndPoint(1);
@@ -591,7 +524,7 @@ public class ProfileValidator
 
 public class SurfaceNormalCalculator
 {
-    public XYZ ComputeNormal(IList<XYZ> points)
+    public static XYZ ComputeNormal(IList<XYZ> points)
     {
         if (points == null || points.Count < 3) return null;
 
