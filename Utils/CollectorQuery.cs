@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
+using System.Windows.Documents;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Analysis;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.Models;
@@ -48,6 +50,15 @@ namespace HVACLoadTerminals.Utils
         {
             return new FilteredElementCollector(document).OfClass(typeof(FamilySymbol)).
                 WherePasses(new ElementCategoryFilter(BuiltInCategory.OST_Windows)).ToElements().ToList();
+        }
+
+        public static List<EnergyAnalysisSpace> GetAllaAnalysisSpaces(Document document)
+        {
+            return new FilteredElementCollector(document)
+                .OfCategory(BuiltInCategory.OST_AnalyticSpaces)
+                .WhereElementIsNotElementType()
+                .Cast<EnergyAnalysisSpace>()
+                .ToList();
         }
         
         public static List<Element> GetAllDoorsFamilySymbols(Document document)
@@ -352,9 +363,9 @@ namespace HVACLoadTerminals.Utils
                 .ToList();
         }
 
-        public static Element GetProjectInfo()
+        public static Element GetProjectInfo(Document doc)
         {
-            var doc = RevitConfig.Document;
+            //var doc = RevitConfig.Document;
             var collector = new FilteredElementCollector(doc)
                 .OfCategory(BuiltInCategory.OST_ProjectInformation);
             return collector.FirstElement();

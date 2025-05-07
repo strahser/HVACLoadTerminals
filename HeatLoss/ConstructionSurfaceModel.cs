@@ -157,7 +157,7 @@ namespace HVACLoadTerminals.HeatLoss
                     if ( BuildingHeight > 0 && OpenInstanceHeight > 0 && BuildingHeight - OpenInstanceHeight > 0)
                         try
                         {
-                            var projectInfo = CollectorQuery.GetProjectInfo();
+                            var projectInfo = CollectorQuery.GetProjectInfo(RevitConfig.Document);
                             double airVelocity;
                             try
                             {

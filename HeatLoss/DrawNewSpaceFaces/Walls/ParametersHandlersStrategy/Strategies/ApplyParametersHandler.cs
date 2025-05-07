@@ -21,29 +21,27 @@ public static class ApplyParametersHandler
         var spaceParameters = new Dictionary<string, object>
         {
             { nameof(ConstructionSurfaceModel.SpaceId), space.Id.ToString() },
-            { nameof(ConstructionSurfaceModel.SpaceNumber), space.Number.ToString() },
-            { nameof(ConstructionSurfaceModel.SpaceName), space.Name.ToString() }
+            { nameof(ConstructionSurfaceModel.SpaceNumber), space.Number },
+            { nameof(ConstructionSurfaceModel.SpaceName), space.Name }
         };
 
-        ApplyParametersHandler.SetMultipleParameters(wall, spaceParameters.Select(kv => (kv.Key, kv.Value)).ToArray());
+        SetMultipleParameters(wall, spaceParameters.Select(kv => (kv.Key, kv.Value)).ToArray());
     }
 
     public static void ApplyModelParameters(Wall wall, ConstructionSurfaceModel faceModel,HashSet<string> allowedFields)
     {
         foreach (var property in typeof(ConstructionSurfaceModel).GetProperties())
         {
-            if (allowedFields.Contains(property.Name))
+            if (!allowedFields.Contains(property.Name)) continue;
+            var parameterValue = property.GetValue(faceModel)?.ToString();
+            if (parameterValue != null)
             {
-                var parameterValue = property.GetValue(faceModel)?.ToString();
-                if (parameterValue != null)
-                {
-                    ParametersUtility.SetParameterByValueAndName(wall, property.Name, parameterValue);
-                }
+                ParametersUtility.SetParameterByValueAndName(wall, property.Name, parameterValue);
             }
         }
     }
 
-    public static void SetMultipleParameters(Wall wall, params (string parameterName, object value)[] parameters)
+    private static void SetMultipleParameters(Wall wall, params (string parameterName, object value)[] parameters)
     {
         foreach (var (parameterName, value) in parameters)
         {

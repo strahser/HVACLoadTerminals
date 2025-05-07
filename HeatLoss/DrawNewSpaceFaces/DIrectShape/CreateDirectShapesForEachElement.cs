@@ -98,7 +98,7 @@ public static class CreateDirectShapesForEachElement
                 //устанавливаем параметры
                 TransferParameters(elem, ds);
                 var enclosureType =AddAreaValueToElement(elem, ds);
-                OverrideGraphicDirectShape(doc, ds, enclosureType);
+                GraphicDirectShapeHandler.OverrideGraphicDirectShape(doc, ds, enclosureType);
                 return true; // Элемент успешно создан
             }
             else
@@ -114,54 +114,7 @@ public static class CreateDirectShapesForEachElement
         }
     }
 
-    public static void OverrideGraphicDirectShape(Document doc, Autodesk.Revit.DB.DirectShape ds, string enclosureType)
-    {
-        Color  enclosureColor = EnclosureColorManager.GetColor(enclosureType, ds);
-        OverrideGraphicSettings settings = new OverrideGraphicSettings();
 
-        // Получаем солид
-        FillPatternElement solidPattern = GetSolidFillPattern(doc);
-
-        if (solidPattern == null) return;
-
-        // Базовые настройки для всех элементов
-        settings.SetSurfaceForegroundPatternId(solidPattern.Id);
-        settings.SetSurfaceForegroundPatternColor(enclosureColor);
-        settings.SetProjectionLineColor(enclosureColor);
-
-        // Индивидуальные настройки
-        ApplyEnclosureSpecificSettings(enclosureType, settings);
-        // Применяем настройки
-        doc.ActiveView.SetElementOverrides(ds.Id, settings);
-
-    }
-    
-    private static void ApplyEnclosureSpecificSettings(string enclosureType, OverrideGraphicSettings settings)
-    {        switch (enclosureType)
-        {
-            case var _ when enclosureType == EnclosureTypeOptions.Window:
-                settings.SetSurfaceTransparency(0); // Полная непрозрачность
-                settings.SetProjectionLineWeight(4);
-                break;
-
-            case var _ when enclosureType == EnclosureTypeOptions.Curtain:
-                settings.SetSurfaceTransparency(40); // Частичная прозрачность
-                break;
-
-            default:
-                settings.SetSurfaceTransparency(0); // По умолчанию непрозрачные
-                break;
-        }
-    }
-    
-    private static FillPatternElement GetSolidFillPattern(Document doc)
-    {
-        return  new FilteredElementCollector(doc)
-            .OfClass(typeof(FillPatternElement))
-            .Cast<FillPatternElement>()
-            .FirstOrDefault(f => f.GetFillPattern().IsSolidFill);
-    }
-    
     private static string AddAreaValueToElement(Element elem, Autodesk.Revit.DB.DirectShape ds)
     {
         var enclosureType = elem.LookupParameter(nameof(ConstructionSurfaceModel.EnclosureType)).AsValueString();
@@ -297,6 +250,57 @@ public static class CreateDirectShapesForEachElement
     {
         Debug.WriteLine("Ошибка", $"Элемент {elem.Id}: {ex.Message}");
     }
+}
+
+public class GraphicDirectShapeHandler{
+    public static void OverrideGraphicDirectShape(Document doc, Autodesk.Revit.DB.DirectShape ds, string enclosureType)
+    {
+        Color  enclosureColor = EnclosureColorManager.GetColor(enclosureType, ds);
+        OverrideGraphicSettings settings = new OverrideGraphicSettings();
+
+        // Получаем солид
+        FillPatternElement solidPattern = GetSolidFillPattern(doc);
+
+        if (solidPattern == null) return;
+
+        // Базовые настройки для всех элементов
+        settings.SetSurfaceForegroundPatternId(solidPattern.Id);
+        settings.SetSurfaceForegroundPatternColor(enclosureColor);
+        settings.SetProjectionLineColor(enclosureColor);
+
+        // Индивидуальные настройки
+        ApplyEnclosureSpecificSettings(enclosureType, settings);
+        // Применяем настройки
+        doc.ActiveView.SetElementOverrides(ds.Id, settings);
+
+    }
+    
+    private static void ApplyEnclosureSpecificSettings(string enclosureType, OverrideGraphicSettings settings)
+    {        switch (enclosureType)
+        {
+            case var _ when enclosureType == EnclosureTypeOptions.Window:
+                settings.SetSurfaceTransparency(0); // Полная непрозрачность
+                settings.SetProjectionLineWeight(4);
+                break;
+
+            case var _ when enclosureType == EnclosureTypeOptions.Curtain:
+                settings.SetSurfaceTransparency(40); // Частичная прозрачность
+                break;
+
+            default:
+                settings.SetSurfaceTransparency(0); // По умолчанию непрозрачные
+                break;
+        }
+    }
+    
+    private static FillPatternElement GetSolidFillPattern(Document doc)
+    {
+        return  new FilteredElementCollector(doc)
+            .OfClass(typeof(FillPatternElement))
+            .Cast<FillPatternElement>()
+            .FirstOrDefault(f => f.GetFillPattern().IsSolidFill);
+    }
+
 }
 
 

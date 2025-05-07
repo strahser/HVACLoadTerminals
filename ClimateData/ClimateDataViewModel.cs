@@ -219,7 +219,7 @@ public class ClimateDataViewModel : ViewModelBase
     {
         using Transaction t = new Transaction(_document, "Update Climate Data");
         t.Start();
-        var projectInfo = CollectorQuery.GetProjectInfo();
+        var projectInfo = CollectorQuery.GetProjectInfo(_document);
 
         var properties = typeof(ClimateDataModel).GetProperties();
 

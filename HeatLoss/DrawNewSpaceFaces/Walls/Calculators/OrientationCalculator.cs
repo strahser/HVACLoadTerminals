@@ -8,10 +8,10 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
 // Калькулятор ориентации
 public class OrientationCalculator
 {
-    public string Calculate(Curve curve, string northDirection)
+    public static string Calculate(Curve curve, string northDirection)
     {
         //northDirection up,down,left,right)
-        var mapping = OrientationMapping.OrientationMappings.FirstOrDefault(m =>
+        var mapping = OrientationMapping.UpdatedOrientationFromNorth.FirstOrDefault(m =>
             m.MainDirection.ToLower() == northDirection.ToLower());
         if (curve is Arc)
         {
@@ -34,33 +34,19 @@ public class OrientationCalculator
         {
             return curveDirection.Y > 0 ? mapping.N : mapping.S;
         }
-        else if (Math.Abs(curveDirection.X) > 0.9) // Горизонтальное направление (В/З)
+
+        if (Math.Abs(curveDirection.X) > 0.9) // Горизонтальное направление (В/З)
         {
             return curveDirection.X > 0 ? mapping.E : mapping.W;
         }
-        else
+        return curveDirection.X switch
         {
             // Промежуточные направления
-            if (curveDirection.X > 0 && curveDirection.Y > 0)
-            {
-                return mapping.NE; // Северо-восток
-            }
-            else if (curveDirection.X < 0 && curveDirection.Y > 0)
-            {
-                return mapping.NW; // Северо-запад
-            }
-            else if (curveDirection.X > 0 && curveDirection.Y < 0)
-            {
-                return mapping.SE; // Юго-восток
-            }
-            else if (curveDirection.X < 0 && curveDirection.Y < 0)
-            {
-                return mapping.SW; // Юго-запад
-            }
-            else
-            {
-                return "Не определено"; // Ориентация не определена
-            }
-        }
+            > 0 when curveDirection.Y > 0 => mapping.NE,
+            < 0 when curveDirection.Y > 0 => mapping.NW,
+            > 0 when curveDirection.Y < 0 => mapping.SE,
+            < 0 when curveDirection.Y < 0 => mapping.SW,
+            _ => "Не определено"
+        };
     }
 }

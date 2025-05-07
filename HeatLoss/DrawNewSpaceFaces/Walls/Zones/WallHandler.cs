@@ -139,7 +139,7 @@ public class WallHandler
     private static string CalculateOrientation(Curve curve, string northDirection)
         {
             //northDirection up,down,left,right)
-            var mapping = OrientationMapping.OrientationMappings.FirstOrDefault(m =>
+            var mapping = OrientationMapping.UpdatedOrientationFromNorth.FirstOrDefault(m =>
                 m.MainDirection.ToLower() == northDirection.ToLower());
             if (curve is Arc)
             {

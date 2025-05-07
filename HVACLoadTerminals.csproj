@@ -104,6 +104,7 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapeFromAnalyticalOpensCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapesForEachElement.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\ConvertToDirectShapeCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\DirectShapeParameterHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\EnclosureColorManager.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\EnumToBooleanConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\StringToBooleanConverter.cs" />

@@ -18,7 +18,7 @@ public class BaseWallParametersStrategy(Document hvacDoc, string northDirection)
         Level groundLevel)
         {
                 // Установка ориентации
-                var orientation = new OrientationCalculator().Calculate(wallCurve, northDirection);
+                var orientation = OrientationCalculator.Calculate(wallCurve, northDirection);
                 ParametersUtility.SetParameterByValueAndName(wall, nameof(faceModel.Orientation), orientation);
 
                 // Применение параметров пространства

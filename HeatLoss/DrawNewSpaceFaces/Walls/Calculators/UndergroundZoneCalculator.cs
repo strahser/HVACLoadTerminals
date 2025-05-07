@@ -4,30 +4,32 @@ using Autodesk.Revit.DB;
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
 
 // Калькулятор подземных зон
-public class UndergroundZoneCalculator
+public class UndergroundZoneModel
 {
-    public void ApplyZoneParameters(
-        ConstructionSurfaceModel faceModel,
-        double spaceElevation,
-        double groundElevation)
+    public string UndergroundZoneNumber { get; set; }
+    public double UndergroundZoneValue { get; set; }
+    public double TransferCoefficient { get; set; }
+}
+public class UndergroundZoneCalculator()
+{
+    public static UndergroundZoneModel ApplyZoneParameters(double spaceElevationFt, double groundElevationFt)
     {
-        double depthInFeet = groundElevation - spaceElevation;
+        double depthInFeet = groundElevationFt - spaceElevationFt;
         double depthInMeters = UnitUtils.ConvertFromInternalUnits(depthInFeet, UnitTypeId.Meters);
-
         int zoneIndex = (int)Math.Floor(depthInMeters / 2.0);//округляем до меньшего что бы коэффициент теплопередачи был больше
         zoneIndex = Math.Max(1, Math.Min(zoneIndex, 4));
-
-        faceModel.UndergroundZoneNumber = GetZoneNumber(zoneIndex);
-        faceModel.UndergroundZoneValue = GetZoneResistance(zoneIndex);
-        faceModel.ConstructionName = $"{faceModel.ConstructionName} Зона {faceModel.UndergroundZoneNumber}";
-        if (faceModel.UndergroundZoneValue > 0)
+        var undergroundModel = new UndergroundZoneModel();
+        if (depthInFeet <= 0) return undergroundModel;
+        undergroundModel.UndergroundZoneNumber = GetZoneNumber(zoneIndex);
+        undergroundModel.UndergroundZoneValue = GetZoneResistance(zoneIndex);
+        if (undergroundModel.UndergroundZoneValue > 0)
         {
-            faceModel.TransferCoefficient = 1.0 / faceModel.UndergroundZoneValue;
+            undergroundModel.TransferCoefficient = 1.0 / undergroundModel.UndergroundZoneValue;
         }
-        
+        return undergroundModel;
     }
 
-    private string GetZoneNumber(int index) => index switch
+    private static string GetZoneNumber(int index) => index switch
     {
         1 => "I",
         2 => "II",
@@ -35,7 +37,7 @@ public class UndergroundZoneCalculator
         _ => "IV"
     };
 
-    private double GetZoneResistance(int index) => index switch
+    private static double GetZoneResistance(int index) => index switch
     {
         1 => 1.05,
         2 => 1.9,

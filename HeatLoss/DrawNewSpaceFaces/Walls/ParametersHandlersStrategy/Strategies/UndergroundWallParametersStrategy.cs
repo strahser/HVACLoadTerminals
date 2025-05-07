@@ -9,10 +9,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.ParametersHandlersS
 // Стратегия подземных зон
 public class UndergroundWallParametersStrategy : IWallParametersStrategy
 {
-    private readonly UndergroundZoneCalculator _zoneCalculator = new();
-
-    public void ApplyParameters(
-        Wall wall,
+    public void ApplyParameters(Wall wall,
         Space space,
         ConstructionSurfaceModel faceModel,
         Curve wallCurve,
@@ -21,7 +18,11 @@ public class UndergroundWallParametersStrategy : IWallParametersStrategy
         if (space.Level == null || groundLevel == null) return;
 
         // Расчет параметров зоны
-        _zoneCalculator.ApplyZoneParameters(faceModel, space.Level.Elevation, groundLevel.Elevation);
+        UndergroundZoneModel zoneParameters = UndergroundZoneCalculator.ApplyZoneParameters(space.Level.Elevation, groundLevel.Elevation);
+        faceModel.UndergroundZoneNumber = zoneParameters.UndergroundZoneNumber;
+        faceModel.UndergroundZoneValue = zoneParameters.UndergroundZoneValue;
+        faceModel.TransferCoefficient = zoneParameters.TransferCoefficient;
+        faceModel.ConstructionName = string.Concat(faceModel.ConstructionName, zoneParameters.UndergroundZoneNumber);
 
         // Обновление параметров стены
         ParametersUtility.SetParameterByValueAndName(wall, nameof(faceModel.ConstructionName), faceModel.ConstructionName);

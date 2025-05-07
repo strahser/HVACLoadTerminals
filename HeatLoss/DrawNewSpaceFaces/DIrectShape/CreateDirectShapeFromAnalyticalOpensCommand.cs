@@ -1,121 +1,199 @@
-
 using System;
-using Autodesk.Revit.Attributes;
-using Autodesk.Revit.DB;
-
-using Autodesk.Revit.UI;
 using System.Collections.Generic;
 using System.Linq;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
 using Autodesk.Revit.DB.Analysis;
+using Autodesk.Revit.DB.Mechanical;
+using Autodesk.Revit.Attributes;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
 
+
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape;
+
 
 [Transaction(TransactionMode.Manual)]
 public class CreateDirectShapeFromAnalyticalOpensCommand : IExternalCommand
 {
     private readonly LoggingService _logger = new();
-
+    private const string NorthDirection = "up";
+   
+    
 
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
         var doc = commandData.Application.ActiveUIDocument.Document;
+        Level groundLevel = new FilteredElementCollector(doc)
+            .OfCategory(BuiltInCategory.OST_Levels)
+            .WhereElementIsNotElementType()
+            .Cast<Level>()
+            .OrderBy(l => l.Elevation)
+            .ToList()[2];
+        _logger.Log($"Ground Level: {groundLevel.Name}");
         
+            // 1. Собираем аналитические пространства
         try
         {
-            using var transaction = new Transaction(doc, "Create Analytical DirectShapes");
+            using var transaction = new Transaction(doc, "Link Spaces to DirectShapes");
             transaction.Start();
-
-            var energyModel = GetEnergyModel(doc);
-            if (energyModel == null) return Result.Failed;
-
-            var surfaces = energyModel.GetAnalyticalSurfaces()
-                .Where(IsExteriorWall)
-                .ToList();
-
-            if (!surfaces.Any())
+            List<EnergyAnalysisSpace> analyticSpaces = CollectorQuery.GetAllaAnalysisSpaces(doc);
+            foreach (var analyticSpace in analyticSpaces)
             {
-                _logger.Log("Нет поверхностей наружных/подземных стен");
-                return Result.Failed;
-            }
+                    // 2. Находим связанное механическое пространство
+                Space mechSpace = AnalyticalModelProcessor.FindMechSpaceForAnalyticSpace(analyticSpace, doc);
+                if (mechSpace == null) continue;
 
-            foreach (var surface in surfaces)
-            {
-                // Создаем DirectShape для самой стены
-                CreateDirectShapeFromWall(doc, surface);
-                    
-                // Обрабатываем проемы
-                ProcessSurfaceOpens(doc, surface);
+                    // 3. Получаем поверхности аналитического пространства
+                List<EnergyAnalysisSurface> surfaces = AnalyticalModelProcessor.GetSurfacesFromAnalyticSpace(analyticSpace);
+                foreach (var surface in surfaces.Where(AnalyticalModelProcessor.IsExteriorWall))
+                {
+                    // 4. Создаем DirectShape с параметром Space
+                    var dsShapeCreator = new DirectShapeCreator(doc, surface, mechSpace,NorthDirection,groundLevel);
+                    dsShapeCreator.CreateDirectShapeForSurface();
+                    dsShapeCreator.CreateDirectShapeForOpenings();
+                }
             }
-
             transaction.Commit();
             return Result.Succeeded;
         }
+        
         catch (Exception ex)
         {
             _logger.Log($"Ошибка: {ex.Message}");
             return Result.Failed;
         }
     }
+}
 
-    // Метод для создания DirectShape стены
-    private void CreateDirectShapeFromWall(Document doc, EnergyAnalysisSurface surface)
+public static class AnalyticalModelProcessor
+{
+    public static Space FindMechSpaceForAnalyticSpace(Element analyticSpace, Document doc)
     {
-        try
-        {
-            var polyloops = surface.GetPolyloops()?.ToList();
-            if (polyloops.Count == 0) return;
+        var bbox = analyticSpace.get_BoundingBox(null);
+        if (bbox?.Min == null || bbox.Max == null) return null;
 
-            var geometries = new List<GeometryObject>();
-            var options = new SpatialElementBoundaryOptions();
-
-            foreach (var polyLoop in polyloops)
-            {
-                var points = polyLoop.GetPoints().ToList();
-                if (points.Count < 3) continue;
-
-                // 1. Рассчитываем нормаль поверхности
-                var normal = CalculateSurfaceNormal(points);
-                if (normal == null) continue;
-
-                // 2. Создаем контур стены
-                var curveLoop = CurveLoop.Create(points
-                    .Select((p, i) => Line.CreateBound(p, points[(i + 1) % points.Count]) as Curve)
-                    .ToList());
-
-                // 3. Определяем параметры экструзии
-                var (extrusionDir, extrusionLength) = GetWallExtrusionParams(points, normal);
-
-                // 4. Создаем геометрию
-                var extrusion = GeometryCreationUtilities.CreateExtrusionGeometry(
-                    new List<CurveLoop> { curveLoop },
-                    extrusionDir,
-                    extrusionLength);
-
-                geometries.Add(extrusion);
-            }
-
-            if (geometries.Count == 0) return;
-
-            // 5. Создаем DirectShape
-            var ds = Autodesk.Revit.DB.DirectShape.CreateElement(doc, new ElementId(BuiltInCategory.OST_GenericModel));
-            ds.SetShape(geometries);
-            ds.Name = $"Analytical Wall {surface.Id}";
-            
-            // 6. Назначаем параметры
-            var enclosureType = GetEnclosureTypeForSurface(surface);
-            CreateDirectShapesForEachElement.OverrideGraphicDirectShape(doc, ds, enclosureType);
-            _logger.Log($"Создана стена из {geometries.Count} элементов");
-        }
-        catch (Exception ex)
-        {
-            _logger.Log($"Ошибка создания стены: {ex.Message}");
-        }
+        var centroid = (bbox.Min + bbox.Max) * 0.5;
+        return new FilteredElementCollector(doc)
+            .OfCategory(BuiltInCategory.OST_MEPSpaces)
+            .Cast<Space>()
+            .FirstOrDefault(space => space
+                .IsPointInSpace(centroid))  ;
+        // &&space.get_BoundingBox(null).ContainsPoint(centroid))
     }
 
-    // Расчет нормали поверхности
-    private XYZ CalculateSurfaceNormal(List<XYZ> points)
+    public static List<EnergyAnalysisSurface> GetSurfacesFromAnalyticSpace(EnergyAnalysisSpace analyticSpace)
+    {
+
+        return analyticSpace.GetAnalyticalSurfaces().ToList();
+    }
+
+    internal static bool IsExteriorWall(EnergyAnalysisSurface surface)
+    {
+        return surface.SurfaceType.ToString() is "ExteriorWall" or "UndergroundWall"; 
+    }
+    
+    public static string GetEnclosureSurfaceType(EnergyAnalysisSurface surface) => 
+        surface.SurfaceType switch
+        {
+            EnergyAnalysisSurfaceType.ExteriorWall => EnclosureTypeOptions.Wall,
+            EnergyAnalysisSurfaceType.Underground => EnclosureTypeOptions.Wall,
+            EnergyAnalysisSurfaceType.Roof => EnclosureTypeOptions.Roof,
+            EnergyAnalysisSurfaceType.ExteriorFloor => EnclosureTypeOptions.Floor,
+            _ => EnclosureTypeOptions.Wall
+        };
+
+    public static string GetEnclosureOpeningType(EnergyAnalysisOpening opening) => 
+        opening.OpeningType.ToString() switch
+        {
+            "Window" => EnclosureTypeOptions.Window,
+            "Door" => EnclosureTypeOptions.Door,
+            "Curtain" => EnclosureTypeOptions.Curtain,
+            "Skylight" => EnclosureTypeOptions.Skylight,
+            "Air"=> EnclosureTypeOptions.Curtain,
+            _ => opening.OpeningType.ToString()
+        };
+}
+
+public  class DirectShapeCreator(Document doc, EnergyAnalysisSurface surface, Space space, string northDirection, Level groundLevel )
+{
+    private const string EnclosureType = nameof(ConstructionSurfaceModel.EnclosureType);
+    internal void CreateDirectShapeForSurface()
+    {
+        var geometries = GeometryHelper.CreateExtrusionGeometries(surface.GetPolyloops(), SurfaceType.Wall);
+        if (!geometries.Any()) return ;
+        var ds = Autodesk.Revit.DB.DirectShape.CreateElement(doc, new ElementId(BuiltInCategory.OST_GenericModel));
+        ds.SetShape(geometries);
+        var enclosureType = AnalyticalModelProcessor.GetEnclosureSurfaceType(surface);
+        GraphicDirectShapeHandler.OverrideGraphicDirectShape(doc, ds, enclosureType);
+        ds.Name = $"ASpace {surface.Id}";
+        var dsParameterHandler = new DirectShapeParameterHandler(doc, ds, space, surface,northDirection,groundLevel);
+        ds.LookupParameter(EnclosureType).Set(enclosureType);
+        dsParameterHandler.SetSpaceParameters();
+    }
+    
+    public  void CreateDirectShapeForOpenings()
+    {
+      LoggingService logger = new();
+        foreach (var opening in surface.GetAnalyticalOpenings())
+        {
+            var openingGeom = GeometryHelper.CreateExtrusionGeometries(opening.GetPolyloops(), SurfaceType.Opening);
+            if (!openingGeom.Any()) continue;
+            var ds = Autodesk.Revit.DB.DirectShape.CreateElement(doc, new ElementId(BuiltInCategory.OST_GenericModel));
+            ds.SetShape(openingGeom);
+            ds.Name = $"AOpening {opening.Id}";
+            var enclosureTypeOpening = AnalyticalModelProcessor.GetEnclosureOpeningType(opening);
+            if (enclosureTypeOpening != "Other")
+                GraphicDirectShapeHandler.OverrideGraphicDirectShape(doc, ds, enclosureTypeOpening);
+            var dsParameterHandler = new DirectShapeParameterHandler(doc, ds, space, opening,northDirection,groundLevel);
+            dsParameterHandler.SetSpaceParameters();
+            var orientationValue = dsParameterHandler.GetOrientationParameter(surface);
+            logger.Log($"orientationValue for Opening {orientationValue}");
+            //Перезаписываем значение ориентации.
+            ds.LookupParameter(DirectShapeParameterHandler.Orientation).Set(orientationValue);
+            logger.Log($"установлено значение {orientationValue}");
+            ds.LookupParameter(EnclosureType).Set(enclosureTypeOpening);
+        }
+    }
+}
+
+public static class GeometryHelper
+{
+    public static List<GeometryObject> CreateExtrusionGeometries(IEnumerable<Polyloop> polyloops, SurfaceType surfaceType)
+    {
+        var geometries = new List<GeometryObject>();
+        
+        foreach (var polyLoop in polyloops ?? [])
+        {
+            var points = polyLoop?.GetPoints().ToList();
+            if (points == null || points.Count < 3) continue;
+
+            var normal = CalculateNormal(points);
+            if (normal == null) continue;
+
+            var curveLoop = CurveLoop.Create(
+                points.Select((p, i) => 
+                    Line.CreateBound(p, points[(i + 1) % points.Count]) as Curve)
+                .ToList());
+
+            var (direction, length) = GetExtrusionParams(normal, surfaceType);
+            
+            geometries.Add(GeometryCreationUtilities.CreateExtrusionGeometry(
+                new List<CurveLoop> { curveLoop }, 
+                direction, 
+                length));
+        }
+        return geometries;
+    }
+    
+    public static bool BoundingBoxContainsPoint(this BoundingBoxXYZ bbox, XYZ point)
+    {
+        return point.X >= bbox.Min.X && point.X <= bbox.Max.X &&
+               point.Y >= bbox.Min.Y && point.Y <= bbox.Max.Y &&
+               point.Z >= bbox.Min.Z && point.Z <= bbox.Max.Z;
+    }
+    
+    private static XYZ CalculateNormal(List<XYZ> points)
     {
         try
         {
@@ -123,185 +201,39 @@ public class CreateDirectShapeFromAnalyticalOpensCommand : IExternalCommand
             var v2 = points[2] - points[0];
             var normal = v1.CrossProduct(v2).Normalize();
             
-            // Корректировка направления для подземных стен
             if (normal.Z > 0) normal = -normal;
-            
             return normal;
         }
         catch
         {
-            _logger.Log("Ошибка расчета нормали стены");
+
             return null;
         }
+        
+        
     }
 
-    // Определение параметров экструзии для стены
-    private static (XYZ direction, double length) GetWallExtrusionParams(List<XYZ> points, XYZ normal)
+    private static (XYZ direction, double length) GetExtrusionParams(XYZ normal, SurfaceType surfaceType)
     {
         const double defaultThickness = 0.5;
         
-        // Для вертикальных стен
-        if (!(Math.Abs(normal.Z) < 0.001)) return (XYZ.BasisZ, defaultThickness);
-        var height = points.Max(p => p.Z) - points.Min(p => p.Z);
-        //return (normal, height);
-        return (normal, defaultThickness);
-
-        // Для горизонтальных/наклонных элементов
-    }
-
-    // Назначение параметров стены
-    
-    private static EnergyAnalysisDetailModel GetEnergyModel(Document doc)
-    {
-        return new FilteredElementCollector(doc)
-            .OfClass(typeof(EnergyAnalysisDetailModel))
-            .Cast<EnergyAnalysisDetailModel>()
-            .FirstOrDefault();
-    }
-
-    private bool IsExteriorWall(EnergyAnalysisSurface surface)
-    {
-        try
+        return surfaceType switch
         {
-            return surface.SurfaceType.ToString() is "ExteriorWall" or "UndergroundWall";
-        }
-        catch
-        {
-            _logger.Log($"Ошибка определения типа поверхности {surface.Id}");
-            return false;
-        }
-    }
-
-    private void ProcessSurfaceOpens(Document doc, EnergyAnalysisSurface surface)
-    {
-        var openings = surface.GetAnalyticalOpenings()?.ToList() ?? [];
-        foreach (var opening in openings)
-        {
-            CreateDirectShapeFromOpening(doc, opening);
-        }
-    }
-
-    private void CreateDirectShapeFromOpening(Document doc, EnergyAnalysisOpening opening)
-    {
-        try
-        {
-            var polyloops = opening.GetPolyloops()?.ToList();
-            if (polyloops.Count == 0) return;
-
-            var geometries = new List<GeometryObject>();
-
-            foreach (var polyLoop in polyloops)
-            {
-                var points = polyLoop.GetPoints().ToList();
-                if (points.Count < 3) continue;
-
-                // 1. Вычисление нормали полигона
-                var normal = CalculatePolygonNormal(points);
-                if (normal == null) continue;
-
-                // 2. Определение направления экструзии
-                var extrusionDir = GetSafeExtrusionDirection(normal);
-
-                // 3. Создание контура
-                var curveLoop = CurveLoop.Create(points
-                    .Select((p, i) => Line.CreateBound(p, points[(i + 1) % points.Count]) as Curve)
-                    .ToList());
-
-                // 4. Расчет толщины экструзии
-                var extrusionLength = GetExtrusionLength(points, normal);
-
-                // 5. Создание экструзии
-                var extrusion = GeometryCreationUtilities.CreateExtrusionGeometry(
-                    new List<CurveLoop> { curveLoop },
-                    extrusionDir,
-                    extrusionLength);
-
-                geometries.Add(extrusion);
-            }
-
-            if (geometries.Count == 0) return;
-
-            var ds = Autodesk.Revit.DB.DirectShape.CreateElement(doc, new ElementId(BuiltInCategory.OST_GenericModel));
-            ds.SetShape(geometries);
-            ds.Name = $"Analytical Opening {opening.Id}";
-            var enclosureType = GetEnclosureTypeForOpening(opening);
-            if (enclosureType != "Other")
-                CreateDirectShapesForEachElement.OverrideGraphicDirectShape(doc, ds, enclosureType);
-            _logger.Log($"Создан DirectShape для проема {opening.Id}");
-        }
-        catch (Exception ex)
-        {
-            _logger.Log($"Ошибка создания DirectShape: {ex.Message}");
-        }
-    }
-
-    // Вычисление нормали полигона через векторное произведение
-    private XYZ CalculatePolygonNormal(List<XYZ> points)
-    {
-        try
-        {
-            var v1 = points[1] - points[0];
-            var v2 = points[2] - points[0];
-            return v1.CrossProduct(v2).Normalize();
-        }
-        catch
-        {
-            _logger.Log("Ошибка вычисления нормали");
-            return null;
-        }
-    }
-
-    // Безопасное определение направления экструзии
-    private static XYZ GetSafeExtrusionDirection(XYZ normal)
-    {
-        const double tolerance = 0.001;
-
-        // Если нормаль вертикальная - используем горизонтальное направление
-        if (Math.Abs(normal.Z) > 1 - tolerance)
-            return new XYZ(1, 0, 0);
-
-        // Иначе используем нормаль, спроецированную на XY плоскость
-        return new XYZ(normal.X, normal.Y, 0).Normalize();
-    }
-
-    // Расчет длины экструзии
-    private static double GetExtrusionLength(List<XYZ> points, XYZ normal)
-    {
-        // Для вертикальных элементов используем Z-высоту
-        if (!(Math.Abs(normal.Z) < 0.001)) return 0.3; // 300 мм по умолчанию
-        var minZ = points.Min(p => p.Z);
-        var maxZ = points.Max(p => p.Z);
-        //return maxZ - minZ;
-        return 0.6;
-
-    }
-    
-    // Определение типа ограждения для поверхности
-    private string GetEnclosureTypeForSurface(EnergyAnalysisSurface surface)
-    {
-        if (surface.SurfaceType.ToString() == "UndergroundWall")
-            return EnclosureTypeOptions.Wall; // Подземные стены обрабатываются в EnclosureColorManager
-
-        return surface.SurfaceType switch
-        {
-            EnergyAnalysisSurfaceType.ExteriorWall => EnclosureTypeOptions.Wall,
-            EnergyAnalysisSurfaceType.Roof => EnclosureTypeOptions.Roof,
-            EnergyAnalysisSurfaceType.ExteriorFloor => EnclosureTypeOptions.Floor,
-            _ => EnclosureTypeOptions.Wall
-        };
-    }
-
-// Определение типа проема
-    private string GetEnclosureTypeForOpening(EnergyAnalysisOpening opening)
-    {
-        var openingType = opening.OpeningType.ToString();
-        return openingType switch
-        {
-            "Window" => EnclosureTypeOptions.Window,
-            "Door" => EnclosureTypeOptions.Door,
-            "Curtain" => EnclosureTypeOptions.Curtain,
-            "Skylight" => EnclosureTypeOptions.Skylight,
-            _ => "Other"
+            SurfaceType.Wall when Math.Abs(normal.Z) >= 0.001 => (XYZ.BasisZ, defaultThickness),
+            
+            SurfaceType.Wall => (normal, defaultThickness),
+            
+            SurfaceType.Opening when Math.Abs(normal.Z) > 0.999 => (new XYZ(1, 0, 0), 0.3),
+            
+            SurfaceType.Opening => (new XYZ(normal.X, normal.Y, 0).Normalize(), 0.6),
+            
+            _ => (XYZ.BasisZ, defaultThickness)
         };
     }
 }
+
+public enum SurfaceType { Wall, Opening }
+
+
+
+

@@ -24,15 +24,11 @@ public class CompositeWallParametersStrategy(Document hvacDoc,IEnumerable<IWallP
         }
 
         // Общие параметры после всех стратегий
-        ParametersUtility.SetParameterByValueAndName(
-            wall,
-            nameof(faceModel.TemperatureInSpace),
+        ParametersUtility.SetParameterByValueAndName(wall, nameof(faceModel.TemperatureInSpace),
             ParametersHandler.GetSpaceSetHeatPoint(hvacDoc, space)
         );
 
-        ParametersUtility.SetParameterByValueAndName(
-            wall,
-            nameof(faceModel.TemperatureOut),
+        ParametersUtility.SetParameterByValueAndName(wall, nameof(faceModel.TemperatureOut),
             ParametersHandler.GetProjectInformation(hvacDoc, nameof(ClimateDataModel.TWinterOut092))
         );
     }
