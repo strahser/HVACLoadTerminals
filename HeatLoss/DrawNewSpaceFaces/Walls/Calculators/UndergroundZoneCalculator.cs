@@ -1,5 +1,6 @@
 using System;
 using Autodesk.Revit.DB;
+using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
 
@@ -12,21 +13,53 @@ public class UndergroundZoneModel
 }
 public class UndergroundZoneCalculator()
 {
+    private static int Clamp(int value, int min, int max)
+    {
+        if (value < min)
+            return min;
+        return value > max ? max : value;
+    }
+
     public static UndergroundZoneModel ApplyZoneParameters(double spaceElevationFt, double groundElevationFt)
     {
+         LoggingService _logger = new();
+        _logger.Log($"Начало расчета. SpaceElevation: {spaceElevationFt} ft, GroundElevation: {groundElevationFt} ft");
+
         double depthInFeet = groundElevationFt - spaceElevationFt;
-        double depthInMeters = UnitUtils.ConvertFromInternalUnits(depthInFeet, UnitTypeId.Meters);
-        int zoneIndex = (int)Math.Floor(depthInMeters / 2.0);//округляем до меньшего что бы коэффициент теплопередачи был больше
-        zoneIndex = Math.Max(1, Math.Min(zoneIndex, 4));
-        var undergroundModel = new UndergroundZoneModel();
-        if (depthInFeet <= 0) return undergroundModel;
-        undergroundModel.UndergroundZoneNumber = GetZoneNumber(zoneIndex);
-        undergroundModel.UndergroundZoneValue = GetZoneResistance(zoneIndex);
-        if (undergroundModel.UndergroundZoneValue > 0)
+        _logger.Log($"Рассчитанная глубина: {depthInFeet} ft", LogLevel.Error);
+
+        if (depthInFeet <= 0)
         {
-            undergroundModel.TransferCoefficient = 1.0 / undergroundModel.UndergroundZoneValue;
+            _logger.Log("Некорректная глубина. Возврат null", LogLevel.Warning);
+            return null;
         }
-        return undergroundModel;
+
+        double depthInMeters = UnitUtils.ConvertFromInternalUnits(depthInFeet, UnitTypeId.Meters);
+        int zoneIndex = (int)Math.Floor(depthInMeters / 2.0);
+    
+        _logger.Log($"Конвертация в метры: {depthInMeters} m, raw index: {zoneIndex}", LogLevel.Error);
+
+        zoneIndex = Clamp(zoneIndex, 1, 4);
+        _logger.Log($"Финальный индекс после clamp: {zoneIndex}");
+
+        try
+        {
+            double zoneResistance = GetZoneResistance(zoneIndex);
+            var result = new UndergroundZoneModel
+            {
+                UndergroundZoneNumber = GetZoneNumber(zoneIndex),
+                UndergroundZoneValue = zoneResistance,
+                TransferCoefficient =  zoneResistance!=0? 1.0 / zoneResistance:0
+            };
+
+            _logger.Log($"Успешно создана зона {result.UndergroundZoneNumber}. Сопротивление: {zoneResistance}");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.Log($"Ошибка создания модели: {ex.Message}\n{ex.StackTrace}", LogLevel.Error);
+            return null;
+        }
     }
 
     private static string GetZoneNumber(int index) => index switch

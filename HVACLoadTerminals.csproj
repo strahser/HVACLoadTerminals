@@ -101,11 +101,16 @@
     <Compile Include="GSOP\GsopCalculatorFromRevitData.cs" />
     <Compile Include="GSOP\ProjectInfoRevitExtensions.cs" />
     <Compile Include="HeatLoss\ConstructionSurfaceModel.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\AnalyticalModelProcessor.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapeFromAnalyticalOpensCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapesForEachElement.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\ConvertToDirectShapeCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\DirectShapeCreator.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\DirectShapeParameterHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\EnclosureColorManager.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\GeometryHelper.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\GraphicDirectShapeHandler.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\SurfaceType.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\EnumToBooleanConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\StringToBooleanConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\FloorsRoofs\Converters\VisibilityConverter.cs" />

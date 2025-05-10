@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Analysis;
 using Autodesk.Revit.DB.Mechanical;
@@ -10,16 +9,98 @@ using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.DirectShape;
 
-internal  class DirectShapeParameterHandler (
-    Document doc, 
-    Autodesk.Revit.DB.DirectShape ds, 
-    Space space, 
+internal class DirectShapeParameterHandler(
+    Document doc,
+    Autodesk.Revit.DB.DirectShape ds,
+    Space space,
     Element surface,
     string northDirection,
     Level groundLevel
 )
 {
+    public void SetSpaceParameters()
+    {
+        // Set basic space parameters
+        SetSpaceParameter();
+        // Map additional parameters to actions
+        SetAdditionalParameters();
+    }
+
+    private void SetSpaceParameter()
+    {
+        ds.LookupParameter(SpaceId).Set(space.Id.ToString());
+        ds.LookupParameter(SpaceName).Set(space.Name);
+        ds.LookupParameter(SpaceNumber).Set(space.Number);
+    }
+
+    private void SetAdditionalParameters()
+    {
+        string zoneNumber=null;
+        double zoneValue=0;
+        double transferCoef=0;
+        try
+        {
+            var zoneData = GetUndergroundZoneNumber();
+            if (zoneData != null)
+            {
+                zoneNumber = zoneData.UndergroundZoneNumber;
+                zoneValue = zoneData.UndergroundZoneValue;
+                transferCoef = zoneData.TransferCoefficient;
+                
+                _logger.Log($"Значения зоны: zoneNumber={zoneNumber}, zoneValue={zoneValue}");
+            }
+            else
+            {
+                _logger.Log("Данные зоны отсутствуют (null)",LogLevel.Error);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.Log($"Ошибка при получении параметров зоны: {e.Message}");
+        }
+        
+        var spaceHeatPoint = ParametersHandler.GetSpaceSetHeatPoint(doc, space);
+        var parameterMapping = new Dictionary<string, Action>
+        {
+            {
+                TemperatureInSpace, () => ds.LookupParameter(TemperatureInSpace).Set(spaceHeatPoint)
+            },
+            { ConstructionName, GetSurfaceName },
+            { TemperatureOut, () => ds.LookupParameter(TemperatureOut).Set(GetOutTemperatureFromProject()) },
+            { Orientation, SetOrientationParameter },
+            {
+                TransferCoefficient,
+                () => 
+                {
+                    if (transferCoef != 0)
+                    {
+                        // Установить значение из transferCoef, если оно не равно нулю
+                        ds.LookupParameter(TransferCoefficient).Set(transferCoef);
+                    }
+                    else
+                    {
+                        // Иначе вызвать стандартный метод
+                        SetParameterFromAnalyticProperty(
+                            TransferCoefficient,
+                            BuiltInParameter.ANALYTICAL_HEAT_TRANSFER_COEFFICIENT
+                        );
+                    }
+                }
+            },
+            {
+                UndergroundZoneNumber,
+                () => ds.LookupParameter(UndergroundZoneNumber).Set(zoneNumber)
+            },
+            { UndergroundZoneValue, () => ds.LookupParameter(UndergroundZoneValue).Set(zoneValue) },
+            { ConstructionArea, SetAreaParameter }
+        };
+
+        // Execute all parameter actions
+        foreach (var paramAction in parameterMapping.Values) paramAction.Invoke();
+    }
+
     #region Constant
+
     private const string SpaceId = nameof(ConstructionSurfaceModel.SpaceId);
     private const string SpaceName = nameof(ConstructionSurfaceModel.SpaceName);
     private const string SpaceNumber = nameof(ConstructionSurfaceModel.SpaceNumber);
@@ -32,62 +113,29 @@ internal  class DirectShapeParameterHandler (
     private const string UndergroundZoneValue = nameof(ConstructionSurfaceModel.UndergroundZoneValue);
     private const string ConstructionArea = nameof(ConstructionSurfaceModel.ConstructionArea);
     private readonly LoggingService _logger = new();
-    #endregion
-    public  void SetSpaceParameters() {
-        // Set basic space parameters
-        SetSpaceParameter();
-        // Map additional parameters to actions
-        SetAdditionalParameters();
-    }
-    private  void SetSpaceParameter()
-    {
-        ds.LookupParameter(SpaceId).Set(space.Id.ToString());
-        ds.LookupParameter(SpaceName).Set(space.Name);
-        ds.LookupParameter(SpaceNumber).Set(space.Number);
-    }
-    private void SetAdditionalParameters()
-    {
-        var zoneData = GetUndergroundZoneNumber();
-        var parameterMapping = new Dictionary<string, Action>
-        {
-            { TemperatureInSpace, () => ds.LookupParameter(TemperatureInSpace).Set(ParametersHandler.GetSpaceSetHeatPoint(doc, space)) },
-            { ConstructionName,GetSurfaceName },
-            { TemperatureOut, () => ds.LookupParameter(TemperatureOut).Set(GetOutTemperatureFromProject()) },
-            { Orientation, SetOrientationParameter },
-            { TransferCoefficient, () => SetParameterFromAnalyticProperty( TransferCoefficient,  BuiltInParameter.ANALYTICAL_HEAT_TRANSFER_COEFFICIENT) },
-            { UndergroundZoneNumber, () => ds.LookupParameter(UndergroundZoneNumber).Set(zoneData.UndergroundZoneNumber) },
-            { UndergroundZoneValue, () => ds.LookupParameter(UndergroundZoneValue).Set(zoneData.UndergroundZoneValue) },
-            { ConstructionArea, SetAreaParameter }
-        };
 
-        // Execute all parameter actions
-        foreach (var paramAction in parameterMapping.Values)
-        {
-            paramAction.Invoke();
-        }
-    }
+    #endregion
 
     # region Вспомогательные методы
-    private  void SetParameterFromAnalyticProperty(string parameterName, BuiltInParameter analyticParam)
+
+    private void SetParameterFromAnalyticProperty(string parameterName, BuiltInParameter analyticParam)
     {
         var parameter = surface?.get_Parameter(analyticParam);
         if (parameter == null) return;
         ds.LookupParameter(parameterName)?.Set(GetParameterValue(parameter));
     }
-    
+
     private void GetSurfaceName()
     {
-        EnergyAnalysisSurface sf = surface as EnergyAnalysisSurface; 
-        EnergyAnalysisOpening open = surface as EnergyAnalysisOpening;
+        var sf = surface as EnergyAnalysisSurface;
+        var open = surface as EnergyAnalysisOpening;
         try
         {
-            
             ds.LookupParameter(ConstructionName).Set(sf?.GetConstruction().ConstructionName);
         }
         catch (Exception)
         {
             ds.LookupParameter(ConstructionName).Set(open?.OriginatingElementName);
-            
         }
     }
 
@@ -103,12 +151,13 @@ internal  class DirectShapeParameterHandler (
         };
     }
 
-    private  double GetOutTemperatureFromProject()
+    private double GetOutTemperatureFromProject()
     {
         var projectInfo = CollectorQuery.GetProjectInfo(doc);
-        return projectInfo.LookupParameter(TemperatureOut)?.AsDouble() ?? 0; }
+        return projectInfo.LookupParameter(TemperatureOut)?.AsDouble() ?? 0;
+    }
 
-    public string GetOrientationParameter( Element element)
+    public string GetOrientationParameter(Element element)
     {
         var orientationParam = element?.get_Parameter(BuiltInParameter.AZIMUTH);
         if (orientationParam == null)
@@ -116,10 +165,10 @@ internal  class DirectShapeParameterHandler (
             _logger.Log($"Параметр AZIMUTH не найден для элемента {element?.Id}", LogLevel.Warning);
             return null;
         }
-        
-        OrientationMapping mapper = new OrientationMapping();
-        double radians = orientationParam.AsDouble();
-        double degrees = mapper.NormalizeAzimuth(radians * (180 / Math.PI));
+
+        var mapper = new OrientationMapping();
+        var radians = orientationParam.AsDouble();
+        var degrees = mapper.NormalizeAzimuth(radians * (180 / Math.PI));
         _logger.Log($"Рассчитан азимут: {degrees:F2}° (из радиан: {radians:F4})");
 
         var mapping = mapper.GetOrientationMapping(northDirection);
@@ -128,27 +177,29 @@ internal  class DirectShapeParameterHandler (
             _logger.Log($"Не найден маппинг для направления: {northDirection}", LogLevel.Error);
             return null;
         }
+
         _logger.Log($"Используется маппинг: {mapping.Name} ({mapping.MainDirection})");
 
-        string orientation = mapper.GetOrientationFromAzimuth(degrees, mapping);
+        var orientation = mapper.GetOrientationFromAzimuth(degrees, mapping);
         _logger.Log($"Определена ориентация: {orientation}");
         return orientation;
     }
-    
-    private  void SetOrientationParameter()
+
+    private void SetOrientationParameter()
     {
-        var orientation  = GetOrientationParameter(surface);
-        Parameter param = ds.LookupParameter(Orientation);
+        var orientation = GetOrientationParameter(surface);
+        var param = ds.LookupParameter(Orientation);
         if (param == null || param.IsReadOnly)
         {
             _logger.Log($"Параметр '{Orientation}' не найден или недоступен для записи", LogLevel.Error);
             return;
         }
+
         param.Set(orientation);
         _logger.Log($"Параметр '{Orientation}' успешно установлен в значение: {orientation}");
     }
 
-    private  void SetAreaParameter()
+    private void SetAreaParameter()
     {
         var areaParam = surface?.get_Parameter(BuiltInParameter.RBS_GBXML_SURFACE_AREA);
         if (areaParam == null) return;
@@ -156,21 +207,30 @@ internal  class DirectShapeParameterHandler (
         ds.LookupParameter(ConstructionArea)?.Set(areaSqMeters);
     }
 
-    // Методы для подземных зон (пример)
     private UndergroundZoneModel GetUndergroundZoneNumber()
     {
-        _logger.Log($"определяем зону для подземной стены уровень {space.Level.Name}");
+        if (space.Level == null || groundLevel == null)
+        {
+            _logger.Log("Ошибка: уровень пространства или подземный уровень не определен.");
+            return null;
+        }
+
+        double depth = groundLevel.Elevation - space.Level.Elevation;
+
         EnergyAnalysisSurface sf = surface as EnergyAnalysisSurface;
-        if (space.Level == null || groundLevel == null) return null;
-        _logger.Log($"space.Level '{space.Level}' space.Level{space.Level}");
-        var undegroundLevel = sf.SurfaceType == EnergyAnalysisSurfaceType.Underground
-            ? UndergroundZoneCalculator.ApplyZoneParameters(space.Level.Elevation, groundLevel.Elevation)
-            : null;
-        _logger.Log($"для модели UndergroundZoneModel определен undegroundLevel'{undegroundLevel}' undegroundLevel{undegroundLevel}");
-        _logger.Log($"UndergroundZoneNumber- {undegroundLevel.UndergroundZoneNumber}, undegroundLevel.UndergroundZoneValue-{undegroundLevel.UndergroundZoneValue}");
-        return undegroundLevel ;
-    }
+        _logger.Log($"Определяем зону: уровень пространства - {space.Level.Name}, " +
+                    $"подземный уровень - {groundLevel.Name}," +
+                    $" разница отметок = {depth}"+
+                    $"тип стены - {sf.SurfaceType}," 
+                    );
+        if (sf.SurfaceType != EnergyAnalysisSurfaceType.Underground && depth <= 0)
+        {
+            _logger.Log("Поверхность не подземная или глубина <= 0. Зона не применяется.");
+            return null;
+        }
         
-    
+        return UndergroundZoneCalculator.ApplyZoneParameters(space.Level.Elevation, groundLevel.Elevation);
+    }
+
     # endregion
 }
