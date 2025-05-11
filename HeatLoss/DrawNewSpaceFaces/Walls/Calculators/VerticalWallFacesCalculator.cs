@@ -16,7 +16,7 @@ public static class VerticalWallFacesCalculator
     /// <summary>
     /// Определяем наружные грани каждого помещения 
     /// </summary>
-   public static List<ConstructionSurfaceModel> GetRoomExternalVerticalFaces(Document doc, Room room, HashSet<ElementId> selectedTypes = null)
+   public static List<ConstructionSurfaceModel> GetExternalFaces(Document doc, Room room, HashSet<ElementId> selectedTypes = null)
 {
     var faces = new List<ConstructionSurfaceModel>();
     var logger = new LoggingService("VerticalWallFacesCalculator.txt");

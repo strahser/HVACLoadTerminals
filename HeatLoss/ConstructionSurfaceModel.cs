@@ -19,6 +19,8 @@ namespace HVACLoadTerminals.HeatLoss
         
         private bool _useNormative;
         
+        
+        public Curve FaceCurve { get; set; }
         public Room _Room { get; set; }
         public Face _Face { get; set; }
         public string RevitElementId { get; set; }

@@ -23,37 +23,24 @@ namespace HVACLoadTerminals.Utils
             .OfCategory(BuiltInCategory.OST_Doors)
             .WhereElementIsNotElementType().ToList();
         }
-        public static Dictionary<String, string> CreateRoomSpaceIdDictionary(List<Element> rooms, List<Element> spaces)
+        // Создает словарь Space.Id -> Room.Id на основе точки пространства внутри комнаты
+        public static Dictionary<ElementId, ElementId> CreateSpaceRoomDictionary(List<Room> rooms, List<Space> spaces)
         {
-            var roomSpaceDictionary = new Dictionary<string, string>();
-
-
-            // Пройтись по всем помещениям
-            foreach (var roomElement in rooms)
+            var dictionary = new Dictionary<ElementId, ElementId>();
+        
+            foreach (var space in spaces.Where(s => s.Location is LocationPoint))
             {
-                var room = roomElement as Room;
-
-                if (room == null || !(room.Area > 0)) continue;
-                // Получить LocationPoint помещения
-                var roomLocationPoint = (LocationPoint)room.Location; // Используем Point для LocationPoint
-
-                // Пройтись по всем пространствам
-                foreach (var spaceElement in spaces)
+                var spacePoint = ((LocationPoint)space.Location).Point;
+            
+                foreach (var room in rooms.Where(r => r.IsPointInRoom(spacePoint)))
                 {
-                    var space = spaceElement as Space;
-
-                    if (space is not { Area: > 0 }) continue;
-                    var roomPoint = roomLocationPoint.Point;
-                    // Проверка, находится ли точка внутри BoundingBox
-                    if (space.IsPointInSpace(roomPoint))
-                    {
-                        // Добавить пару Room.Id => SelectedSpace.Id в словарь
-                        roomSpaceDictionary.Add(space.Id.ToString(), room.Id.ToString());
-                    }
+                    dictionary[space.Id] = room.Id;
+                    break; // Первая найденная комната
                 }
             }
-            return roomSpaceDictionary;
+            return dictionary;
         }
+ 
         private static bool CheckIsPointInSpace(Space space, LocationPoint roomLocationPoint)
         {
             var roomPoint = roomLocationPoint.Point;

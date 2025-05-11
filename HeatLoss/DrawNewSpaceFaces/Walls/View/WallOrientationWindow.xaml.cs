@@ -15,7 +15,7 @@ public partial class WallOrientationWindow : Window
         CancelButton.Click += (s, e) => this.DialogResult = false;
 
     }
-    
+
     private void CheckBox_Checked(object sender, RoutedEventArgs e)
     {
         if (sender is CheckBox checkBox && checkBox.DataContext is WallTypeWrapper wrapper)

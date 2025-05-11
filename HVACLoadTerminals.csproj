@@ -135,12 +135,14 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_ConvexHullAnalysisCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\DrawWalls.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\EnclosureCacheManager.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\FailedFacesManager.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Models\WallTypeWrapper.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Interface\IWallParametersStrategy.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\ApplyParametersHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\BaseWallParametersStrategy.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\CompositeWallParametersStrategy.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\UndergroundWallParametersStrategy.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\WallParameterStrategy.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\WallParametersStrategyFactory.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\BoundaryProcessor.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\commands\CreateRaycastingExteriorWallsCommand.cs" />
@@ -148,11 +150,11 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\GeometryUtility.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\SpaceAnalyzer.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\WallCreator.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\BoolToCollapsedConverter.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\BoolToVisibilityConverter.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\InverseBoolConverter.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\MultiSelectBehavior.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\StringEqualsConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\Converters\BoolToCollapsedConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\Converters\BoolToVisibilityConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\Converters\GreaterThanZeroConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\Converters\InverseBoolConverter.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\Converters\StringEqualsConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\WallOrientationWindow.xaml.cs">
       <DependentUpon>WallOrientationWindow.xaml</DependentUpon>
     </Compile>

@@ -1,19 +1,19 @@
 using System;
 using System.Globalization;
-using System.Windows;
 using System.Windows.Data;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.View;
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.View.Converters;
 
-public class BoolToCollapsedConverter : IValueConverter
+public class InverseBoolConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        return (value is bool b && b) ? Visibility.Collapsed : Visibility.Visible;
+        return !(value is bool b && b);
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        // Реализация обратного преобразования
+        return !(value is bool b && b);
     }
 }
