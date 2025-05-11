@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Documents;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Analysis;
+using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.Models;
@@ -17,12 +18,15 @@ namespace HVACLoadTerminals.Utils
     
     public static class CollectorQuery
     {
-        public static List<Element> GetAllRooms(Document document)
+        public static List<Room> GetAllRooms(Document document)
         {
             return new FilteredElementCollector(document)
                   .OfCategory(BuiltInCategory.OST_Rooms)
                   .WhereElementIsNotElementType()
-                  .ToElements().ToList();
+                  .ToElements()
+                  .Cast<Room>()
+                  .Where(r => r.IsValidObject && r.Area > 0)
+                  .ToList();
         }
 
         public static List<Element> GetAllWindows(Document document)

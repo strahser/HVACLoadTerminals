@@ -19,7 +19,7 @@ public static class VerticalWallFacesCalculator
    public static List<ConstructionSurfaceModel> GetRoomExternalVerticalFaces(Document doc, Room room, HashSet<ElementId> selectedTypes = null)
 {
     var faces = new List<ConstructionSurfaceModel>();
-    var logger = new LoggingService();
+    var logger = new LoggingService("VerticalWallFacesCalculator.txt");
 
     if (room == null || !room.IsValidObject || room.Area <= 0)
     {
@@ -37,24 +37,23 @@ public static class VerticalWallFacesCalculator
         // Логирование выбранных типов
         if (selectedTypes != null)
         {
-            logger.Log($"Выбранные типы стен для Room {room.Id}: {string.Join(", ", selectedTypes.Select(id => id.IntegerValue))}");
+            logger.Log($"Выбранные типы стен для Room {room.Id}: " +
+                       $"{string.Join(", ", selectedTypes.Select(id => id.IntegerValue))}");
         }
 
-        foreach (Face face in solid.Faces)
+        foreach (Face face in solid?.Faces)
         {
             foreach (var boundary in geometry.GetBoundaryFaceInfo(face))
             {
                 if (boundary.SubfaceType != SubfaceType.Side)
                 {
-                    logger.Log($"Пропуск: грань {face.Id} не является боковой (тип: {boundary.SubfaceType})");
                     continue;
                 }
 
                 // Получаем стену и её тип
                 var wall = doc.GetElement(boundary.SpatialBoundaryElement.HostElementId) as Wall;
-                if (wall == null || wall.WallType == null)
+                if (wall?.WallType == null)
                 {
-                    logger.Log($"Пропуск: элемент {boundary.SpatialBoundaryElement.HostElementId} не является стеной");
                     continue;
                 }
                 var wallTypeId = wall.WallType.Id;
@@ -94,13 +93,9 @@ public static class VerticalWallFacesCalculator
     public static HashSet<ElementId> GetUsedWallTypes(Document doc)
     {
         var usedTypes = new HashSet<ElementId>();
-        var rooms = new FilteredElementCollector(doc)
-            .OfCategory(BuiltInCategory.OST_Rooms)
-            .WhereElementIsNotElementType()
-            .Cast<Room>()
-            .Where(r => r.IsValidObject && r.Area > 0);
+        var validRooms = CollectorQuery.GetAllRooms(doc);
 
-        foreach (var room in rooms)
+        foreach (var room in validRooms)
         {
             var types = GetRoomEnclosureWallTypes(doc, room);
             foreach (var id in types)

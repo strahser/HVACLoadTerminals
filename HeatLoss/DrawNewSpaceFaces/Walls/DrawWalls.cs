@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.DB.Mechanical;
 using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
@@ -12,9 +13,10 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls;
 
 public class DrawWalls(Document hvacDocument, Document roomDocument)
 {
+ 
     private readonly Document _hvacDocument = hvacDocument ?? throw new ArgumentNullException(nameof(hvacDocument));
     private readonly Document _roomDocument = roomDocument ?? throw new ArgumentNullException(nameof(roomDocument));
-    private readonly ILogger _logger = new LoggingService();
+    private readonly ILogger _logger = new LoggingService("DrawWalls.txt");
     private const string TemperatureInSpace = nameof(ConstructionSurfaceModel.TemperatureInSpace);
     private const string TemperatureOut = nameof(ConstructionSurfaceModel.TemperatureOut);
     private readonly double _winterOut092 = ParametersHandler.GetProjectInformation(hvacDocument, nameof(ClimateDataModel.TWinterOut092));
@@ -23,7 +25,7 @@ public class DrawWalls(Document hvacDocument, Document roomDocument)
     
     private List<Element> Spaces => CollectorQuery.GetAllSpaces(_hvacDocument);
     
-    private List<Element> Rooms => CollectorQuery.GetAllRooms(_roomDocument);
+    private List<Room> Rooms => CollectorQuery.GetAllRooms(_roomDocument);
 
     public void DrawWallsForSelectedSpaces(string northDirection, Level groundLevel, HashSet<ElementId> selectedTypes = null)
     {
@@ -75,7 +77,6 @@ public class DrawWalls(Document hvacDocument, Document roomDocument)
     {
         var curve = GetValidWallCurve(faceModel._Face, space);
         if (curve == null) return null;
-
         var wall = Wall.Create(_hvacDocument, curve, space.Level.Id, false);
         SetWallParameters(space, faceModel, northDirection, curve, wall, groundLevel);
         return wall;
@@ -94,7 +95,6 @@ public class DrawWalls(Document hvacDocument, Document roomDocument)
         {
             if (curve != null) return curve;
         }
-
         _logger.Log($"Предупреждение: Не удалось получить кривую для создания стены в пространстве {space.Name}");
         return null;
     }

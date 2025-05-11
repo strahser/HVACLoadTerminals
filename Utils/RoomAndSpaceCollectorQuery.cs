@@ -25,7 +25,7 @@ namespace HVACLoadTerminals.Utils
         }
         public static Dictionary<String, string> CreateRoomSpaceIdDictionary(List<Element> rooms, List<Element> spaces)
         {
-            var roomSpaceDictionary = new Dictionary<String, string>();
+            var roomSpaceDictionary = new Dictionary<string, string>();
 
 
             // Пройтись по всем помещениям
@@ -33,27 +33,22 @@ namespace HVACLoadTerminals.Utils
             {
                 var room = roomElement as Room;
 
-                if (room != null && room.Area > 0)
+                if (room == null || !(room.Area > 0)) continue;
+                // Получить LocationPoint помещения
+                var roomLocationPoint = (LocationPoint)room.Location; // Используем Point для LocationPoint
+
+                // Пройтись по всем пространствам
+                foreach (var spaceElement in spaces)
                 {
-                    // Получить LocationPoint помещения
-                    var roomLocationPoint = (LocationPoint)room.Location; // Используем Point для LocationPoint
+                    var space = spaceElement as Space;
 
-
-                    // Пройтись по всем пространствам
-                    foreach (var spaceElement in spaces)
+                    if (space is not { Area: > 0 }) continue;
+                    var roomPoint = roomLocationPoint.Point;
+                    // Проверка, находится ли точка внутри BoundingBox
+                    if (space.IsPointInSpace(roomPoint))
                     {
-                        var space = spaceElement as Space;
-
-                        if (space != null && space.Area > 0)
-                        {
-                            var roomPoint = roomLocationPoint.Point;
-                            // Проверка, находится ли точка внутри BoundingBox
-                            if (space.IsPointInSpace(roomPoint))
-                            {
-                                // Добавить пару Room.Id => SelectedSpace.Id в словарь
-                                roomSpaceDictionary.Add(space.Id.ToString(), room.Id.ToString());
-                            }
-                        }
+                        // Добавить пару Room.Id => SelectedSpace.Id в словарь
+                        roomSpaceDictionary.Add(space.Id.ToString(), room.Id.ToString());
                     }
                 }
             }
@@ -75,7 +70,7 @@ namespace HVACLoadTerminals.Utils
 
         }
 
-        public static Room GetRoomByNumber(string roomNumber, List<Element> rooms)
+        public static Room GetRoomByNumber(string roomNumber, List<Room> rooms)
         {
 
             foreach (var roomElement in rooms)

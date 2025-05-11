@@ -26,16 +26,16 @@ public static class AnalyticalModelProcessor
 
     internal static bool IsExteriorWall(EnergyAnalysisSurface surface)
     {
-        return surface.SurfaceType.ToString() is "ExteriorWall" or "UndergroundWall";
+        return surface.Type.ToString() is "ExteriorWall" or "UndergroundWall" or "UndergroundSlab" or "Roof";
     }
 
     public static string GetEnclosureSurfaceType(EnergyAnalysisSurface surface) =>
-        surface.SurfaceType switch
+        surface.Type switch
         {
-            EnergyAnalysisSurfaceType.ExteriorWall => EnclosureTypeOptions.Wall,
-            EnergyAnalysisSurfaceType.Underground => EnclosureTypeOptions.Wall,
-            EnergyAnalysisSurfaceType.Roof => EnclosureTypeOptions.Roof,
-            EnergyAnalysisSurfaceType.ExteriorFloor => EnclosureTypeOptions.Floor,
+            gbXMLSurfaceType.ExteriorWall => EnclosureTypeOptions.Wall,
+            gbXMLSurfaceType.UndergroundWall => EnclosureTypeOptions.Wall,
+            gbXMLSurfaceType.Roof => EnclosureTypeOptions.Roof,
+            gbXMLSurfaceType.UndergroundSlab => EnclosureTypeOptions.Floor,
             _ => EnclosureTypeOptions.Wall
         };
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Analysis;
 using Autodesk.Revit.DB.Mechanical;
+using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
@@ -131,11 +132,16 @@ internal class DirectShapeParameterHandler(
         var open = surface as EnergyAnalysisOpening;
         try
         {
-            ds.LookupParameter(ConstructionName).Set(sf?.GetConstruction().ConstructionName);
+            ds.LookupParameter(ConstructionName).Set(open.OriginatingElementName);
+            _logger.Log($"Конструкция отверстие - {open.OriginatingElementName}");
+
+                
+            
         }
         catch (Exception)
-        {
-            ds.LookupParameter(ConstructionName).Set(open?.OriginatingElementName);
+        {       ds.LookupParameter(ConstructionName).Set(sf?.GetConstruction().ConstructionName);
+            _logger.Log($"Ошибка при определении имени конструкции ={surface.Name}");
+            _logger.Log($"Конструкция стена - {surface.Name}");
         }
     }
 
@@ -154,7 +160,7 @@ internal class DirectShapeParameterHandler(
     private double GetOutTemperatureFromProject()
     {
         var projectInfo = CollectorQuery.GetProjectInfo(doc);
-        return projectInfo.LookupParameter(TemperatureOut)?.AsDouble() ?? 0;
+        return projectInfo.LookupParameter(nameof(ClimateDataModel.TWinterOut092))?.AsDouble() ?? 0;
     }
 
     public string GetOrientationParameter(Element element)
@@ -165,6 +171,23 @@ internal class DirectShapeParameterHandler(
             _logger.Log($"Параметр AZIMUTH не найден для элемента {element?.Id}", LogLevel.Warning);
             return null;
         }
+
+        try
+        {
+            var sf = element as EnergyAnalysisSurface;
+            if (sf.Type.ToString() == "Roof" 
+                || sf.Type.ToString() == "UndergroundSlab" 
+                ||sf.Type.ToString() =="InteriorFloor"
+                || sf.Type.ToString() == "Floor")
+            {
+                return "Horizontal";
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.Log($"Не смог преобразовать Элемент {element.Name}", LogLevel.Error);
+        }
+
 
         var mapper = new OrientationMapping();
         var radians = orientationParam.AsDouble();

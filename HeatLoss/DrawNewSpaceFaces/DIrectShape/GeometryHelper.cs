@@ -63,19 +63,20 @@ public static class GeometryHelper
 
     private static (XYZ direction, double length) GetExtrusionParams(XYZ normal, SurfaceType surfaceType)
     {
-        const double defaultThickness = 0.5;
+        const double defaultWallThickness = 0.5;
+        const double defaultOpeningThickness = 0.7;
 
         return surfaceType switch
         {
-            SurfaceType.Wall when Math.Abs(normal.Z) >= 0.001 => (XYZ.BasisZ, defaultThickness),
+            SurfaceType.Wall when Math.Abs(normal.Z) >= 0.001 => (XYZ.BasisZ, defaultWallThickness),
 
-            SurfaceType.Wall => (normal, defaultThickness),
+            SurfaceType.Wall => (normal, defaultWallThickness),
 
-            SurfaceType.Opening when Math.Abs(normal.Z) > 0.999 => (new XYZ(1, 0, 0), 0.3),
+            SurfaceType.Opening when Math.Abs(normal.Z) > 0.999 => (new XYZ(1, 0, 0), defaultOpeningThickness),
 
-            SurfaceType.Opening => (new XYZ(normal.X, normal.Y, 0).Normalize(), 0.6),
+            SurfaceType.Opening => (new XYZ(normal.X, normal.Y, 0).Normalize(), defaultOpeningThickness),
 
-            _ => (XYZ.BasisZ, defaultThickness)
+            _ => (XYZ.BasisZ, defaultOpeningThickness)
         };
     }
 }

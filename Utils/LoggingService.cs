@@ -15,7 +15,7 @@ public interface ILogger
 {
     void Log(string message, LogLevel level = LogLevel.Info);
 }
-public class LoggingService : ILogger
+public class LoggingService(string fileName = "RevitWallLog.txt") : ILogger
 {
     private static long _logCounter = 0;
     public void Log(string message, LogLevel level = LogLevel.Info)
@@ -32,8 +32,8 @@ public class LoggingService : ILogger
         try
         {
             string path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.Desktop), 
-                "RevitWallLog.txt");
+                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),fileName 
+                );
             
             File.AppendAllText(path, message + Environment.NewLine);
         }
