@@ -133,6 +133,10 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_AnalyzeSpaceBoundariesCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_AnalyzeWallNormalsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_ConvexHullAnalysisCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\DrawWalls.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\SpaceRoomLinker.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\WallCreationContext.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\WallCreationService.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\DrawWalls.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\EnclosureCacheManager.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\FailedFacesManager.cs" />

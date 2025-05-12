@@ -16,7 +16,7 @@ namespace HVACLoadTerminals.Utils
 
         private SpaceBoundaryCurveModel SpaceBoundaryModel { get; set; }
         private Curve Curve { get; set; }
-        IList<Curve> Curves;
+        IList<Curve> _curves;
         public CanvasHelper(Canvas _CustomCanvas,SpaceBoundaryCurveModel _SpaceBoundaryModel, Curve _Curve)
         {
             CustomCanvas = _CustomCanvas;
@@ -101,11 +101,11 @@ namespace HVACLoadTerminals.Utils
         private void AddCurveLable(int scaleFactor)
         {
             // Add line labels
-            for (var i = 0; i < Curves.Count; i++)
+            for (var i = 0; i < _curves.Count; i++)
             {
                 // Calculate midpoint of each line
-                var midX = (Curves[i].GetEndPoint(0).X + Curves[i].GetEndPoint(1).X) / 2 * scaleFactor;
-                var midY = (Curves[i].GetEndPoint(0).Y + Curves[i].GetEndPoint(1).Y) / 2 * scaleFactor;
+                var midX = (_curves[i].GetEndPoint(0).X + _curves[i].GetEndPoint(1).X) / 2 * scaleFactor;
+                var midY = (_curves[i].GetEndPoint(0).Y + _curves[i].GetEndPoint(1).Y) / 2 * scaleFactor;
 
                 // Create a TextBlock for the label
                 var label = new TextBlock

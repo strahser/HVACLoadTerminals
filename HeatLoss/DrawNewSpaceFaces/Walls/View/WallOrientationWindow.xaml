@@ -15,6 +15,22 @@
         <conv:BoolToCollapsedConverter x:Key="BoolToCollapsed"/>
         <conv:StringEqualsConverter x:Key="StringEqualsConverter"/>
         <conv:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
+        <Style x:Key="LinkButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="#0078D4"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock Text="{TemplateBinding Content}" 
+                                   TextDecorations="Underline"
+                                   Padding="{TemplateBinding Padding}"
+                                   Foreground="{TemplateBinding Foreground}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Window.DataContext>
@@ -206,5 +222,40 @@
                    Foreground="{Binding StatusColor}"
                    HorizontalAlignment="Center"
                    Margin="0 10 0 0"/>
+        <!-- Новый блок после списка ошибок -->
+        <Border Grid.Row="9" 
+                Visibility="{Binding FailedWallsCount, Converter={StaticResource GreaterThanZeroConverter}}"
+                Background="#FFF8F8"
+                Margin="0 5 0 10"
+                Padding="10"
+                CornerRadius="5">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          MaxHeight="250">
+                <StackPanel>
+                    <TextBlock Text="Пространства с ошибками:" 
+                               FontWeight="Bold" 
+                               Margin="0 0 0 5"/>
+            
+                    <ItemsControl ItemsSource="{Binding FailedSpacesInfo}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0 3">
+                                    <TextBlock Text="{Binding SpaceName}" Margin="0 0 5 0"/>
+                                    <TextBlock Text="Ошибок: " Foreground="DarkRed"/>
+                                    <TextBlock Text="{Binding FailedFacesCount}" Margin="0 0 10 0"/>
+                            
+                                    <Button Content="Показать" 
+                                            Command="{Binding DataContext.ZoomToSpaceCommand, 
+                                              RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding Location}"
+                                            Padding="5 2"
+                                            Style="{StaticResource LinkButtonStyle}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
     </Grid>
 </Window>

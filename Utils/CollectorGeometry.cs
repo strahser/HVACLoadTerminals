@@ -40,7 +40,7 @@ namespace HVACLoadTerminals.Utils
                 }
                 catch (ArgumentException ex)
                 {
-                return null;
+                    return null;
                 }
             }
             else {return null; }            

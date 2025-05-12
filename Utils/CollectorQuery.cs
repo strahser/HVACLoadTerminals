@@ -307,8 +307,12 @@ namespace HVACLoadTerminals.Utils
         public static ElementId GetFamilyInstances(Document doc, string elementName)
         {
 
-            var listOfElements = new FilteredElementCollector(doc).OfClass(typeof(FamilySymbol)).WhereElementIsElementType()
-                    .ToElements().Where(e => e.Name == elementName).ToList<Element>();
+            var listOfElements = new FilteredElementCollector(doc)
+                .OfClass(typeof(FamilySymbol))
+                .WhereElementIsElementType()
+                .ToElements()
+                .Where(e => e.Name == elementName)
+                .ToList<Element>();
             var symbolId = listOfElements.FirstOrDefault().Id;
 
                //IList<Element> familyInstances = new FilteredElementCollector(RoomDoc).WherePasses(new FamilyInstanceFilter(RoomDoc, symbolId)).ToElements();

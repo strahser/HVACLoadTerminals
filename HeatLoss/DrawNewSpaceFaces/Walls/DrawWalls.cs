@@ -4,41 +4,44 @@ using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.DB.Mechanical;
+using Autodesk.Revit.Exceptions;
 using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.ParametersHandlersStrategy;
 using HVACLoadTerminals.Utils;
+using ArgumentException = System.ArgumentException;
+using ArgumentNullException = Autodesk.Revit.Exceptions.ArgumentNullException;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls;
 
 public class DrawWalls
 {
-    private readonly Document _hvacDocument;
-    private readonly Document _roomDocument;
-    private readonly ILogger _logger;
-    private readonly FailedFacesManager _failedFacesManager;
-    
     private readonly List<Room> _cachedRooms;
-    private readonly List<Space> _cachedSpaces;
+    public readonly List<Space> CachedSpaces;
+    public readonly FailedFacesManager FailedFacesManager;
+    private readonly Document _hvacDocument;
+    private readonly ILogger _logger;
+    private readonly Document _roomDocument;
     private readonly Dictionary<string, Room> _roomKeyCache = new();
     private readonly Dictionary<ElementId, string> _spaceRoomKeyMap = new();
-    public List<Wall> CreatedWalls { get; } = [];
-    public bool IsReady => _hvacDocument != null && _roomDocument?.IsValidObject == true;
-    public List<string> FailedFaceKeys => _failedFacesManager.FailedFaceKeys;
 
     public DrawWalls(Document hvacDocument, Document roomDocument)
     {
         _hvacDocument = hvacDocument;
         _roomDocument = roomDocument;
         _logger = new LoggingService("DrawWalls.log");
-        _failedFacesManager = new FailedFacesManager(_logger);
+        FailedFacesManager = new FailedFacesManager();
         ParametersHandler.GetProjectInformation(hvacDocument, nameof(ClimateDataModel.TWinterOut092));
-        
+
         _cachedRooms = CollectorQuery.GetAllRooms(roomDocument);
-        _cachedSpaces = CollectorQuery.GetAllSpaces(hvacDocument).Cast<Space>().ToList();
-        
+        CachedSpaces = CollectorQuery.GetAllSpaces(hvacDocument).Cast<Space>().ToList();
+
         InitializeCaches();
     }
+
+    public List<Wall> CreatedWalls { get; } = [];
+    public bool IsReady => _hvacDocument != null && _roomDocument?.IsValidObject == true;
+    public List<string> FailedFaceKeys => FailedFacesManager.FailedFaceKeys;
 
     private void InitializeCaches()
     {
@@ -48,7 +51,7 @@ public class DrawWalls
             if (!_roomKeyCache.ContainsKey(key)) _roomKeyCache.Add(key, room);
         }
 
-        foreach (var space in _cachedSpaces.Where(s => s.Location is LocationPoint))
+        foreach (var space in CachedSpaces.Where(s => s.Location is LocationPoint))
         {
             var spacePoint = ((LocationPoint)space.Location).Point;
             var room = _cachedRooms.FirstOrDefault(r => r.IsPointInRoom(spacePoint));
@@ -59,17 +62,14 @@ public class DrawWalls
     public void CreateWallsForSpaces(string northDirection, Level groundLevel, HashSet<ElementId> filter = null)
     {
         ValidateInput(northDirection, groundLevel);
-        
+
         using var transactionGroup = new TransactionGroup(_hvacDocument, "Create Walls");
         transactionGroup.Start();
 
-        foreach (var space in _cachedSpaces)
-        {
-            ProcessSpaceWalls(space, northDirection, groundLevel, filter);
-        }
+        foreach (var space in CachedSpaces) ProcessSpaceWalls(space, northDirection, groundLevel, filter);
 
         transactionGroup.Assimilate();
-        _failedFacesManager.LogFailedOperations();
+        FailedFacesManager.LogFailedOperations();
     }
 
     private void ProcessSpaceWalls(Space space, string northDirection, Level groundLevel, HashSet<ElementId> filter)
@@ -88,10 +88,7 @@ public class DrawWalls
 
         var faces = VerticalWallFacesCalculator
             .GetExternalFaces(_roomDocument, room, filter);
-        foreach (var face in faces)
-        {
-            ProcessSingleFace(space, face, northDirection, groundLevel);
-        }
+        foreach (var face in faces) ProcessSingleFace(space, face, northDirection, groundLevel);
     }
 
     private void ProcessSingleFace(Space space, ConstructionSurfaceModel face, string north, Level groundLevel)
@@ -110,7 +107,7 @@ public class DrawWalls
             curve = GetFaceCurveWithValidation(face._Face);
             if (curve == null)
             {
-                _failedFacesManager
+                FailedFacesManager
                     .RegisterFailure(faceKey, space, face, null, "Invalid face geometry");
                 return;
             }
@@ -123,18 +120,18 @@ public class DrawWalls
             {
                 CreatedWalls.Add(wall);
                 transaction.Commit();
-                _failedFacesManager.RemoveFace(faceKey);
+                FailedFacesManager.RemoveFace(faceKey);
             }
             else
             {
                 transaction.RollBack();
-                _failedFacesManager
+                FailedFacesManager
                     .RegisterFailure(faceKey, space, face, curve, "Failed to create wall");
             }
         }
         catch (Exception ex)
         {
-            _failedFacesManager
+            FailedFacesManager
                 .RegisterFailure(faceKey, space, face, curve, ex.Message);
             LogErrorDetails(curve, face, ex);
         }
@@ -153,19 +150,19 @@ public class DrawWalls
             var curveLoops = face.GetEdgesAsCurveLoops();
             return curveLoops?.FirstOrDefault()?.FirstOrDefault();
         }
-        catch (Autodesk.Revit.Exceptions.ArgumentNullException ex)
+        catch (ArgumentNullException ex)
         {
             _logger.Log($"Invalid face: {ex.Message}", LogLevel.Error);
             return null;
         }
-        catch (Autodesk.Revit.Exceptions.InternalException ex)
+        catch (InternalException ex)
         {
             _logger.Log($"Revit API Error: {ex.Message}", LogLevel.Error);
             return null;
         }
     }
 
-    private Wall CreateWallFromCurve(Space space, Curve curve, ConstructionSurfaceModel face, 
+    private Wall CreateWallFromCurve(Space space, Curve curve, ConstructionSurfaceModel face,
         string north, Level groundLevel)
     {
         if (space.Level == null)
@@ -189,7 +186,7 @@ public class DrawWalls
         }
     }
 
-    private void ConfigureWallParameters(Wall wall, Space space, ConstructionSurfaceModel face, 
+    private void ConfigureWallParameters(Wall wall, Space space, ConstructionSurfaceModel face,
         string north, Level groundLevel, Curve curve)
     {
         var strategy = new WallParametersStrategyFactory(_hvacDocument, north)
@@ -208,7 +205,7 @@ public class DrawWalls
         using var transactionGroup = new TransactionGroup(_hvacDocument, "Retry Failed Walls");
         transactionGroup.Start();
 
-        _failedFacesManager.RetryFailedFaces(data =>
+        FailedFacesManager.RetryFailedFaces(data =>
         {
             try
             {
@@ -230,12 +227,12 @@ public class DrawWalls
                 else
                 {
                     transaction.RollBack();
-                    _failedFacesManager.UpdateError(data.FaceKey, "Retry failed: Unknown error");
+                    FailedFacesManager.UpdateError(data.FaceKey, "Retry failed: Unknown error");
                 }
             }
             catch (Exception ex)
             {
-                _failedFacesManager.UpdateError(data.FaceKey, $"Retry failed: {ex.Message}");
+                FailedFacesManager.UpdateError(data.FaceKey, $"Retry failed: {ex.Message}");
                 _logger.Log($"Retry error [{data.FaceKey}]: {ex.Message}", LogLevel.Error);
             }
         });
@@ -254,7 +251,10 @@ public class DrawWalls
         _logger.Log(logMessage, LogLevel.Error);
     }
 
-    private static string GetRoomKey(Room room) => $"{room.LevelId}_{room.Number}";
+    private static string GetRoomKey(Room room)
+    {
+        return $"{room.LevelId}_{room.Number}";
+    }
 
     private static void ValidateInput(string direction, Level level)
     {

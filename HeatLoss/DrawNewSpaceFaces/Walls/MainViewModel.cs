@@ -4,14 +4,61 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Linq;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Mechanical;
+using Autodesk.Revit.UI;
+
+using CommunityToolkit.Mvvm.Input;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Models;
 using HVACLoadTerminals.Utils;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
+using RelayCommand = HVACLoadTerminals.Utils.RelayCommand;
 
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls;
+public class ViewZoomer
+{
+    public void ZoomTo(XYZ point, Autodesk.Revit.DB.View view)
+    {
+        var uiDoc = new UIDocument(RevitConfig.Document);
+        
+        // Для 3D-видов
+        if (view is View3D view3D)
+        {
+            ZoomFor3DView(view3D, point);
+            return;
+        }
+
+        // Для 2D-видов и других
+        ZoomFor2DView(uiDoc, point);
+    }
+    
+    private static void ZoomFor3DView(View3D view, XYZ point)
+    {
+        using var trans = new Transaction(RevitConfig.Document, "3D Zoom");
+        trans.Start();
+
+        var min = new XYZ(point.X - 25, point.Y - 25, point.Z - 25);
+        var max = new XYZ(point.X + 25, point.Y + 25, point.Z + 25);
+        
+        view.SetSectionBox(new BoundingBoxXYZ { Min = min, Max = max });
+        trans.Commit();
+    }
+
+    private static void ZoomFor2DView(UIDocument uiDoc, XYZ point)
+    {
+        // Создаем временный элемент для зуминга
+        var collector = new FilteredElementCollector(uiDoc.Document)
+            .WhereElementIsNotElementType()
+            .FirstOrDefault(e => e is Space);
+
+        if (collector == null) return;
+        // Показываем элемент и центрируем вид
+        uiDoc.ShowElements(new List<ElementId> { collector.Id });
+        uiDoc.RefreshActiveView();
+    }
+}
 
 
 public class DocumentService
@@ -88,6 +135,13 @@ public class WallTypeService(Document roomDoc, EnclosureCacheManager cacheManage
 }
 
 
+public class FailedSpaceInfo(string name, int count, XYZ location)
+{
+    public string SpaceName { get; } = name;
+    public int FailedFacesCount { get; } = count;
+    public XYZ Location { get; } = location;
+}
+
   public class MainViewModel : ReactiveObject
     {
         private readonly Document _hvacDoc;
@@ -120,14 +174,22 @@ public class WallTypeService(Document roomDoc, EnclosureCacheManager cacheManage
         [Reactive] public bool AllTypesSelected { get; set; }
         [Reactive] public int CreatedWallsCount { get; private set; }
         [Reactive] public int FailedWallsCount { get; private set; }
-        [Reactive] public ObservableCollection<string> ErrorMessages { get; private set; } = new();
+        [Reactive] public ObservableCollection<string> ErrorMessages { get; private set; } = [];
         [Reactive] public string StatusMessage { get; private set; }
-        [Reactive] public ObservableCollection<WallTypeWrapper> AvailableWallTypes { get; set; } = new();
+        [Reactive] public ObservableCollection<WallTypeWrapper> AvailableWallTypes { get; private set; } = [];
+        
+        [Reactive] 
+        public ObservableCollection<FailedSpaceInfo> FailedSpacesInfo { get; set; } = [];
+        public Dictionary<ElementId, (int Count, XYZ Point)> FailedSpaces => 
+            _wallsDrawer.FailedFacesManager.FailedSpaces;
 
         // Commands
         public RelayCommand OkCommand { get; private set; }
         public RelayCommand RefreshCacheCommand { get; private set; }
         public RelayCommand RetryFailedWallsCommand { get; private set; }
+        
+        // Команда для зумирования
+        public RelayCommand<XYZ> ZoomToSpaceCommand { get; private set; }
 
         private void InitializeDefaults()
         {
@@ -143,6 +205,13 @@ public class WallTypeService(Document roomDoc, EnclosureCacheManager cacheManage
             OkCommand = new RelayCommand(_ => ExecuteOk());
             RefreshCacheCommand = new RelayCommand(_ => RefreshCache());
             RetryFailedWallsCommand = new RelayCommand(_ => RetryFailedWalls());
+            
+            ZoomToSpaceCommand = new RelayCommand<XYZ>(point => 
+            {
+                if (point == null) return;
+                var view = RevitConfig.Document.ActiveView;
+                new ViewZoomer().ZoomTo(point, view);
+            });
         }
 
         private void SetupObservables()
@@ -241,19 +310,28 @@ public class WallTypeService(Document roomDoc, EnclosureCacheManager cacheManage
         {
             CreatedWallsCount = _wallsDrawer?.CreatedWalls.Count ?? 0;
             FailedWallsCount = _wallsDrawer?.FailedFaceKeys.Count ?? 0;
-    
             StatusColor = FailedWallsCount > 0 ? "OrangeRed" : "Green";
             StatusMessage = $"Операция завершена. Успешно: {CreatedWallsCount} | Неудачно: {FailedWallsCount}";
         }
 
         private void LogErrors()
         {
+            FailedSpacesInfo.Clear();
             ErrorMessages.Clear();
-            if (_wallsDrawer?.FailedFaceKeys != null)
+
+            if (FailedSpaces!= null)
             {
-                foreach (var error in _wallsDrawer.FailedFaceKeys)
+                foreach (var entry in FailedSpaces)
                 {
-                    ErrorMessages.Add($"Ошибка: {error}");
+                    var space = _wallsDrawer.CachedSpaces.FirstOrDefault(s => s.Id == entry.Key);
+                    if (space != null)
+                    {
+                        FailedSpacesInfo.Add(new FailedSpaceInfo(
+                            space.Name,
+                            entry.Value.Count,
+                            entry.Value.Point
+                        ));
+                    }
                 }
             }
         }
@@ -265,6 +343,7 @@ public class WallTypeService(Document roomDoc, EnclosureCacheManager cacheManage
             ErrorMessages.Insert(0, $"{DateTime.Now:HH:mm:ss} | {ex}");
             _logger.Log($"ERROR: {ex}", LogLevel.Error);
         }
+
     }
 
 
