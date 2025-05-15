@@ -8,7 +8,10 @@ public enum LogLevel
 {
     Info,
     Warning,
-    Error
+    Error,
+    Critical,
+    Debug,
+    
 }
 
 public interface ILogger

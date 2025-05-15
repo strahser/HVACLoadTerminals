@@ -17,7 +17,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Commands;
 [Regeneration(RegenerationOption.Manual)]
 public class _EnergyModelFromBoundariesCommand : IExternalCommand
 {
-    private LoggingService _logger = new LoggingService();
+    private LoggingService _logger = new();
     private const double _perpendicularLength = 3.0;
     private Document _doc;
 

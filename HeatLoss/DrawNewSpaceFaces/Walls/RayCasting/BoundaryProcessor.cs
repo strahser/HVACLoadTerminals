@@ -5,15 +5,10 @@ using Autodesk.Revit.DB.Mechanical;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
 {
-    public class BoundaryProcessor
+    public class BoundaryProcessor(Document doc)
     {
-        public Document _doc;
+        public Document _doc = doc;
         private readonly List<BoundaryData> _boundaryData = new List<BoundaryData>();
-
-        public BoundaryProcessor(Document doc)
-        {
-            _doc = doc;
-        }
 
         public List<BoundaryData> GetAllBoundaryData()
         {
@@ -42,15 +37,9 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
         }
     }
 
-    public class BoundaryData
+    public class BoundaryData(Curve curveData, Space spaceData)
     {
-        public Curve CurveData { get; }
-        public Space SpaceData { get; }
-
-        public BoundaryData(Curve curveData, Space spaceData)
-        {
-            CurveData = curveData;
-            SpaceData = spaceData;
-        }
+        public Curve CurveData { get; } = curveData;
+        public Space SpaceData { get; } = spaceData;
     }
 }

@@ -13,6 +13,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
 
         public void CreateWall(Curve curve, ElementId levelId)
         {
+            const double wallHeight = 9.19;
             try
             {
                 WallType wallType = new FilteredElementCollector(_doc)
@@ -20,8 +21,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
                     .FirstElement() as WallType;
 
                 if (wallType == null) return;
-
-                Wall.Create(_doc, curve, wallType.Id, levelId, 3.0, 0, false, false);
+                Wall.Create(_doc, curve, wallType.Id, levelId, wallHeight, 0, false, false);
             }
             catch { }
         }

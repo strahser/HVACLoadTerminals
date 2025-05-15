@@ -318,20 +318,13 @@ public class FailedSpaceInfo(string name, int count, XYZ location)
         {
             FailedSpacesInfo.Clear();
             ErrorMessages.Clear();
-
-            if (FailedSpaces!= null)
+            if (FailedSpaces == null) return;
+            foreach (var entry in FailedSpaces)
             {
-                foreach (var entry in FailedSpaces)
+                var space = _wallsDrawer.CachedSpaces.FirstOrDefault(s => s.Id == entry.Key);
+                if (space != null)
                 {
-                    var space = _wallsDrawer.CachedSpaces.FirstOrDefault(s => s.Id == entry.Key);
-                    if (space != null)
-                    {
-                        FailedSpacesInfo.Add(new FailedSpaceInfo(
-                            space.Name,
-                            entry.Value.Count,
-                            entry.Value.Point
-                        ));
-                    }
+                    FailedSpacesInfo.Add(new FailedSpaceInfo(space.Name, entry.Value.Count, entry.Value.Point));
                 }
             }
         }
@@ -343,7 +336,6 @@ public class FailedSpaceInfo(string name, int count, XYZ location)
             ErrorMessages.Insert(0, $"{DateTime.Now:HH:mm:ss} | {ex}");
             _logger.Log($"ERROR: {ex}", LogLevel.Error);
         }
-
     }
 
 

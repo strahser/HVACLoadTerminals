@@ -2,7 +2,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 
-namespace HVACLoadTerminals.HeatLoss.Commands
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Commands
 {
     [Transaction(TransactionMode.Manual)]
     public class _AnalyzeWallNormalsCommand : IExternalCommand

@@ -2,44 +2,38 @@ using System.Collections.Generic;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting;
+
+public class SpaceAnalyzer(Document doc)
 {
-    public class SpaceAnalyzer
+    public Document _doc = doc;
+    private readonly HashSet<ElementId> _spaceIds = new HashSet<ElementId>();
+
+    public void CacheSpaces()
     {
-        public Document _doc;
-        private readonly HashSet<ElementId> _spaceIds = new HashSet<ElementId>();
+        _spaceIds.Clear();
+        var spaces = new FilteredElementCollector(_doc)
+            .OfCategory(BuiltInCategory.OST_MEPSpaces)
+            .WhereElementIsNotElementType();
 
-        public SpaceAnalyzer(Document doc)
+        foreach (var space in spaces)
         {
-            _doc = doc;
+            _spaceIds.Add(space.Id);
         }
+    }
 
-        public void CacheSpaces()
+    public bool IsPointInAnySpace(XYZ point, ElementId originalSpaceId)
+    {
+        foreach (var spaceId in _spaceIds)
         {
-            _spaceIds.Clear();
-            var spaces = new FilteredElementCollector(_doc)
-                .OfCategory(BuiltInCategory.OST_MEPSpaces)
-                .WhereElementIsNotElementType();
+            if (spaceId == originalSpaceId) continue;
 
-            foreach (var space in spaces)
+            Space space = _doc.GetElement(spaceId) as Space;
+            if (space?.IsPointInSpace(point) == true)
             {
-                _spaceIds.Add(space.Id);
+                return true;
             }
         }
-
-        public bool IsPointInAnySpace(XYZ point, ElementId originalSpaceId)
-        {
-            foreach (var spaceId in _spaceIds)
-            {
-                if (spaceId == originalSpaceId) continue;
-
-                Space space = _doc.GetElement(spaceId) as Space;
-                if (space?.IsPointInSpace(point) == true)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
+        return false;
     }
 }

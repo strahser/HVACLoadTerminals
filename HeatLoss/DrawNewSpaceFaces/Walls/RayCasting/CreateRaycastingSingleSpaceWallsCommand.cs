@@ -18,7 +18,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
         private const double _tolerance = 0.001;
         private Document _doc;
         private View3D _view3D;
-        private List<Curve> _allBoundaries = new List<Curve>();
+        private List<Curve> _allBoundaries = [];
         private ElementId _currentSpaceId;
         private int _debugCounter;
 

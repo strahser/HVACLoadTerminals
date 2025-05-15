@@ -14,20 +14,11 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting.commands
     {
         private Document _doc;
         private View3D _view3D;
-        private readonly BoundaryProcessor _boundaryProcessor;
-        private readonly WallCreator _wallCreator;
-        private readonly SpaceAnalyzer _spaceAnalyzer;
-        private readonly LoggingService _logger;
-        private readonly GeometryUtility _geometryUtility;
-
-        public CreateRaycastingExteriorWallsCommand()
-        {
-            _boundaryProcessor = new BoundaryProcessor(null);
-            _wallCreator = new WallCreator(null);
-            _spaceAnalyzer = new SpaceAnalyzer(null);
-            _logger = new LoggingService();
-            _geometryUtility = new GeometryUtility();
-        }
+        private readonly BoundaryProcessor _boundaryProcessor = new(null);
+        private readonly WallCreator _wallCreator = new(null);
+        private readonly SpaceAnalyzer _spaceAnalyzer = new(null);
+        private readonly LoggingService _logger = new();
+        private readonly GeometryUtility _geometryUtility = new();
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -41,36 +32,30 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting.commands
                 _wallCreator._doc = _doc;
                 _spaceAnalyzer._doc = _doc;
 
-                _view3D = Get3DView();
+                /*_view3D = Get3DView();
                 if (_view3D == null)
                 {
                     message = "Требуется 3D вид для анализа";
                     return Result.Failed;
-                }
+                }*/
 
                 // Кэширование всех пространств
                 _spaceAnalyzer.CacheSpaces();
 
-                using (Transaction tx = new Transaction(_doc, "Создание наружных стен"))
+                using Transaction tx = new Transaction(_doc, "Создание наружных стен");
+                tx.Start();
+
+                // Сбор всех границ
+                var allBoundaries = _boundaryProcessor.GetAllBoundaryData();
+
+                // Обработка всех помещений
+                var spaces = CollectorQuery.GetAllSpaces(_doc).Cast<Space>();
+
+                foreach (var space in spaces)
                 {
-                    tx.Start();
-
-                    // Сбор всех границ
-                    var allBoundaries = _boundaryProcessor.GetAllBoundaryData();
-
-                    // Обработка всех помещений
-                    var spaces = new FilteredElementCollector(_doc)
-                        .OfCategory(BuiltInCategory.OST_MEPSpaces)
-                        .WhereElementIsNotElementType()
-                        .Cast<Space>();
-
-                    foreach (var space in spaces)
-                    {
-                        ProcessSpace(space, allBoundaries.Select(x=>x.CurveData).ToList());
-                    }
-
-                    tx.Commit();
+                    ProcessSpace(space, allBoundaries.Select(x=>x.CurveData).ToList());
                 }
+                tx.Commit();
                 return Result.Succeeded;
             }
             catch (Exception ex)
@@ -94,11 +79,11 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting.commands
                 {
                     Curve curve = segment.GetCurve();
                     if (curve == null) continue;
-
-                    if (IsExteriorWall(space, curve, allBoundaries))
+                    _wallCreator.CreateWall(curve, levelId);
+                    /*if (IsExteriorWall(space, curve, allBoundaries))
                     {
-                        _wallCreator.CreateWall(curve, levelId);
-                    }
+                        
+                    }*/
                 }
             }
         }

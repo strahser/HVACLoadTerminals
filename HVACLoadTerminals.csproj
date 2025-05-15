@@ -105,6 +105,7 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapeFromAnalyticalOpensCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateDirectShapesForEachElement.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\ConvertToDirectShapeCommand.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\CreateWindowDirectShapes.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\DirectShapeCreator.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\DirectShapeParameterHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\DIrectShape\EnclosureColorManager.cs" />
@@ -168,6 +169,7 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\WallHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\WallZonesCreator.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Zones\Zone.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\CreateAllWallsFromFloor.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\DrawWindowsAndDoorsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\OpensHandler.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\WindowsDoors\WindowsAndDoorsSelectionWindow.xaml.cs" />

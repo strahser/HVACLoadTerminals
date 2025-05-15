@@ -11,7 +11,7 @@ using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.FloorsRoofs
 {
-    public  class DrawFloors
+    public static class DrawFloors
     {
         private static  Document _hvacDocument = RevitConfig.Document;  
         public static int DrawFloorsForSelectedSpaces(Document hvacDocument,List<Space> spaces, 

@@ -28,7 +28,7 @@ public class WallCreationService(
 
         // Используем RoomDocument из линкера
         var faces = VerticalWallFacesCalculator.GetExternalFaces(
-            linker.RoomDocument, // Получаем документ через свойство
+            linker.RoomDocument, 
             room, 
             context.Filter
         );

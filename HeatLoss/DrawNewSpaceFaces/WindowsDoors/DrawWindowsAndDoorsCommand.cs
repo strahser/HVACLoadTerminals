@@ -11,23 +11,10 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
         {
             RevitConfig.Initialize(commandData);
             var hvacDocument = RevitConfig.Document;
-
-            // Создаем ViewModel и окно
-            var viewModel = new WindowsAndDoorsViewModel(hvacDocument);
-            var selectionWindow = new WindowsAndDoorsSelectionWindow
-            {
-                DataContext = viewModel
-            };
-
-            // Отображаем окно как модальное
-            if (selectionWindow.ShowDialog() == true)
-            {
-                return Result.Succeeded;
-            }
-            else
-            {
-                return Result.Cancelled;
-            }
+            var roomDocument = CollectorQuery.GetFirstLinkedDocument(hvacDocument);
+            var walls = CollectorQuery.GetAllWalls(hvacDocument);
+            var logger = new LoggingService("WindowDebug.log");
+   return Result.Succeeded;
         }
     }
 }
