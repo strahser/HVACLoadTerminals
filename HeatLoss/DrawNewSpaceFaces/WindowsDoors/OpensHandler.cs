@@ -5,7 +5,6 @@ using System.Linq;
 using System.Windows;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
-using Autodesk.Revit.UI;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Utils;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
@@ -104,44 +103,75 @@ internal class OpensHandler(Document hvacDocument, Document roomDocument)
         MessageBox.Show($"Создано {count} {openingType}");
     }
 
-    private List<FamilyInstance> DrawBaseOpens(Wall wall, List<Element> opensList, FamilySymbol opensInstance,
-        string enclosureType)
+private List<FamilyInstance> DrawBaseOpens(Wall wall, List<Element> opensList, 
+    FamilySymbol opensInstance, string enclosureType)
+{
+    var logMessage = new System.Text.StringBuilder();
+    logMessage.AppendLine($"Старт создания элементов для стены {wall.Id}");
+    
+    if (opensInstance == null)
+        logMessage.AppendLine("ОШИБКА: Не найдено семейство элемента");
+
+    var openList = new List<FamilyInstance>();
+    
+    foreach (var element in opensList)
     {
-        if (opensInstance == null) TaskDialog.Show("Error", "Не найдено семейство стены/окна");
-        var openList = new List<FamilyInstance>();
-        // Создание окна, если точка вставки находится внутри ограничивающего прямоугольника стены
-        foreach (var element in opensList)
+        var open = (FamilyInstance)element;
+        var level = hvacDocument.GetElement(wall.LevelId) as Level;
+        logMessage.AppendLine($"Уровень стены: {level?.Name}");
+
+        var wallBoundingBox = wall.get_BoundingBox(null);
+        logMessage.AppendLine($"BoundingBox стены: Min={wallBoundingBox.Min}, Max={wallBoundingBox.Max}");
+
+        var locationWindowPoint = (LocationPoint)open.Location;
+        var windowInsertionPoint = locationWindowPoint.Point;
+        logMessage.AppendLine($"Точка вставки: {windowInsertionPoint}");
+
+        var isInBoundBox = CheckIsPointInBoundBox(wallBoundingBox, windowInsertionPoint);
+        logMessage.AppendLine($"Точка внутри BoundingBox: {isInBoundBox}");
+
+        if (!isInBoundBox) continue;
+
+        // Добавлен вывод параметров элемента
+        logMessage.AppendLine($"Параметры исходного элемента: {GetElementParameters(open)}");
+        
+        using var transaction = new Transaction(hvacDocument, $"Создать {enclosureType} {open.Name}");
+        var options = transaction.GetFailureHandlingOptions();
+        options.SetFailuresPreprocessor(new FailureProcessor());
+
+        transaction.SetFailureHandlingOptions(options);
+        transaction.Start();
+        
+        try
         {
-            var open = (FamilyInstance)element;
-            // Получение уровня стены
-            var level = hvacDocument.GetElement(wall.LevelId) as Level;
-            var wallBoundingBox = wall.get_BoundingBox(null);
-            var locationWindowPoint = (LocationPoint)open.Location;
-            // Получение точки вставки окна
-            var windowInsertionPoint = locationWindowPoint.Point;
-            // Проверка, находится ли точка вставки внутри ограничивающего прямоугольника стены
-            if (!CheckIsPointInBoundBox(wallBoundingBox, windowInsertionPoint)) continue;
-            // Создание окна.
-            using var transaction = new Transaction(hvacDocument, $"Создать {enclosureType} {open.Name}");
-            transaction.Start();
-            // **Register the FailureProcessor within the transaction**
-            var options = transaction.GetFailureHandlingOptions();
-            options.SetFailuresPreprocessor(new FailureProcessor());
-
-            transaction.SetFailureHandlingOptions(options);
             var newOpen = hvacDocument.Create.NewFamilyInstance(
-                                                        windowInsertionPoint,
-                                                        opensInstance,
-                                                        wall,
-                                                        level,
-                                                        StructuralType.NonStructural);
-            SetOpensParameters(wall, enclosureType, open, newOpen);
-            transaction.Commit();
-            openList.Add(newOpen);
-        }
+                windowInsertionPoint,
+                opensInstance,
+                wall,
+                level,
+                StructuralType.NonStructural);
 
-        return openList;
+            logMessage.AppendLine($"Создан элемент ID: {newOpen.Id}");
+            openList.Add(newOpen);
+            transaction.Commit();
+        }
+        catch (Exception ex)
+        {
+            logMessage.AppendLine($"Ошибка транзакции: {ex.Message}");
+            transaction.RollBack();
+        }
     }
+
+    Debug.Write(logMessage.ToString());
+    return openList;
+}
+
+private string GetElementParameters(Element element)
+{
+    return string.Join(", ", element.Parameters
+        .Cast<Parameter>()
+        .Select(p => $"{p.Definition.Name}: {p.AsValueString()}"));
+}
 
     private static void SetOpensParameters(Wall wall, string enclosureType, FamilyInstance open, FamilyInstance newOpen)
     {
@@ -198,12 +228,16 @@ internal class OpensHandler(Document hvacDocument, Document roomDocument)
 
     private static bool CheckIsPointInBoundBox(BoundingBoxXYZ boundingBox, XYZ locationPoint)
     {
-        // Проверка, находится ли точка внутри BoundingBox
-        return boundingBox.Min.X <= locationPoint.X + 1 && boundingBox.Max.X >= locationPoint.X - 1 &&
-               boundingBox.Min.Y <= locationPoint.Y + 1 && boundingBox.Max.Y >= locationPoint.Y - 1 &&
-               boundingBox.Min.Z <= locationPoint.Z + 1 && boundingBox.Max.Z >= locationPoint.Z + 1;
+        const double tolerance = 3.0; // 3 метра допуска
+        return locationPoint.X >= boundingBox.Min.X - tolerance && 
+               locationPoint.X <= boundingBox.Max.X + tolerance &&
+               locationPoint.Y >= boundingBox.Min.Y - tolerance &&
+               locationPoint.Y <= boundingBox.Max.Y + tolerance &&
+               locationPoint.Z >= boundingBox.Min.Z - tolerance && 
+               locationPoint.Z <= boundingBox.Max.Z + tolerance;
     }
 }
+
 
 public static class ExternalRooms
 {
