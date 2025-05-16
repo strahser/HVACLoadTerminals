@@ -5,6 +5,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
+using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting.commands
@@ -13,12 +14,10 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting.commands
     public class CreateRaycastingExteriorWallsCommand : IExternalCommand
     {
         private Document _doc;
-        private View3D _view3D;
         private readonly BoundaryProcessor _boundaryProcessor = new(null);
         private readonly WallCreator _wallCreator = new(null);
         private readonly SpaceAnalyzer _spaceAnalyzer = new(null);
         private readonly LoggingService _logger = new();
-        private readonly GeometryUtility _geometryUtility = new();
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -31,29 +30,18 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting.commands
                 _boundaryProcessor._doc = _doc;
                 _wallCreator._doc = _doc;
                 _spaceAnalyzer._doc = _doc;
-
-                /*_view3D = Get3DView();
-                if (_view3D == null)
-                {
-                    message = "Требуется 3D вид для анализа";
-                    return Result.Failed;
-                }*/
-
+                
                 // Кэширование всех пространств
                 _spaceAnalyzer.CacheSpaces();
 
                 using Transaction tx = new Transaction(_doc, "Создание наружных стен");
                 tx.Start();
-
-                // Сбор всех границ
-                var allBoundaries = _boundaryProcessor.GetAllBoundaryData();
-
                 // Обработка всех помещений
                 var spaces = CollectorQuery.GetAllSpaces(_doc).Cast<Space>();
 
                 foreach (var space in spaces)
                 {
-                    ProcessSpace(space, allBoundaries.Select(x=>x.CurveData).ToList());
+                    ProcessSpace(space);
                 }
                 tx.Commit();
                 return Result.Succeeded;
@@ -66,7 +54,7 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting.commands
             }
         }
 
-        private void ProcessSpace(Space space, List<Curve> allBoundaries)
+        private void ProcessSpace(Space space)
         {
             if (space == null) return;
 
@@ -79,49 +67,25 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting.commands
                 {
                     Curve curve = segment.GetCurve();
                     if (curve == null) continue;
-                    _wallCreator.CreateWall(curve, levelId);
-                    /*if (IsExteriorWall(space, curve, allBoundaries))
-                    {
-                        
-                    }*/
+                    var wall = _wallCreator.CreateWall(curve, levelId);
+                    SetWallParameters(wall,space);
                 }
             }
         }
 
-        private bool IsExteriorWall(Space space, Curve curve, List<Curve> allBoundaries)
+        private static void SetWallParameters(Wall wall, Space space)
         {
-            int validPoints = 0;
-            var points = _geometryUtility.GetSamplePoints(curve);
-
-            foreach (var point in points)
-            {
-                XYZ outwardDirection = _geometryUtility.GetOutwardDirection(curve, point, space,_view3D);
-                if (outwardDirection == null) continue;
-
-                XYZ endPoint = point + outwardDirection * 1.0;
-
-                // Проверка нахождения в других помещениях
-                if (_spaceAnalyzer.IsPointInAnySpace(endPoint, space.Id)) continue;
-
-                // Проверка пересечений
-                if (!_geometryUtility.DoesNormalIntersectOtherCurves(point, endPoint, curve, allBoundaries))
-                {
-                    validPoints++;
-                }
-            }
-
-            return validPoints >= (points.Count / 2 + 1);
+            ParametersUtility.SetParameterByValueAndName(
+                wall, nameof(ConstructionSurfaceModel.SpaceName), space.Name);
+            ParametersUtility.SetParameterByValueAndName(
+                wall, nameof(ConstructionSurfaceModel.SpaceId), space.Id.ToString());
+            ParametersUtility.SetParameterByValueAndName(
+                wall, nameof(ConstructionSurfaceModel.SpaceName), space.Name);
+            ParametersUtility.SetParameterByValueAndName(
+                wall, nameof(ConstructionSurfaceModel.SpaceNumber), space.Number.ToString());
+            ParametersUtility.SetParameterByValueAndName(
+                wall, nameof(ConstructionSurfaceModel.EnclosureType), EnclosureTypeOptions.Wall);
         }
 
-        private View3D Get3DView()
-        {
-            return new FilteredElementCollector(_doc)
-                .OfClass(typeof(View3D))
-                .Cast<View3D>()
-                .FirstOrDefault(v => 
-                    !v.IsTemplate && 
-                    v.CanBePrinted && 
-                    !v.IsPerspective);
-        }
     }
 }

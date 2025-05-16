@@ -2,16 +2,11 @@ using Autodesk.Revit.DB;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
 {
-    public class WallCreator
+    public class WallCreator(Document doc)
     {
-        public Document _doc;
+        public Document _doc = doc;
 
-        public WallCreator(Document doc)
-        {
-            _doc = doc;
-        }
-
-        public void CreateWall(Curve curve, ElementId levelId)
+        public Wall CreateWall(Curve curve, ElementId levelId)
         {
             const double wallHeight = 9.19;
             try
@@ -20,10 +15,12 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
                     .OfClass(typeof(WallType))
                     .FirstElement() as WallType;
 
-                if (wallType == null) return;
-                Wall.Create(_doc, curve, wallType.Id, levelId, wallHeight, 0, false, false);
+                if (wallType == null) return null;
+                var wall = Wall.Create(_doc, curve, wallType.Id, levelId, wallHeight, 0, false, false);
+                return wall;
             }
             catch { }
+            return null;
         }
     }
 }
