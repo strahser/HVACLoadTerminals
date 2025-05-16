@@ -1,19 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Windows;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
-using Autodesk.Revit.UI;
-using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Utils;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-using ArgumentException = Autodesk.Revit.Exceptions.ArgumentException;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors;
 
@@ -42,12 +35,14 @@ internal class OpensHandler(Document hvacDocument, Document roomDocument)
         _geometryHelperData.DrawOpensForSelectedWalls(walls, _roomWidowsList, _windowSymbol, EnclosureTypeOptions.Window);
         
         
+       // DuplicateRemover.RemoveWindowDuplicates(hvacDocument);
+        
     }
 
     public void DrawDoors(List<Element> walls)
     {
-        
         _geometryHelperData.DrawOpensForSelectedWalls(walls, _roomDoorsList, _doorSymbol, EnclosureTypeOptions.Door);
+        //DuplicateRemover.RemoveDoorDuplicates(hvacDocument);
     }
 }
 
@@ -159,7 +154,7 @@ internal static class ParameterHandler
         }
     }
 
-    private static double GetOpenDimensionParameterValue(FamilyInstance element, BuiltInParameter parameter)
+    public static double GetOpenDimensionParameterValue(FamilyInstance element, BuiltInParameter parameter)
     {
         var elementParameterValue = element.get_Parameter(parameter).AsDouble();
         var symbolParameterValue = element.Symbol.get_Parameter(parameter).AsDouble();
@@ -169,7 +164,7 @@ internal static class ParameterHandler
         return Math.Sqrt(aReaFt);
     }
 
-    private static void ChangeOpensGeometryDimensionParameter(FamilyInstance newOpenInstance,
+    public static void ChangeOpensGeometryDimensionParameter(FamilyInstance newOpenInstance,
         BuiltInParameter parameter, double parameterValue)
     {
         var newOpenParameterValue = newOpenInstance.get_Parameter(parameter);
@@ -179,9 +174,9 @@ internal static class ParameterHandler
 
 internal class GeometryHelper
 {
-    private LoggingService logMessage = new("WindowDebug.log");
-    private Document _hvacDocument;
-    private List<WindowInsertionModel> _insertionModels = new();
+    private readonly LoggingService _logMessage = new("WindowDebug.log");
+    private readonly Document _hvacDocument;
+    private readonly List<WindowInsertionModel> _insertionModels = [];
 
     // Модель данных для вставки окон
     private class WindowInsertionModel
@@ -192,7 +187,7 @@ internal class GeometryHelper
         public Wall TargetWall { get; set; }
         public FamilySymbol FamilySymbol { get; set; }
         public Level Level { get; set; }
-        public Element OriginalOpening { get; set; }
+        public FamilyInstance OriginalOpening { get; set; }
     }
 
     internal GeometryHelper(Document hvacDocument)
@@ -200,7 +195,7 @@ internal class GeometryHelper
         _hvacDocument = hvacDocument;
     }
 
-    internal void DrawOpensForSelectedWalls(List<Element> walls, List<Element> openings, 
+    internal void DrawOpensForSelectedWalls(List<Element> walls, List<Element> openings,
         FamilySymbol familySymbol, string openingType)
     {
         // Этап 1: Сбор всех потенциальных позиций для вставки
@@ -254,13 +249,14 @@ internal class GeometryHelper
             {
                 CreateOpeningInstance(model);
             }
+
             transaction.Commit();
             MessageBox.Show($"Создано {validatedModels.Count} {openingType}");
         }
         catch (Exception ex)
         {
             transaction.RollBack();
-            logMessage.Log($"Ошибка создания элементов: {ex.Message}");
+            _logMessage.Log($"Ошибка создания элементов: {ex.Message}");
         }
     }
 
@@ -274,8 +270,14 @@ internal class GeometryHelper
             StructuralType.NonStructural);
 
         // Копирование параметров из исходного отверстия
-        //ParameterHandler.CopyParameters(model.OriginalOpening, newOpening);
-        logMessage.Log($"Создано отверстие ID: {newOpening.Id}");
+        //ParameterHandler.SetOpensParameters(model.TargetWall, EnclosureTypeOptions.Wall, model.OriginalOpening, newOpening);
+        ParametersUtility.SetParameterByValueAndName(newOpening, nameof(ConstructionSurfaceModel.ConstructionName), model.OriginalOpening.Name);
+        /*var height = ParameterHandler.GetOpenDimensionParameterValue(model.OriginalOpening, BuiltInParameter.CASEWORK_HEIGHT);
+        var width = ParameterHandler.GetOpenDimensionParameterValue(model.OriginalOpening, BuiltInParameter.GENERIC_WIDTH);
+        ParameterHandler.ChangeOpensGeometryDimensionParameter(newOpening, BuiltInParameter.CASEWORK_HEIGHT, height);
+        ParameterHandler.ChangeOpensGeometryDimensionParameter(newOpening, BuiltInParameter.GENERIC_WIDTH, width);*/
+        
+        _logMessage.Log($"Создано отверстие ID: {newOpening.Id}");
     }
 
     private XYZ RoundPoint(XYZ point, double precision = 0.001)
@@ -286,11 +288,6 @@ internal class GeometryHelper
             Math.Round(point.Z / precision) * precision);
     }
 
-    private string GetParameter(Element element, string paramName)
-    {
-        return element.LookupParameter(paramName)?.AsString() ?? string.Empty;
-    }
-
     private static bool CheckIsPointInBoundBox(BoundingBoxXYZ boundingBox, XYZ locationPoint)
     {
         const int tolerance = 1;
@@ -299,4 +296,84 @@ internal class GeometryHelper
                boundingBox.Min.Y <= locationPoint.Y + tolerance && boundingBox.Max.Y >= locationPoint.Y - tolerance &&
                boundingBox.Min.Z <= locationPoint.Z + tolerance && boundingBox.Max.Z >= locationPoint.Z + tolerance;
     }
+
+    private string GetParameter(Element element, string paramName)
+    {
+        return element.LookupParameter(paramName)?.AsString() ?? string.Empty;
+    }
 }
+
+internal static class DuplicateRemover
+    {
+        private const double Tolerance = 1e-6;
+
+        public static void RemoveWindowDuplicates(Document document)
+        {
+            RemoveDuplicates(document, CollectorQuery.GetAllWindows(document));
+        }
+
+        public static void RemoveDoorDuplicates(Document document)
+        {
+            RemoveDuplicates(document, CollectorQuery.GetAllDoors(document));
+        }
+
+        private static void RemoveDuplicates(Document document, IEnumerable<Element> elements)
+        {
+            var elementsWithPoints = elements
+                .Select(e => new { Element = e, Point = GetLocationPoint(e) })
+                .Where(x => x.Point != null)
+                .ToList();
+
+            var comparer = new XyzComparer();
+            var grouped = elementsWithPoints
+                .GroupBy(x => x.Point, comparer)
+                .Where(g => g.Count() > 1);
+
+            if (!grouped.Any()) return;
+
+            using (Transaction t = new Transaction(document, "Remove Duplicates"))
+            {
+                t.Start();
+                foreach (var group in grouped)
+                {
+                    foreach (var item in group.Skip(1))
+                    {
+                        document.Delete(item.Element.Id);
+                    }
+                }
+
+                t.Commit();
+            }
+        }
+
+        private static XYZ GetLocationPoint(Element element)
+        {
+            if (element.Location is LocationPoint locPoint)
+            {
+                return locPoint.Point;
+            }
+
+            if (element.Location is LocationCurve locCurve)
+            {
+                var curve = locCurve.Curve;
+                return (curve.GetEndPoint(0) + curve.GetEndPoint(1)) / 2;
+            }
+
+            return null;
+        }
+
+        private class XyzComparer : IEqualityComparer<XYZ>
+        {
+            public bool Equals(XYZ x, XYZ y)
+            {
+                return x.IsAlmostEqualTo(y, Tolerance);
+            }
+
+            public int GetHashCode(XYZ obj)
+            {
+                return Math.Round(obj.X, 6).GetHashCode()
+                       ^ Math.Round(obj.Y, 6).GetHashCode()
+                       ^ Math.Round(obj.Z, 6).GetHashCode();
+            }
+        }
+    }
