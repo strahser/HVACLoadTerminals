@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Windows;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
@@ -9,6 +11,8 @@ using Autodesk.Revit.UI;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Utils;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using ArgumentException = Autodesk.Revit.Exceptions.ArgumentException;
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors;
@@ -36,6 +40,8 @@ internal class OpensHandler(Document hvacDocument, Document roomDocument)
     public void DrawWindows(List<Element> walls)
     {
         _geometryHelperData.DrawOpensForSelectedWalls(walls, _roomWidowsList, _windowSymbol, EnclosureTypeOptions.Window);
+        
+        
     }
 
     public void DrawDoors(List<Element> walls)
@@ -171,102 +177,118 @@ internal static class ParameterHandler
     }
 }
 
-internal  class GeometryHelper(Document hvacDocument)
+internal class GeometryHelper
 {
     private LoggingService logMessage = new("WindowDebug.log");
-    internal void DrawOpensForSelectedWalls(List<Element> walls, List<Element> openings, FamilySymbol familySymbol,
-        string openingType)
-    {
-        if (openings == null || openings.Count == 0 || familySymbol == null) return;
-        var count = 0;
-        foreach (var wall in walls.Cast<Wall>())
-            try
-            {
-                var createdOpenings = DrawBaseOpens(wall, openings, familySymbol, openingType);
-                count += createdOpenings.Count;
-            }
-            catch (ArgumentException ex)
-            {
-                // Обработка конкретного исключения, например, несоответствие параметров
-                logMessage.Log($"Ошибка при создании {openingType}: {ex}");
-            }
-            catch (Exception ex)
-            {
-                // Обработка других исключений
-                logMessage.Log($"Непредвиденная ошибка при создании {openingType}: {ex.Message}");
-            }
+    private Document _hvacDocument;
+    private List<WindowInsertionModel> _insertionModels = new();
 
-        MessageBox.Show($"Создано {count} {openingType}");
+    // Модель данных для вставки окон
+    private class WindowInsertionModel
+    {
+        public string SpaceId { get; set; }
+        public string SpaceNumber { get; set; }
+        public XYZ InsertionPoint { get; set; }
+        public Wall TargetWall { get; set; }
+        public FamilySymbol FamilySymbol { get; set; }
+        public Level Level { get; set; }
+        public Element OriginalOpening { get; set; }
     }
 
-    private List<FamilyInstance> DrawBaseOpens(Wall wall, List<Element> opensList, FamilySymbol opensInstance, string enclosureType)
+    internal GeometryHelper(Document hvacDocument)
     {
-        if (opensInstance == null)
-        {
-            TaskDialog.Show("Error", "Не найдено семейство стены/окна");
-            logMessage.Log("ОШИБКА: Не найдено семейство элемента");
-        }
-            
-        var openList = new List<FamilyInstance>();
-        // Создание окна, если точка вставки находится внутри ограничивающего прямоугольника стены
-        logMessage.Log($"Старт создания элементов для стены {wall.Id}");
-        
-        foreach (var element in opensList)
-        {
-            var open = (FamilyInstance)element;
-            // Получение уровня стены
-            var level = hvacDocument.GetElement(wall.LevelId) as Level;
+        _hvacDocument = hvacDocument;
+    }
 
+    internal void DrawOpensForSelectedWalls(List<Element> walls, List<Element> openings, 
+        FamilySymbol familySymbol, string openingType)
+    {
+        // Этап 1: Сбор всех потенциальных позиций для вставки
+        CollectInsertionModels(walls, openings, familySymbol);
+
+        // Этап 2: Валидация и создание элементов
+        CreateValidatedOpenings(openingType);
+    }
+
+    private void CollectInsertionModels(List<Element> walls, List<Element> openings, FamilySymbol familySymbol)
+    {
+        foreach (Wall wall in walls.Cast<Wall>())
+        {
             var wallBoundingBox = wall.get_BoundingBox(null);
-            var locationWindowPoint = (LocationPoint)open.Location;
-            // Получение точки вставки окна
-            var windowInsertionPoint = locationWindowPoint.Point;
+            var level = _hvacDocument.GetElement(wall.LevelId) as Level;
 
-            // Проверка, находится ли точка вставки внутри ограничивающего прямоугольника стены
-            var isInBoundBox = CheckIsPointInBoundBox(wallBoundingBox, windowInsertionPoint);
-            if (isInBoundBox)
+            foreach (FamilyInstance opening in openings.Cast<FamilyInstance>())
             {
-                logMessage.Log($"Точка внутри BoundingBox: wall Name {wall.Name} isInBoundBox: {isInBoundBox}");
-            }
-            
-            if (!isInBoundBox) continue;
-            logMessage.Log($"Начало Транзакции");
-            // Создание окна.
-            using var transaction = new Transaction(hvacDocument, $"Создать {enclosureType} {open.Name}");
-            transaction.Start();
-            // **Register the FailureProcessor within the transaction**
-            var options = transaction.GetFailureHandlingOptions();
-            options.SetFailuresPreprocessor(new FailureProcessor());
-            transaction.SetFailureHandlingOptions(options);
-            logMessage.Log($"Параметры для вставки:\n" +
-                           $" windowInsertionPoint: {windowInsertionPoint} " +
-                                                           $"opensInstance: {opensInstance.Name} " +
-                                                           $"wall: {wall.Name} " +
-                                                           $"level: {level.Name} ");
-            try
-            {
-                var newOpen = hvacDocument.Create
-                    .NewFamilyInstance(windowInsertionPoint, opensInstance, wall, level, StructuralType.NonStructural);
-                if (newOpen != null)
+                var location = (LocationPoint)opening.Location;
+                var point = location.Point;
+
+                if (!CheckIsPointInBoundBox(wallBoundingBox, point)) continue;
+
+                _insertionModels.Add(new WindowInsertionModel
                 {
-                    logMessage.Log($"Создан элемент ID: {newOpen.Id}");
-                    logMessage.Log($"Данные для обработки параметров: wall {wall.Name} " +
-                                   $"enclosureType:  {enclosureType} " +
-                                   $"open Name: {open.Name} " +
-                                   $"newOpen Name: {newOpen.Name} ");
-                    //ParameterHandler.SetOpensParameters(wall, enclosureType, open, newOpen);
-
-                    openList.Add(newOpen);
-                }
-                transaction.Commit();
-            }
-            catch (Exception e)
-            {
-                logMessage.Log($"Ошибка создания элемента : {e.Message}");
-                transaction.RollBack();
+                    SpaceId = GetParameter(opening, "SpaceId"),
+                    SpaceNumber = GetParameter(opening, "SpaceNumber"),
+                    InsertionPoint = point,
+                    TargetWall = wall,
+                    FamilySymbol = familySymbol,
+                    Level = level,
+                    OriginalOpening = opening
+                });
             }
         }
-        return openList;
+    }
+
+    private void CreateValidatedOpenings(string openingType)
+    {
+        var validatedModels = _insertionModels
+            .GroupBy(m => new { m.SpaceId, Point = RoundPoint(m.InsertionPoint) })
+            .Select(g => g.First())
+            .ToList();
+
+        using var transaction = new Transaction(_hvacDocument, $"Create {openingType}s");
+        transaction.Start();
+
+        try
+        {
+            foreach (var model in validatedModels)
+            {
+                CreateOpeningInstance(model);
+            }
+            transaction.Commit();
+            MessageBox.Show($"Создано {validatedModels.Count} {openingType}");
+        }
+        catch (Exception ex)
+        {
+            transaction.RollBack();
+            logMessage.Log($"Ошибка создания элементов: {ex.Message}");
+        }
+    }
+
+    private void CreateOpeningInstance(WindowInsertionModel model)
+    {
+        var newOpening = _hvacDocument.Create.NewFamilyInstance(
+            model.InsertionPoint,
+            model.FamilySymbol,
+            model.TargetWall,
+            model.Level,
+            StructuralType.NonStructural);
+
+        // Копирование параметров из исходного отверстия
+        //ParameterHandler.CopyParameters(model.OriginalOpening, newOpening);
+        logMessage.Log($"Создано отверстие ID: {newOpening.Id}");
+    }
+
+    private XYZ RoundPoint(XYZ point, double precision = 0.001)
+    {
+        return new XYZ(
+            Math.Round(point.X / precision) * precision,
+            Math.Round(point.Y / precision) * precision,
+            Math.Round(point.Z / precision) * precision);
+    }
+
+    private string GetParameter(Element element, string paramName)
+    {
+        return element.LookupParameter(paramName)?.AsString() ?? string.Empty;
     }
 
     private static bool CheckIsPointInBoundBox(BoundingBoxXYZ boundingBox, XYZ locationPoint)
