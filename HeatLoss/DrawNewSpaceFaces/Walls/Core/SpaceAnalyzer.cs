@@ -1,13 +1,14 @@
 using System.Collections.Generic;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
+using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting;
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Core;
 
-public class SpaceAnalyzer(Document doc)
+public class SpaceAnalyzer
 {
-    public Document _doc = doc;
-    private readonly HashSet<ElementId> _spaceIds = new HashSet<ElementId>();
+    private readonly Document _doc = RevitConfig.Document;
+    private readonly HashSet<ElementId> _spaceIds = [];
 
     public void CacheSpaces()
     {

@@ -2,13 +2,14 @@ using System.Collections.Generic;
 using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Mechanical;
+using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Core
 {
-    public class BoundaryProcessor(Document doc)
+    public class BoundaryProcessor
     {
-        public Document _doc = doc;
-        private readonly List<BoundaryData> _boundaryData = new List<BoundaryData>();
+        public Document _doc = RevitConfig.Document;
+        private readonly List<BoundaryData> _boundaryData = [];
 
         public List<BoundaryData> GetAllBoundaryData()
         {

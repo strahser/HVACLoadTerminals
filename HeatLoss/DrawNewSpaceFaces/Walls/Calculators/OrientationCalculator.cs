@@ -6,7 +6,7 @@ using HVACLoadTerminals.ModelsStatic;
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
 
 // Калькулятор ориентации
-public class OrientationCalculator
+public static class OrientationCalculator
 {
     public static string Calculate(Curve curve, string northDirection)
     {

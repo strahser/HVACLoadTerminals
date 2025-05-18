@@ -134,10 +134,10 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_AnalyzeSpaceBoundariesCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_AnalyzeWallNormalsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Commands\_ConvexHullAnalysisCommand.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\DrawWalls.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\SpaceRoomLinker.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\WallCreationContext.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\WallCreationService.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\BoundaryProcessor.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\SpaceAnalyzer.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\Core\WallCreator.cs" />
+    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\CreateRaycastingExteriorWallsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\DrawWalls.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\EnclosureCacheManager.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\FailedFacesManager.cs" />
@@ -149,12 +149,8 @@
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\UndergroundWallParametersStrategy.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\Strategies\WallParameterStrategy.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\ParametersHandlersStrategy\WallParametersStrategyFactory.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\BoundaryProcessor.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\commands\CreateRaycastingExteriorWallsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\CreateRaycastingSingleSpaceWallsCommand.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\GeometryUtility.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\SpaceAnalyzer.cs" />
-    <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\WallCreator.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\Converters\BoolToCollapsedConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="HeatLoss\DrawNewSpaceFaces\Walls\View\Converters\GreaterThanZeroConverter.cs" />
@@ -346,6 +342,9 @@
     <PackageReference Include="System.Text.Json">
       <Version>9.0.0</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="HeatLoss\DrawNewSpaceFaces\Walls\RayCasting\commands\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

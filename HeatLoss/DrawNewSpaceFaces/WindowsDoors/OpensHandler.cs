@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using Autodesk.Revit.DB;
@@ -9,29 +8,145 @@ using Autodesk.Revit.UI;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Utils;
 using HVACLoadTerminals.ModelsStatic;
 using HVACLoadTerminals.Utils;
-using ArgumentException = Autodesk.Revit.Exceptions.ArgumentException;
+
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors;
 
-internal class OpensHandler(Document hvacDocument, Document roomDocument)
+internal class OpensHandler
 {
-    private static readonly List<string> TransferParameters = ConstructionSurfaceModel.TransferParameters;
+    private readonly Document _hvacDocument;
+    
+    private readonly Document _roomDocument;
+    
+    private readonly LoggingService _logger = new("WindowLogger.txt");
+    
+    private readonly OpensGeometryCreator _geometryCreator;
+    
+    private  FamilySymbol _doorSymbol;
 
-    private readonly FamilySymbol _doorSymbol =
-        CollectorQuery.GetAllDoorsFamilySymbols(hvacDocument).FirstOrDefault() as FamilySymbol;
+    private List<Element> _roomDoorsList;
 
-    private readonly List<Element> _roomDoorsList = CollectorQuery.GetAllDoors(roomDocument)
-        .Where(IsExternalElement).ToList();
+    private  List<Element> _roomWidowsList;
 
-    private readonly List<Element> _roomWidowsList = CollectorQuery.GetAllWindows(roomDocument)
-        .Where(IsExternalElement).ToList();
+    private  FamilySymbol _windowSymbol;
+    
+    private  List<Element> _walls;
 
-    private readonly FamilySymbol _windowSymbol = CollectorQuery.GetAllWindowsFamilySymbols(hvacDocument)
+    public OpensHandler(Document hvacDocument, Document roomDocument)
+    {
+        _hvacDocument = hvacDocument;
+        _roomDocument = roomDocument;
+        GetConstructionInstances();
+        _geometryCreator = new OpensGeometryCreator(_hvacDocument, _walls);
+    }
+
+    public void DrawWindows()
+    {
+        
+        _geometryCreator.DrawOpensForSelectedWalls(_roomWidowsList, _windowSymbol, EnclosureTypeOptions.Window);
+    }
+
+    public void DrawDoors()
+    {
+        _geometryCreator.DrawOpensForSelectedWalls(_roomDoorsList, _doorSymbol, EnclosureTypeOptions.Door);
+    }
+
+    private void GetConstructionInstances()
+    {
+      _doorSymbol = CollectorQuery.GetAllDoorsFamilySymbols(_hvacDocument).FirstOrDefault() as FamilySymbol;
+
+      _roomDoorsList = CollectorQuery.GetAllDoors(_roomDocument)
+        .Where(InstanceChecker.IsExternalElement).ToList();
+
+     _roomWidowsList = CollectorQuery.GetAllWindows(_roomDocument)
+        .Where(InstanceChecker.IsExternalElement).ToList();
+
+    _windowSymbol = CollectorQuery.GetAllWindowsFamilySymbols(_hvacDocument)
         .FirstOrDefault() as FamilySymbol;
+    
+     _walls =  CollectorQuery.GetAllWalls(_hvacDocument);
+    }
+}
 
 
+internal class OpensGeometryCreator(Document hvacDocument, List<Element> walls)
+{
+    private readonly LoggingService _logger =new("WindowLogger.txt");
 
-    private static bool IsExternalElement(Element element)
+     public void DrawOpensForSelectedWalls( List<Element> openings, FamilySymbol familySymbol, string openingType)
+    {
+        if (openings == null || openings.Count == 0 || familySymbol == null) return;
+        var count = 0;
+        foreach (var wall in walls.Cast<Wall>())
+            try
+            {
+                var createdOpenings = DrawBaseOpens(wall, openings, familySymbol, openingType);
+                count += createdOpenings.Count;
+            }
+            catch (ArgumentException ex)
+            {
+                // Обработка конкретного исключения, например, несоответствие параметров
+                _logger.Log($"Ошибка при создании {openingType}: {ex.Message}",LogLevel.Error);
+            }
+            catch (Exception ex)
+            {
+                // Обработка других исключений
+                _logger.Log($"Непредвиденная ошибка при создании {openingType}: {ex.Message}",LogLevel.Error);
+            }
+
+        MessageBox.Show($"Создано {count} {openingType}");
+    }
+
+    private List<FamilyInstance> DrawBaseOpens(Wall wall, List<Element> opensList, FamilySymbol opensInstance, string enclosureType)
+    {
+        if (opensInstance == null) TaskDialog.Show("Error", "Не найдено семейство стены/окна");
+        var openList = new List<FamilyInstance>();
+        // Создание окна, если точка вставки находится внутри ограничивающего прямоугольника стены
+        foreach (var element in opensList)
+        {
+            var open = (FamilyInstance)element;
+            var level = hvacDocument.GetElement(wall.LevelId) as Level;
+            var wallBoundingBox = wall.get_BoundingBox(null);
+            var locationWindowPoint = (LocationPoint)open.Location;
+            var windowInsertionPoint = locationWindowPoint.Point;
+            // Проверка, находится ли точка вставки внутри ограничивающего прямоугольника стены
+            if (!InstanceChecker.CheckIsPointInBoundBox(wallBoundingBox, windowInsertionPoint)) continue;
+            // Создание окна.
+            using var transaction = new Transaction(hvacDocument, $"Создать {enclosureType} {open.Name}");
+            transaction.Start();
+            // **Register the FailureProcessor within the transaction**
+            var options = transaction.GetFailureHandlingOptions();
+            options.SetFailuresPreprocessor(new FailureProcessor());
+           transaction.SetFailureHandlingOptions(options);
+           
+            var newOpen = hvacDocument.Create.NewFamilyInstance(
+                windowInsertionPoint,
+                opensInstance,
+                wall,
+                level,
+                StructuralType.NonStructural);
+            _logger.Log($"cоздано окно {newOpen.Name} пространствно {newOpen?.Space?.Number}");
+
+            OpenParametersHandler.TransferParametersFromLinkedDocument(open, newOpen,enclosureType);
+            OpenParametersHandler.TransferParametersFromWall(wall, newOpen);
+            transaction.Commit();
+            openList.Add(newOpen);
+        }
+        return openList;
+    }
+}
+
+internal static class InstanceChecker
+{
+    internal static bool CheckIsPointInBoundBox(BoundingBoxXYZ boundingBox, XYZ locationPoint)
+    {
+        // Проверка, находится ли точка внутри BoundingBox
+        return boundingBox.Min.X <= locationPoint.X + 1 && boundingBox.Max.X >= locationPoint.X - 1 &&
+               boundingBox.Min.Y <= locationPoint.Y + 1 && boundingBox.Max.Y >= locationPoint.Y - 1 &&
+               boundingBox.Min.Z <= locationPoint.Z + 1 && boundingBox.Max.Z >= locationPoint.Z + 1;
+    }
+
+    internal static bool IsExternalElement(Element element)
     {
         if (element is not FamilyInstance instance)
             return false;
@@ -68,116 +183,69 @@ internal class OpensHandler(Document hvacDocument, Document roomDocument)
         var parts = name.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         return parts.Length > 0 ? parts[0].ToLowerInvariant() : null;
     }
+}
 
-    public void DrawWindows(List<Element> walls)
+internal static class ExternalRooms
+{
+    // Список внешних комнат (первое слово в названии)
+    public static HashSet<string> RoomKeywords { get; } = new(StringComparer.OrdinalIgnoreCase)
     {
-        DrawOpensForSelectedWalls(walls, _roomWidowsList, _windowSymbol, EnclosureTypeOptions.Window);
-    }
+        //"балкон",
+        "лоджия"
+    };
 
-    public void DrawDoors(List<Element> walls)
+
+    // Список ключевых слов для исключения элементов
+    public static HashSet<string> ExcludedElementKeywords { get; } = new(StringComparer.OrdinalIgnoreCase)
     {
-        DrawOpensForSelectedWalls(walls, _roomDoorsList, _doorSymbol, EnclosureTypeOptions.Door);
-    }
+        "отлив_металлический",
+        "подоконная доска"
+    };
+}
 
-    private void DrawOpensForSelectedWalls(List<Element> walls, List<Element> openings, FamilySymbol familySymbol,
-        string openingType)
+internal static class  OpenParametersHandler
+{
+    private static readonly List<string> TransferParameters = ConstructionSurfaceModel.TransferParameters;
+
+    internal static void TransferParametersFromWall(Wall wall, FamilyInstance newOpen)
     {
-        if (openings == null || openings.Count == 0 || familySymbol == null) return;
-        var count = 0;
-        foreach (var wall in walls.Cast<Wall>())
-            try
-            {
-                var createdOpenings = DrawBaseOpens(wall, openings, familySymbol, openingType);
-                count += createdOpenings.Count;
-            }
-            catch (ArgumentException ex)
-            {
-                // Обработка конкретного исключения, например, несоответствие параметров
-                Debug.Write($"Ошибка при создании {openingType}: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                // Обработка других исключений
-                Debug.Write($"Непредвиденная ошибка при создании {openingType}: {ex.Message}");
-            }
-
-        MessageBox.Show($"Создано {count} {openingType}");
-    }
-
-    private List<FamilyInstance> DrawBaseOpens(Wall wall, List<Element> opensList, FamilySymbol opensInstance,
-        string enclosureType)
-    {
-        if (opensInstance == null) TaskDialog.Show("Error", "Не найдено семейство стены/окна");
-        var openList = new List<FamilyInstance>();
-        // Создание окна, если точка вставки находится внутри ограничивающего прямоугольника стены
-        foreach (var element in opensList)
-        {
-            var open = (FamilyInstance)element;
-            // Получение уровня стены
-            var level = hvacDocument.GetElement(wall.LevelId) as Level;
-            var wallBoundingBox = wall.get_BoundingBox(null);
-            var locationWindowPoint = (LocationPoint)open.Location;
-            // Получение точки вставки окна
-            var windowInsertionPoint = locationWindowPoint.Point;
-            // Проверка, находится ли точка вставки внутри ограничивающего прямоугольника стены
-            if (!CheckIsPointInBoundBox(wallBoundingBox, windowInsertionPoint)) continue;
-            // Создание окна.
-            using var transaction = new Transaction(hvacDocument, $"Создать {enclosureType} {open.Name}");
-            transaction.Start();
-            // **Register the FailureProcessor within the transaction**
-            var options = transaction.GetFailureHandlingOptions();
-            options.SetFailuresPreprocessor(new FailureProcessor());
-
-            transaction.SetFailureHandlingOptions(options);
-            var newOpen = hvacDocument.Create.NewFamilyInstance(
-                windowInsertionPoint,
-                opensInstance,
-                wall,
-                level,
-                StructuralType.NonStructural);
-            SetOpensParameters(wall, enclosureType, open, newOpen);
-            transaction.Commit();
-            openList.Add(newOpen);
-        }
-
-        return openList;
-    }
-
-    private static void SetOpensParameters(Wall wall, string enclosureType, FamilyInstance open, FamilyInstance newOpen)
-    {
-        // Установка параметров для нового окна
-        var transferCoefficientParam = open.Symbol
-            .get_Parameter(BuiltInParameter.ANALYTICAL_HEAT_TRANSFER_COEFFICIENT);
-        double uValue;
-
-        // Проверка, существует ли параметр
-        if (transferCoefficientParam != null)
-            // Получение значения параметра
-            uValue = transferCoefficientParam.AsDouble();
-        else
-            uValue = 0;
-        var height = GetOpenDimensionParameterValue(open, BuiltInParameter.CASEWORK_HEIGHT);
-        var width = GetOpenDimensionParameterValue(open, BuiltInParameter.GENERIC_WIDTH);
-        ChangeOpensGeometryDimensionParameter(newOpen, BuiltInParameter.CASEWORK_HEIGHT, height);
-        ChangeOpensGeometryDimensionParameter(newOpen, BuiltInParameter.GENERIC_WIDTH, width);
-
-        Debug.Write($"{open.Name}-height {height}-width {width}");
         //забираем параметры из стены
         foreach (var parameter in TransferParameters)
         {
             var parameterValue = wall.LookupParameter(parameter).AsValueString();
+            if(parameterValue==null) continue;
             ParametersUtility.SetParameterByValueAndName(newOpen, parameter, parameterValue);
         }
-
-        //забираем параметры окон дверей из связанного документа
-        ParametersUtility.SetParameterByValueAndName(newOpen, nameof(ConstructionSurfaceModel.TransferCoefficient),
-            uValue);
-        ParametersUtility.SetParameterByValueAndName(newOpen, nameof(ConstructionSurfaceModel.ConstructionName),
-            open.Name);
-        ParametersUtility.SetParameterByValueAndName(newOpen, nameof(ConstructionSurfaceModel.EnclosureType),
-            enclosureType);
     }
 
+   public static void TransferParametersFromLinkedDocument(FamilyInstance open, FamilyInstance newOpen, string enclosureType)
+   {
+       const string transferCoefficientName = nameof(ConstructionSurfaceModel.TransferCoefficient);
+       const string constructionName = nameof(ConstructionSurfaceModel.ConstructionName);
+       const string enclosureTypName = nameof(ConstructionSurfaceModel.EnclosureType);
+       
+        // Установка параметров для нового окна
+
+        var height = GetOpenDimensionParameterValue(open, BuiltInParameter.CASEWORK_HEIGHT);
+        var width = GetOpenDimensionParameterValue(open, BuiltInParameter.GENERIC_WIDTH);
+        
+        var uValue = GetTransferAnaliticParameterValue(open);
+        ParametersUtility.SetParameterByValueAndName(newOpen,transferCoefficientName, uValue);
+        
+        ParametersUtility.SetParameterByValueAndName(newOpen, constructionName, open.Name);
+        ParametersUtility.SetParameterByValueAndName(newOpen, enclosureTypName, enclosureType);
+
+        ChangeOpensGeometryDimensionParameter(newOpen, BuiltInParameter.CASEWORK_HEIGHT, height);
+        ChangeOpensGeometryDimensionParameter(newOpen, BuiltInParameter.GENERIC_WIDTH, width);
+    }
+
+   private static double GetTransferAnaliticParameterValue(FamilyInstance open)
+   {
+       var transferCoefficientParam = open.Symbol.get_Parameter(BuiltInParameter.ANALYTICAL_HEAT_TRANSFER_COEFFICIENT);
+       if (transferCoefficientParam != null)
+           return  transferCoefficientParam.AsDouble();
+       return 0;
+   }
     private static double GetOpenDimensionParameterValue(FamilyInstance element, BuiltInParameter parameter)
     {
         var elementParameterValue = element.get_Parameter(parameter).AsDouble();
@@ -195,30 +263,5 @@ internal class OpensHandler(Document hvacDocument, Document roomDocument)
         var newOpenParameterValue = newOpenInstance.get_Parameter(parameter);
         if (newOpenParameterValue != null && parameterValue > 0) newOpenParameterValue.Set(parameterValue);
     }
-
-    private static bool CheckIsPointInBoundBox(BoundingBoxXYZ boundingBox, XYZ locationPoint)
-    {
-        // Проверка, находится ли точка внутри BoundingBox
-        return boundingBox.Min.X <= locationPoint.X + 1 && boundingBox.Max.X >= locationPoint.X - 1 &&
-               boundingBox.Min.Y <= locationPoint.Y + 1 && boundingBox.Max.Y >= locationPoint.Y - 1 &&
-               boundingBox.Min.Z <= locationPoint.Z + 1 && boundingBox.Max.Z >= locationPoint.Z + 1;
-    }
 }
 
-public static class ExternalRooms
-{
-    // Список внешних комнат (первое слово в названии)
-    public static HashSet<string> RoomKeywords { get; } = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "балкон",
-        "лоджия"
-    };
-
-
-    // Список ключевых слов для исключения элементов
-    public static HashSet<string> ExcludedElementKeywords { get; } = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "отлив_металлический",
-        "подоконная доска"
-    };
-}

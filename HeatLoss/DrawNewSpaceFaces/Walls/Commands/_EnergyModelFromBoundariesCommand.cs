@@ -7,6 +7,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Analysis;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI;
+using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Core;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting;
 using HVACLoadTerminals.Utils;
 
@@ -33,7 +34,7 @@ public class _EnergyModelFromBoundariesCommand : IExternalCommand
             var energyModelCurves = GetEnergyModelCurves();
             _logger.Log($"Кривых из энергомодели: {energyModelCurves.Count}");
 
-            var spaceBoundaries = new BoundaryProcessor(_doc).GetAllBoundaryData();
+            var spaceBoundaries = new BoundaryProcessor().GetAllBoundaryData();
             _logger.Log($"Граничных сегментов: {spaceBoundaries.Count}");
 
             var matchedCurves = MatchCurves(spaceBoundaries, energyModelCurves);

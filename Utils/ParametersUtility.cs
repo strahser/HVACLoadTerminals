@@ -12,32 +12,31 @@ namespace HVACLoadTerminals.Utils
         {
             var parameter = element.LookupParameter(parameterName);
 
-            if (parameter != null)
+            if (parameter == null) return;
+            switch (parameter.StorageType)
             {
                 // Проверка типа параметра и преобразование значения
-                if (parameter.StorageType == StorageType.String)
-                {
+                case StorageType.String:
                     parameter.Set(value.ToString());
-                }
-                else if (parameter.StorageType == StorageType.Double)
-                {
+                    break;
+                case StorageType.Double:
                     parameter.Set(Convert.ToDouble(value));
-                }
-                else if (parameter.StorageType == StorageType.Integer)
-                {
+                    break;
+                case StorageType.Integer:
                     parameter.Set(Convert.ToInt32(value));
-                }
-                else if (parameter.StorageType == StorageType.ElementId)
+                    break;
+                // Преобразование в ElementId (если требуется)
+                case StorageType.ElementId when value is ElementId elementId:
+                    parameter.Set(elementId);
+                    break;
+                case StorageType.ElementId:
                 {
-                    // Преобразование в ElementId (если требуется)
-                    if (value is ElementId elementId)
-                    {
-                        parameter.Set(elementId);
-                    }
-                    else if (value is string elementIdString)
+                    if (value is string elementIdString)
                     {
                         parameter.Set(new ElementId(Convert.ToInt32(elementIdString)));
                     }
+
+                    break;
                 }
             }
         }

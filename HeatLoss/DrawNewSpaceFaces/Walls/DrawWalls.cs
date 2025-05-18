@@ -4,13 +4,11 @@ using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.DB.Mechanical;
-using Autodesk.Revit.Exceptions;
 using HVACLoadTerminals.ClimateData;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Calculators;
 using HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.ParametersHandlersStrategy;
 using HVACLoadTerminals.Utils;
-using ArgumentException = System.ArgumentException;
-using ArgumentNullException = Autodesk.Revit.Exceptions.ArgumentNullException;
+
 
 namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls;
 

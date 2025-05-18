@@ -1,10 +1,11 @@
 using Autodesk.Revit.DB;
+using HVACLoadTerminals.Utils;
 
-namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.RayCasting
+namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.Walls.Core
 {
-    public class WallCreator(Document doc)
+    public class WallCreator
     {
-        public Document _doc = doc;
+        public Document _doc = RevitConfig.Document;
 
         public Wall CreateWall(Curve curve, ElementId levelId)
         {

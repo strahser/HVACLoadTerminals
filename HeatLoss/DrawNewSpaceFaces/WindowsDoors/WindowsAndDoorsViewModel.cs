@@ -12,7 +12,6 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
         // поля
         private Document _selectedRoomDocument;
         private ObservableCollection<Document> _linkedDocuments = [];
-        private readonly List<Element> _walls; 
         private readonly OpensHandler _opens; 
         
         //комманды
@@ -27,7 +26,6 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
             if (LinkedDocuments.Any()) { SelectedRoomDocument = LinkedDocuments.First();}
             DrawWindowsCommand = new RelayCommand(DrawWindows);
             DrawDoorsCommand = new RelayCommand(DrawDoors);
-            _walls =  CollectorQuery.GetAllWalls(hvacDocument);
             _opens = new OpensHandler(hvacDocument, SelectedRoomDocument);
         }
         
@@ -44,8 +42,8 @@ namespace HVACLoadTerminals.HeatLoss.DrawNewSpaceFaces.WindowsDoors
             return linkedInstances.Select(instance => instance.GetLinkDocument()).Where(doc => doc != null).ToList();
         }
         
-        private void DrawWindows(object parameter) { _opens.DrawWindows(_walls);}
+        private void DrawWindows(object parameter) { _opens.DrawWindows();}
 
-        private void DrawDoors(object parameter){ _opens.DrawDoors(_walls);}
+        private void DrawDoors(object parameter){ _opens.DrawDoors();}
     }
 }
