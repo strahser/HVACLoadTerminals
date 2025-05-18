@@ -39,7 +39,7 @@ public class CreateRaycastingExteriorWallsCommand : IExternalCommand
             using Transaction tx = new Transaction(doc, "Создание наружных стен");
             tx.Start();
             // Обработка всех помещений
-            var spaces = FilterSpaces();
+            var spaces = FilterSpaces(true);
 
             foreach (var space in spaces)
             {
@@ -57,8 +57,12 @@ public class CreateRaycastingExteriorWallsCommand : IExternalCommand
 
     }
 
-    private List<Space> FilterSpaces()
+    private List<Space> FilterSpaces(bool all = false)
     {
+        if (all == true)
+        {
+            return CollectorQuery.GetAllSpaces(RevitConfig.Document).Cast<Space>().ToList();
+        }
         var spaces = CollectorQuery.GetAllSpaces(RevitConfig.Document)
             .Cast<Space>()
             .Where(space =>

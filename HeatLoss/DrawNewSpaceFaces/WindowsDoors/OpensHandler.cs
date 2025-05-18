@@ -190,7 +190,7 @@ internal static class ExternalRooms
     // Список внешних комнат (первое слово в названии)
     public static HashSet<string> RoomKeywords { get; } = new(StringComparer.OrdinalIgnoreCase)
     {
-        //"балкон",
+        "балкон",
         "лоджия"
     };
 
