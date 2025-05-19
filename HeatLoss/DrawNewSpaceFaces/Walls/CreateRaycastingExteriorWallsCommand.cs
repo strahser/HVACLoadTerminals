@@ -39,7 +39,7 @@ public class CreateRaycastingExteriorWallsCommand : IExternalCommand
             using Transaction tx = new Transaction(doc, "Создание наружных стен");
             tx.Start();
             // Обработка всех помещений
-            var spaces = FilterSpaces(true);
+            var spaces = FilterSpaces(all:false);
 
             foreach (var space in spaces)
             {
@@ -79,7 +79,7 @@ public class CreateRaycastingExteriorWallsCommand : IExternalCommand
                     return true;
         
                 string firstName = nameParts[0];
-                return !ExternalRooms.RoomKeywords.Contains(firstName);
+                return !ExternalRoomsModel.RoomKeywords.Contains(firstName);
             })
             .ToList();
         return spaces;

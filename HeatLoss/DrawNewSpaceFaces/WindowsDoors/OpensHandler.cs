@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -83,11 +83,7 @@ internal class OpensGeometryCreator(Document hvacDocument, List<Element> walls)
                 var createdOpenings = DrawBaseOpens(wall, openings, familySymbol, openingType);
                 count += createdOpenings.Count;
             }
-            catch (ArgumentException ex)
-            {
-                // Обработка конкретного исключения, например, несоответствие параметров
-                _logger.Log($"Ошибка при создании {openingType}: {ex.Message}",LogLevel.Error);
-            }
+
             catch (Exception ex)
             {
                 // Обработка других исключений
@@ -104,10 +100,13 @@ internal class OpensGeometryCreator(Document hvacDocument, List<Element> walls)
         // Создание окна, если точка вставки находится внутри ограничивающего прямоугольника стены
         foreach (var element in opensList)
         {
-            var open = (FamilyInstance)element;
+            var open = element as FamilyInstance;
+            if (open?.Location == null || !(open.Location is LocationPoint locationWindowPoint))
+            {
+                continue;
+            }
             var level = hvacDocument.GetElement(wall.LevelId) as Level;
             var wallBoundingBox = wall.get_BoundingBox(null);
-            var locationWindowPoint = (LocationPoint)open.Location;
             var windowInsertionPoint = locationWindowPoint.Point;
             // Проверка, находится ли точка вставки внутри ограничивающего прямоугольника стены
             if (!InstanceChecker.CheckIsPointInBoundBox(wallBoundingBox, windowInsertionPoint)) continue;
@@ -153,7 +152,7 @@ internal static class InstanceChecker
 
         // Проверка на исключение по имени элемента
         var elementName = instance.Name?.Trim() ?? "";
-        var isExcluded = ExternalRooms.ExcludedElementKeywords
+        var isExcluded = ExternalRoomsModel.ExcludedElementKeywords
             .Any(keyword => elementName.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0);
 
         if (isExcluded)
@@ -167,10 +166,10 @@ internal static class InstanceChecker
         var firstWordTo = GetFirstWordLowercase(toRoom?.Name);
 
         var isFromExternal = fromRoom == null ||
-                             (firstWordFrom != null && ExternalRooms.RoomKeywords.Contains(firstWordFrom));
+                             (firstWordFrom != null && ExternalRoomsModel.RoomKeywords.Contains(firstWordFrom));
 
         var isToExternal = toRoom == null ||
-                           (firstWordTo != null && ExternalRooms.RoomKeywords.Contains(firstWordTo));
+                           (firstWordTo != null && ExternalRoomsModel.RoomKeywords.Contains(firstWordTo));
         return isFromExternal || isToExternal;
     }
 
@@ -185,7 +184,7 @@ internal static class InstanceChecker
     }
 }
 
-internal static class ExternalRooms
+internal static class ExternalRoomsModel
 {
     // Список внешних комнат (первое слово в названии)
     public static HashSet<string> RoomKeywords { get; } = new(StringComparer.OrdinalIgnoreCase)
@@ -264,4 +263,3 @@ internal static class  OpenParametersHandler
         if (newOpenParameterValue != null && parameterValue > 0) newOpenParameterValue.Set(parameterValue);
     }
 }
-
