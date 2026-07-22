@@ -1,0 +1,102 @@
+<Window x:Class="HVACLoadTerminals.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:oxy="http://oxyplot.org/wpf"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:vm="clr-namespace:HVACLoadTerminals.App.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance vm:MainViewModel}"
+        Title="HVAC Load Terminals - Placement Designer"
+        Height="800" Width="1200"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <Style TargetType="Button" x:Key="ActionButton">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style TargetType="Label" x:Key="SectionHeader">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,8,0,4"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="#F5F5F5" Padding="8" BorderBrush="#DDD" BorderThickness="0,0,1,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Label Style="{StaticResource SectionHeader}">Projects &amp; Rooms</Label>
+                    <ListBox x:Name="RoomListBox"
+                             ItemsSource="{Binding Rooms}"
+                             SelectedItem="{Binding SelectedRoom}"
+                             DisplayMemberPath="RoomName"
+                             Height="200"/>
+
+                    <Label Style="{StaticResource SectionHeader}">System Data</Label>
+                    <DataGrid x:Name="SystemGrid"
+                              ItemsSource="{Binding SelectedRoomSystems}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              Height="120">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="System" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="60"/>
+                            <DataGridTextColumn Header="Flow" Binding="{Binding FlowRate}" Width="60"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <Label Style="{StaticResource SectionHeader}">Device Catalog</Label>
+                    <DataGrid x:Name="CatalogGrid"
+                              ItemsSource="{Binding DeviceCatalog}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              Height="120">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Device" Binding="{Binding FamilyName}" Width="*"/>
+                            <DataGridTextColumn Header="Max Flow" Binding="{Binding MaxFlowRate}" Width="60"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <Label Style="{StaticResource SectionHeader}">Actions</Label>
+                    <Button Style="{StaticResource ActionButton}"
+                            Command="{Binding CalculatePlacementCommand}">
+                        Calculate Placement
+                    </Button>
+                    <Button Style="{StaticResource ActionButton}"
+                            Command="{Binding ShowAllRoomsCommand}">
+                        Show All Rooms
+                    </Button>
+                    <Button Style="{StaticResource ActionButton}"
+                            Command="{Binding ExportToJsonCommand}">
+                        Export to JSON
+                    </Button>
+                    <Button Style="{StaticResource ActionButton}"
+                            Command="{Binding ImportFromJsonCommand}">
+                        Import from JSON
+                    </Button>
+
+                    <Label Style="{StaticResource SectionHeader}">Placement Info</Label>
+                    <TextBlock x:Name="InfoText"
+                               Text="{Binding StatusMessage}"
+                               TextWrapping="Wrap"
+                               Margin="4"
+                               Foreground="#333"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Grid Grid.Column="1">
+            <oxy:PlotView x:Name="MainPlot"
+                          Model="{Binding PlotModel}"
+                          Margin="8"/>
+        </Grid>
+    </Grid>
+</Window>
