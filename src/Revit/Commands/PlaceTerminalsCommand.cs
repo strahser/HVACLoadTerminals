@@ -7,6 +7,7 @@ using HVACLoadTerminals.Core.Interfaces;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Services;
 using HVACLoadTerminals.Infrastructure.Visualization;
+using HVACLoadTerminals.Revit.Logging;
 using HVACLoadTerminals.Revit.Services;
 
 namespace HVACLoadTerminals.Revit.Commands
@@ -16,33 +17,48 @@ namespace HVACLoadTerminals.Revit.Commands
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            var uiApp = commandData.Application;
-            var uiDoc = uiApp.ActiveUIDocument;
-            var doc = uiDoc.Document;
-
-            var geometryProvider = new RevitRoomGeometryProvider(doc);
-            var systemProvider = new RevitRoomSystemProvider(doc);
-
-            var rooms = geometryProvider.GetAllRooms();
-            if (rooms.Count == 0)
+            const string cmd = "PlaceTerminals";
+            HvacLogger.Info($"{cmd} started");
+            try
             {
-                TaskDialog.Show("No Spaces", "No MEP Spaces found in the current document.");
+                var uiApp = commandData.Application;
+                var uiDoc = uiApp.ActiveUIDocument;
+                var doc = uiDoc.Document;
+                HvacLogger.Info($"  Active doc: {(doc != null ? doc.Title : "<null>")}");
+
+                var geometryProvider = new RevitRoomGeometryProvider(doc);
+                var systemProvider = new RevitRoomSystemProvider(doc);
+
+                var rooms = geometryProvider.GetAllRooms();
+                if (rooms.Count == 0)
+                {
+                    TaskDialog.Show("No Spaces", "No MEP Spaces found in the current document.");
+                    return Result.Failed;
+                }
+
+                var placementService = new TerminalPlacementService();
+                var visualizer = new OxyPlotVisualizer();
+
+                foreach (var placement in rooms.SelectMany(r =>
+                    placementService.CalculateAllPlacements(new[] { r },
+                        new SimpleCatalog())))
+                {
+                    visualizer.ShowRoomWithPlacements(
+                        placement.Room,
+                        placement.Placements);
+                }
+
+                HvacLogger.Info($"{cmd} finished");
+                return Result.Succeeded;
+            }
+            catch (System.Exception ex)
+            {
+                HvacLogger.LogException($"{cmd} failed", ex);
+                TaskDialog.Show("HVAC Load Terminals — error",
+                    $"{cmd} failed:\n{ex.Message}\n\nLog:\n{HvacLogger.LogFilePath}");
+                message = ex.Message;
                 return Result.Failed;
             }
-
-            var placementService = new TerminalPlacementService();
-            var visualizer = new OxyPlotVisualizer();
-
-            foreach (var placement in rooms.SelectMany(r =>
-                placementService.CalculateAllPlacements(new[] { r },
-                    new SimpleCatalog())))
-            {
-                visualizer.ShowRoomWithPlacements(
-                    placement.Room,
-                    placement.Placements);
-            }
-
-            return Result.Succeeded;
         }
 
         private class SimpleCatalog : ITerminalCatalogRepository

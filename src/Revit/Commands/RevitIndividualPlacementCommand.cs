@@ -6,6 +6,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Services;
+using HVACLoadTerminals.Revit.Logging;
 using HVACLoadTerminals.Revit.Services;
 
 namespace HVACLoadTerminals.Revit.Commands
@@ -23,11 +24,14 @@ namespace HVACLoadTerminals.Revit.Commands
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            const string cmd = "RevitIndividualPlacement";
+            HvacLogger.Info($"{cmd} started");
             try
             {
                 var uiApp = commandData.Application;
                 var uiDoc = uiApp.ActiveUIDocument;
                 var doc = uiDoc.Document;
+                HvacLogger.Info($"  Active doc: {(doc != null ? doc.Title : "<null>")}");
 
                 // 1. Current selection filtered to spatial elements (Room or Space).
                 var spatialElements = uiDoc.Selection.GetElementIds()
@@ -117,10 +121,14 @@ namespace HVACLoadTerminals.Revit.Commands
                 bool placed = preview.PreviewAndConfirm(
                     allPlacements, "Individual Placement Preview");
 
+                HvacLogger.Info($"{cmd} finished, placed={placed}, devices={allPlacements.Count}");
                 return placed ? Result.Succeeded : Result.Cancelled;
             }
             catch (Exception ex)
             {
+                HvacLogger.LogException($"{cmd} failed", ex);
+                TaskDialog.Show("HVAC Load Terminals — error",
+                    $"{cmd} failed:\n{ex.Message}\n\nLog:\n{HvacLogger.LogFilePath}");
                 message = ex.Message;
                 return Result.Failed;
             }

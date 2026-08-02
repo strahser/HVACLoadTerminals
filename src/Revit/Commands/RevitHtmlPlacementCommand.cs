@@ -9,6 +9,7 @@ using Autodesk.Revit.UI;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Services;
 using HVACLoadTerminals.Infrastructure.Visualization;
+using HVACLoadTerminals.Revit.Logging;
 using HVACLoadTerminals.Revit.Services;
 
 namespace HVACLoadTerminals.Revit.Commands
@@ -27,6 +28,8 @@ namespace HVACLoadTerminals.Revit.Commands
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            const string cmd = "RevitHtmlPlacement";
+            HvacLogger.Info($"{cmd} started");
             try
             {
                 var uiDoc = commandData.Application.ActiveUIDocument;
@@ -37,6 +40,7 @@ namespace HVACLoadTerminals.Revit.Commands
                 }
 
                 var doc = uiDoc.Document;
+                HvacLogger.Info($"  Active doc: {(doc != null ? doc.Title : "<null>")}");
 
                 // 1. Collect rooms. RevitRoomGeometryProvider returns RoomPolygon
                 //    objects whose Systems list is already populated from the Space
@@ -102,10 +106,14 @@ namespace HVACLoadTerminals.Revit.Commands
                 //    commit, No/error = rollback (nothing stays in the model).
                 var preview = new RevitPlacementPreviewService(uiDoc);
                 bool placed = preview.PreviewAndConfirm(allPlacements, "Terminal Placement Preview");
+                HvacLogger.Info($"{cmd} finished, placed={placed}, devices={allPlacements.Count}");
                 return placed ? Result.Succeeded : Result.Cancelled;
             }
             catch (Exception ex)
             {
+                HvacLogger.LogException($"{cmd} failed", ex);
+                TaskDialog.Show("HVAC Load Terminals — error",
+                    $"{cmd} failed:\n{ex.Message}\n\nLog:\n{HvacLogger.LogFilePath}");
                 message = ex.Message;
                 return Result.Failed;
             }

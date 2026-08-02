@@ -3,6 +3,7 @@ using System.Reflection;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using HVACLoadTerminals.Revit.Logging;
 using HVACLoadTerminals.Revit.Testing;
 
 namespace HVACLoadTerminals.Revit.Commands
@@ -17,10 +18,14 @@ namespace HVACLoadTerminals.Revit.Commands
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            const string cmd = "RevitTestRunner";
+            HvacLogger.Info($"{cmd} started");
             try
             {
                 // Provide the active Document to integration test fixtures via static holder
-                TestDocumentContext.Document = commandData.Application.ActiveUIDocument.Document;
+                var activeDoc = commandData.Application.ActiveUIDocument?.Document;
+                TestDocumentContext.Document = activeDoc;
+                HvacLogger.Info($"  Active doc: {(activeDoc != null ? activeDoc.Title : "<null>")}");
 
                 var results = RevitTestRunner.RunAll(Assembly.GetExecutingAssembly());
                 string reportPath = RevitTestRunner.WriteReport(results, "Revit 2024");
@@ -30,8 +35,14 @@ namespace HVACLoadTerminals.Revit.Commands
                 foreach (var r in results)
                 {
                     if (r.Passed) passed++;
-                    else failed++;
+                    else
+                    {
+                        failed++;
+                        HvacLogger.Warn($"  Test failed: {r.Fixture}.{r.Method} — {r.Error}");
+                    }
                 }
+
+                HvacLogger.Info($"{cmd} finished: {passed}/{results.Count} passed, {failed} failed. Report: {reportPath}");
 
                 TaskDialog.Show("HVAC Load Terminals — Tests",
                     $"Passed: {passed}/{results.Count}\n" +
@@ -42,8 +53,10 @@ namespace HVACLoadTerminals.Revit.Commands
             }
             catch (Exception ex)
             {
+                HvacLogger.LogException($"{cmd} failed", ex);
+                TaskDialog.Show("HVAC Load Terminals — Tests",
+                    $"Error: {ex.Message}\n\nLog:\n{HvacLogger.LogFilePath}");
                 message = ex.Message;
-                TaskDialog.Show("HVAC Load Terminals — Tests", "Error: " + ex.Message);
                 return Result.Failed;
             }
         }
