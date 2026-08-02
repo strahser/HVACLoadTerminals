@@ -6,44 +6,13 @@ namespace HVACLoadTerminals.Core.Services
 {
     public class PolygonOffsetService
     {
-        public IReadOnlyList<Point2D> OffsetInward(Polygon2D polygon, double offsetMm)
+        /// <summary>
+        /// Offsets the polygon inward. <paramref name="offsetUnits"/> is in the same units
+        /// as the polygon coordinates (feet for Revit data). Delegates to Clipper2.
+        /// </summary>
+        public IReadOnlyList<Point2D> OffsetInward(Polygon2D polygon, double offsetUnits)
         {
-            var verts = polygon.Vertices;
-            int n = verts.Count;
-            var result = new List<Point2D>(n);
-
-            for (int i = 0; i < n; i++)
-            {
-                var prev = verts[(i - 1 + n) % n];
-                var curr = verts[i];
-                var next = verts[(i + 1) % n];
-
-                double dx1 = curr.X - prev.X;
-                double dy1 = curr.Y - prev.Y;
-                double len1 = Math.Sqrt(dx1 * dx1 + dy1 * dy1);
-                if (len1 < 1e-12) continue;
-
-                double nx1 = -dy1 / len1;
-                double ny1 = dx1 / len1;
-
-                double dx2 = next.X - curr.X;
-                double dy2 = next.Y - curr.Y;
-                double len2 = Math.Sqrt(dx2 * dx2 + dy2 * dy2);
-                if (len2 < 1e-12) continue;
-
-                double nx2 = -dy2 / len2;
-                double ny2 = dx2 / len2;
-
-                double cx = (nx1 + nx2) / 2.0;
-                double cy = (ny1 + ny2) / 2.0;
-                double clen = Math.Sqrt(cx * cx + cy * cy);
-                if (clen < 1e-12) continue;
-
-                double scale = offsetMm / clen;
-                result.Add(new Point2D(curr.X + cx * scale, curr.Y + cy * scale));
-            }
-
-            return result;
+            return ClipperGeometryService.OffsetInward(polygon, offsetUnits);
         }
 
         public IReadOnlyList<Point2D> DistributePointsOnOffset(

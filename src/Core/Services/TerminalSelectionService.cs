@@ -78,5 +78,60 @@ namespace HVACLoadTerminals.Core.Services
 
             return (devices, bestCount);
         }
+
+        /// <summary>
+        /// Selects <paramref name="count"/> devices of a single family for the given
+        /// system type according to the placement mode:
+        /// <list type="bullet">
+        /// <item><see cref="PlacementMode.ByCalculation"/> / <see cref="PlacementMode.ByStep"/> —
+        /// the best device (fewest units needed, i.e. highest flow) is repeated
+        /// <paramref name="count"/> times.</item>
+        /// <item><see cref="PlacementMode.ByCount"/> — the largest-flow device of the matching
+        /// system type is repeated exactly <paramref name="count"/> times.</item>
+        /// </list>
+        /// The count itself is expected to come from <see cref="QuantityCalculator"/>.
+        /// Returns an empty list when the catalog has no compatible device or count &lt; 1.
+        /// </summary>
+        public IReadOnlyList<TerminalDevice> SelectDevicesForQuantity(
+            IReadOnlyList<TerminalDevice> catalog,
+            HVACSystemType systemType,
+            int count,
+            PlacementOptions options)
+        {
+            if (catalog == null || count < 1)
+                return Array.Empty<TerminalDevice>();
+
+            var compatible = catalog
+                .Where(d => d.SystemType == systemType && d.MaxFlowRate > 0)
+                .ToList();
+
+            if (compatible.Count == 0)
+                return Array.Empty<TerminalDevice>();
+
+            var best = PickBestDevice(compatible)!;
+            if (options.Mode == PlacementMode.ByCount)
+            {
+                best = compatible.OrderByDescending(d => d.MaxFlowRate).First();
+            }
+
+            return Enumerable.Repeat(best, count).ToList();
+        }
+
+        /// <summary>
+        /// Returns the device from <paramref name="compatible"/> that needs the fewest
+        /// units for a given load — for a fixed required flow that is the device with the
+        /// highest <see cref="TerminalDevice.MaxFlowRate"/> (minimal ceil ratio). Returns
+        /// null when the list is empty or contains only zero-flow devices.
+        /// </summary>
+        public TerminalDevice? PickBestDevice(IReadOnlyList<TerminalDevice> compatible)
+        {
+            if (compatible == null || compatible.Count == 0)
+                return null;
+
+            return compatible
+                .Where(d => d.MaxFlowRate > 0)
+                .OrderByDescending(d => d.MaxFlowRate)
+                .FirstOrDefault();
+        }
     }
 }

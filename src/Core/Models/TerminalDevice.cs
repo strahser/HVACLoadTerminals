@@ -10,6 +10,15 @@ namespace HVACLoadTerminals.Core.Models
         public string FlowParameterName { get; }
         public HVACSystemType SystemType { get; }
 
+        /// <summary>Cooling capacity, Watts. 0 = not applicable.</summary>
+        public double CoolingCapacityW { get; }
+
+        /// <summary>Device footprint width, mm. 0 = unknown.</summary>
+        public double WidthMm { get; }
+
+        /// <summary>Device footprint height (depth from the wall), mm. 0 = unknown.</summary>
+        public double HeightMm { get; }
+
         public TerminalDevice(
             string id,
             string familyName,
@@ -17,7 +26,10 @@ namespace HVACLoadTerminals.Core.Models
             string manufacturer,
             double maxFlowRate,
             string flowParameterName,
-            HVACSystemType systemType)
+            HVACSystemType systemType,
+            double coolingCapacityW = 0,
+            double widthMm = 0,
+            double heightMm = 0)
         {
             Id = id;
             FamilyName = familyName;
@@ -26,6 +38,9 @@ namespace HVACLoadTerminals.Core.Models
             MaxFlowRate = maxFlowRate;
             FlowParameterName = flowParameterName;
             SystemType = systemType;
+            CoolingCapacityW = coolingCapacityW;
+            WidthMm = widthMm;
+            HeightMm = heightMm;
         }
 
         public override string ToString() => $"{FamilyName} - {TypeName} ({MaxFlowRate} m3/h)";

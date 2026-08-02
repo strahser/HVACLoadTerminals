@@ -38,9 +38,30 @@ namespace HVACLoadTerminals.Revit
                 assembly.Location,
                 "HVACLoadTerminals.Revit.Commands.ExportRoomDataCommand");
 
+            var runTestsBtnData = new PushButtonData(
+                "RunTests",
+                "Run\nTests",
+                assembly.Location,
+                "HVACLoadTerminals.Revit.Commands.RevitTestRunnerCommand");
+
+            var massBtnData = new PushButtonData(
+                "MassPlacement",
+                "Mass\nPlacement",
+                assembly.Location,
+                "HVACLoadTerminals.Revit.Commands.RevitHtmlPlacementCommand");
+
+            var individualBtnData = new PushButtonData(
+                "IndividualPlacement",
+                "Individual\nPlacement",
+                assembly.Location,
+                "HVACLoadTerminals.Revit.Commands.RevitIndividualPlacementCommand");
+
             panel.AddItem(placeBtnData);
             panel.AddItem(reviewBtnData);
             panel.AddItem(exportBtnData);
+            panel.AddItem(massBtnData);
+            panel.AddItem(individualBtnData);
+            panel.AddItem(runTestsBtnData);
 
             return Result.Succeeded;
         }

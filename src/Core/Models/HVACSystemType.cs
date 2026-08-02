@@ -4,6 +4,7 @@ namespace HVACLoadTerminals.Core.Models
     {
         Supply,
         Exhaust,
-        FanCoil
+        FanCoil,
+        Cooling
     }
 }
