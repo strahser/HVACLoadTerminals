@@ -25,4 +25,31 @@
     <ProjectReference Include="..\Core\HVACLoadTerminals.Core.csproj" />
     <ProjectReference Include="..\Infrastructure\HVACLoadTerminals.Infrastructure.csproj" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Папка плагинов Revit 2024 (можно переопределить: -p:RevitAddinsDir="...") -->
+    <RevitAddinsDir Condition="'$(RevitAddinsDir)' == ''">$(ALLUSERSPROFILE)\Autodesk\Revit\Addins\2024</RevitAddinsDir>
+  </PropertyGroup>
+
+  <!-- Автокопирование сборки и .addin в папку плагинов Revit после сборки -->
+  <ItemGroup>
+    <RevitAddinFiles Include="$(TargetDir)*.dll;$(TargetDir)*.pdb" />
+    <RevitAddinNative64 Include="$(TargetDir)x64\*.*" Condition="Exists('$(TargetDir)x64')" />
+    <RevitAddinNative86 Include="$(TargetDir)x86\*.*" Condition="Exists('$(TargetDir)x86')" />
+  </ItemGroup>
+  <Target Name="CopyToRevitAddins" AfterTargets="Build" Condition="Exists('$(RevitAddinsDir)')">
+    <Message Importance="high" Text="[HVAC] Copying add-in files to $(RevitAddinsDir)\HVACLoadTerminals" />
+    <Copy SourceFiles="@(RevitAddinFiles)"
+          DestinationFolder="$(RevitAddinsDir)\HVACLoadTerminals"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RevitAddinNative64)"
+          DestinationFolder="$(RevitAddinsDir)\HVACLoadTerminals\x64"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RevitAddinNative86)"
+          DestinationFolder="$(RevitAddinsDir)\HVACLoadTerminals\x86"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\HVACLoadTerminals.addin"
+          DestinationFolder="$(RevitAddinsDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>
