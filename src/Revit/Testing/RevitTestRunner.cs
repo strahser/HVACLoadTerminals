@@ -127,7 +127,8 @@ namespace HVACLoadTerminals.Revit.Testing
               .Append("\",\"Host\":\"").Append(Escape(hostName))
               .Append("\",\"Total\":").Append(results.Count)
               .Append(",\"Passed\":").Append(results.Count(r => r.Passed))
-              .Append(",\"Failed\":").Append(results.Count(r => !r.Passed))
+              .Append(",\"Skipped\":").Append(results.Count(r => r.Skipped))
+              .Append(",\"Failed\":").Append(results.Count(r => !r.Passed && !r.Skipped))
               .Append(",\"Results\":[");
             for (int i = 0; i < results.Count; i++)
             {
