@@ -1,20 +1,32 @@
 # Mission Status
 
 ## Progress
-- .opencode/todo.md: ALL items [x] (0 unchecked) — M1-M5 completed
-- Issues: 0 unresolved (sync-issues.md clean)
+- Stage: WebView2 HTML↔Revit data exchange — DONE, committed & pushed (`b605a87`)
+- .opencode/todo.md: mission complete (all [x], M1–M5)
+- Issues: 0 unresolved
 - Workers: 0 active
-- Verification Strategy: Full solution build EXITCODE=0 (all 4 projects); Core.Tests 33/33 pass; Revit project + addin valid; final verification report written
 - Execution Status: pass
 
 ## Current Phase
-PHASE_6 CONCLUDE — Mission complete
+WebView2 ↔ Revit integration (article: mostbim.vercel.app/blog/web-data-exchange/)
 
-## Final State
-- M1 Core placement engine: completed (Clipper2 geometry, room analysis, quantity modes, models, placement service, 33 xUnit tests)
-- M2 HTML visualization: completed (scene serializer, HTML exporter, preview server bridge, WPF window)
-- M3 Revit integration: completed (family catalog provider, device placer, preview service with tx rollback, mass/individual commands, ribbon)
-- M4 Revit tests: completed (test runner + 4 integration fixtures)
-- M5 App + docs + verification: completed (MainViewModel options UI + HTML preview, README 394 lines, final verification report)
-- Deliverables: 71+ source files, .opencode/final-verification-report.md
-- Caveats: Revit runtime tests need live session on TestBuildingHvac_2024.rvt; HTML preview uses system browser (WebView2 unavailable); net48 requires MSBuild 17
+## Stage log (2026-08-03)
+1. Article fetched & cached; WebView2 1.0.4129.50 restored from nuget.org (was not in cache).
+2. WebView2PreviewWindow.xaml(.cs) — WPF host in Revit: CoreWebView2Environment with
+   userDataFolder %LocalAppData%\HVACLoadTerminals\WebView2 (mandatory), NavigationCompleted
+   -> PostWebMessageAsString(scene), WebMessageReceived -> apply/cancel/recompute.
+3. HtmlSceneExporter: JS bridge window.chrome.webview + dynamic Apply/Cancel/Recompute
+   buttons (shown only when WebView2 present; browser fallback still works).
+4. RevitHtmlPlacementCommand: opens WebView2 window (recompute lambda re-runs
+   CalculateAllPlacements), falls back to system browser on WebView2 init failure.
+5. csproj: UseWPF=true, PackageReference WebView2, WebView2Loader.dll (x64, from
+   runtimes\win-x64\native) copied to addins folder by CopyToRevitAddins.
+6. Build: solution EXITCODE=0; Core.Tests 33/33 pass. Plugins folder verified:
+   HVACLoadTerminals.Revit.dll + WebView2Loader.dll + Microsoft.Web.WebView2.*.dll.
+7. Skill: .opencode/skills/webview2-revit-data-exchange/SKILL.md — pushed to GitHub.
+
+## Next potential work
+- Analyze the half-passed Revit UI tests (8/13): FamilyCatalogFixture (no families in test
+  doc) + PlacementFixture (Positions_InsidePolygon, Offset_500mm) — still open from earlier
+  session; requires running Revit with TestBuildingHvac_2024.rvt.
+- Diagnose PlaceTerminals crash via new HvacLogger logs after user re-runs Revit.
