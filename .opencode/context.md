@@ -5,14 +5,14 @@
 - Revit: Autodesk Revit 2024 (C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll)
 - Build: MSBuild 17 (VS 2022 Community) — "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe"
 - Test: xUnit 2.5.3 (in NuGet cache), NUnit available in reference
-- NuGet cache: %USERPROFILE%\.nuget\packages — has Clipper2 (1.3.0/1.5.4/2.0.0, netstandard2.0), xunit 2.5.3, Newtonsoft.Json 13.0.3
+- NuGet cache: %USERPROFILE%\.nuget\packages — has Clipper2 (1.3.0/1.5.4/2.0.0, netstandard2.0), xunit 2.5.3, Newtonsoft.Json 13.0.3, Microsoft.Web.WebView2 1.0.4129.50 (restored 2026-08-03)
 - Solution: HVACLoadTerminals.sln (src/Core, src/Infrastructure, src/App, src/Revit)
 
 ## Project Structure (existing)
 - src/Core (HVACLoadTerminals.Core.csproj, SDK-style net48): Models (Point2D, Polygon2D, RoomPolygon, HVACSystem, HVACSystemType, TerminalDevice, DevicePlacement, PlacementResult), Services (PolygonOffsetService naive, TerminalSelectionService, TerminalPlacementService), Interfaces (IRoomGeometryProvider, IRoomSystemProvider, ITerminalCatalogRepository, ITerminalPlacementService, IPolygonVisualizer, IDevicePlacer), Exceptions
 - src/Infrastructure: Data (JsonRoomDataStore, SQLiteTerminalCatalogRepository), Visualization (OxyPlotVisualizer), Services (DemoRoomDataService)
 - src/App: WPF app (MainWindow, MainViewModel, OxyPlot-based)
-- src/Revit: Application.cs (ribbon: Place/Review/Export), Commands (PlaceTerminals, ReviewPlacement, ExportRoomData), Services (RevitRoomGeometryProvider, RevitRoomSystemProvider, RevitDevicePlacer)
+- src/Revit: Application.cs (ribbon: Place/Review/Export/Mass/Individual/RunTests — 6 кнопок), Commands (PlaceTerminals, ReviewPlacement, ExportRoomData, RevitHtmlPlacementCommand, RevitIndividualPlacementCommand, RevitTestRunnerCommand), Services (RevitRoomGeometryProvider, RevitRoomSystemProvider, RevitDevicePlacer, RevitFamilyCatalogProvider, RevitPlacementPreviewService), Visualization (WebView2PreviewWindow — HTML↔Revit через WebView2 postMessage, UseWPF=true + Microsoft.Web.WebView2 1.0.4129.50), Logging (HvacLogger — %LocalAppData%\HVACLoadTerminals\logs), Testing (RevitTestRunner + фикстуры, отчёт %LocalAppData%\HVACLoadTerminals\TestResults\revit-tests-*.json)
 - Root legacy: old-style HVACLoadTerminals.csproj (Dynamo-based, legacy Views/ViewModels/Utils at root — DO NOT MODIFY unless needed)
 
 ## Reference (READ-ONLY COPY SOURCE) d:\Projects\HeatLossRevit2\

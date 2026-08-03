@@ -6,6 +6,7 @@
     <AssemblyName>HVACLoadTerminals.Revit</AssemblyName>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="RevitAPI">
@@ -16,10 +17,9 @@
       <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
-    <Reference Include="WindowsBase" />
-    <Reference Include="System.Xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\HVACLoadTerminals.Core.csproj" />
@@ -36,6 +36,8 @@
     <RevitAddinFiles Include="$(TargetDir)*.dll;$(TargetDir)*.pdb" />
     <RevitAddinNative64 Include="$(TargetDir)x64\*.*" Condition="Exists('$(TargetDir)x64')" />
     <RevitAddinNative86 Include="$(TargetDir)x86\*.*" Condition="Exists('$(TargetDir)x86')" />
+    <RevitAddinWebView2Loader Include="$(TargetDir)runtimes\win-x64\native\WebView2Loader.dll"
+                              Condition="Exists('$(TargetDir)runtimes\win-x64\native\WebView2Loader.dll')" />
   </ItemGroup>
   <Target Name="CopyToRevitAddins" AfterTargets="Build" Condition="Exists('$(RevitAddinsDir)')">
     <Message Importance="high" Text="[HVAC] Copying add-in files to $(RevitAddinsDir)\HVACLoadTerminals" />
@@ -47,6 +49,9 @@
           SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(RevitAddinNative86)"
           DestinationFolder="$(RevitAddinsDir)\HVACLoadTerminals\x86"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RevitAddinWebView2Loader)"
+          DestinationFolder="$(RevitAddinsDir)\HVACLoadTerminals"
           SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)\HVACLoadTerminals.addin"
           DestinationFolder="$(RevitAddinsDir)"

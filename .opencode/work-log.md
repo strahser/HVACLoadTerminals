@@ -1,6 +1,9 @@
 # Work Log
 
 ## Active Sessions
+- [x] ses_wv2 (Worker): WebView2 preview window + HTML bridge + Revit command wiring - done (Revit build EXITCODE=0, errors=0)
+- [x] ses_wv2b (Commander): WebView2Loader.dll x64 copy to addins folder - done (plugins dir verified)
+- [x] ses_wv2c (Commander): skill .opencode/skills/webview2-revit-data-exchange/SKILL.md - done
 - baseline-build (Commander): MSBuild solution Debug build - done
 - [x] ses_1 (Worker): `src/Core/Services/ClipperGeometryService.cs` + `LengthUnitConverter.cs` + `PolygonOffsetService.cs` + Core.csproj - T1.1 done
 - [x] ses_2 (Worker): `src/Core/Services/RoomGeometryAnalyzer.cs` + `QuantityCalculator.cs` + `TerminalSelectionService.cs` - T1.2/T1.3 done
@@ -68,6 +71,11 @@
 | src/Revit/Commands/RevitTestRunnerCommand.cs | MODIFY | done | ses_16 | UT-12 pass (compile) | 2026-08-02T12:36:42Z | - |
 | src/App/ViewModels/MainViewModel.cs | MODIFY | done | ses_18 | UT-13 pass (App build EXITCODE=0, solution EXITCODE=0, 33/33 tests) | 2026-08-02T12:43:30Z | - |
 | src/App/MainWindow.xaml | MODIFY | done | ses_18 | UT-13 pass (App build EXITCODE=0, solution EXITCODE=0, 33/33 tests) | 2026-08-02T12:43:30Z | - |
+| src/Revit/Visualization/WebView2PreviewWindow.xaml | CREATE | done | ses_wv2 | Revit build EXITCODE=0 | 2026-08-03T19:49Z | - |
+| src/Revit/Visualization/WebView2PreviewWindow.xaml.cs | CREATE | done | ses_wv2 | Revit build EXITCODE=0 | 2026-08-03T19:49Z | - |
+| src/Infrastructure/Visualization/HtmlSceneExporter.cs | MODIFY | done | ses_wv2 | Revit build EXITCODE=0 (bridge JS in TailTemplate) | 2026-08-03T19:49Z | - |
+| src/Revit/Commands/RevitHtmlPlacementCommand.cs | MODIFY | done | ses_wv2 | Revit build EXITCODE=0 (WebView2 + browser fallback) | 2026-08-03T19:49Z | - |
+| src/Revit/HVACLoadTerminals.Revit.csproj | MODIFY | done | ses_wv2 | Revit build EXITCODE=0 (WebView2Loader.dll copied to addins) | 2026-08-03T19:49Z | - |
 
 ## Pending Integration
 - ✅ INTEGRATED + VERIFIED 2026-08-02 (full solution build EXITCODE=0, 33/33 tests): src/Core/Services/* (T1.1-T1.5), src/Core/Models/* (T1.4), src/Core.Tests (T1.6), src/Infrastructure/Visualization/PlacementSceneSerializer.cs + HtmlSceneExporter.cs (T2.1), src/Revit/Services/RevitPlacementPreviewService.cs (T3.3.1), src/Revit/Services/RevitFamilyCatalogProvider.cs (T3.1)

@@ -11,6 +11,7 @@ using HVACLoadTerminals.Core.Services;
 using HVACLoadTerminals.Infrastructure.Visualization;
 using HVACLoadTerminals.Revit.Logging;
 using HVACLoadTerminals.Revit.Services;
+using HVACLoadTerminals.Revit.Visualization;
 
 namespace HVACLoadTerminals.Revit.Commands
 {
@@ -94,12 +95,63 @@ namespace HVACLoadTerminals.Revit.Commands
                     return Result.Cancelled;
                 }
 
-                // 5. HTML preview: serialize the scene and open index.html in the
-                //    default browser (Canvas2D viewer + optional Three.js 3D view).
+                // 5. HTML preview: serialize the scene. Prefer an in-process
+                //    WebView2 window (JSON postMessage bridge to Revit); if
+                //    WebView2 is unavailable, fall back to the system browser.
                 var sceneJson = PlacementSceneSerializer.ToJson(results, DialogTitle);
                 var htmlDir = Path.Combine(Path.GetTempPath(), "HVACLoadTerminalsPreview");
                 var htmlPath = HtmlSceneExporter.SaveToFile(htmlDir, DialogTitle, sceneJson);
-                Process.Start(new ProcessStartInfo(htmlPath) { UseShellExecute = true });
+
+                bool applied = false;
+                try
+                {
+                    var wv2 = new WebView2PreviewWindow(
+                        DialogTitle,
+                        sceneJson,
+                        recomputeSceneJson: () =>
+                        {
+                            try
+                            {
+                                var newResults = service.CalculateAllPlacements(requests, devices)
+                                    .Where(r => r != null)
+                                    .ToList();
+                                if (newResults.Count == 0)
+                                {
+                                    HvacLogger.Warn($"{cmd} recompute produced no placements; keeping previous scene");
+                                    return sceneJson;
+                                }
+                                return PlacementSceneSerializer.ToJson(newResults, DialogTitle);
+                            }
+                            catch (Exception recomputeEx)
+                            {
+                                HvacLogger.LogException($"{cmd} recompute failed", recomputeEx);
+                                return sceneJson;
+                            }
+                        });
+
+                    HvacLogger.Info($"{cmd} opening WebView2 preview window");
+                    wv2.ShowDialog();
+                    applied = wv2.IsApplied;
+                }
+                catch (Exception wv2Ex)
+                {
+                    HvacLogger.Warn($"{cmd} WebView2 preview unavailable ({wv2Ex.Message}); falling back to system browser");
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo(htmlPath) { UseShellExecute = true });
+                    }
+                    catch (Exception browserEx)
+                    {
+                        HvacLogger.LogException($"{cmd} browser open failed", browserEx);
+                        throw;
+                    }
+                }
+
+                if (!applied)
+                {
+                    HvacLogger.Info($"{cmd} preview cancelled by user");
+                    return Result.Cancelled;
+                }
 
                 // 6. In-Revit preview with Place/Cancel confirmation. The preview
                 //    markers and the real devices share one transaction: Yes =

@@ -122,6 +122,78 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
   var btn3d = document.getElementById('btn3d');
   var btn2d = document.getElementById('btn2d');
 
+  // ---------- WebView2 bridge (host <-> page) ----------
+  // When the document is hosted inside a WebView2 control, window.chrome.webview
+  // is present. Messages flow as JSON strings: page -> host via postMessage,
+  // host -> page via the 'message' event with { type: "scene", payload }.
+  var wv = (window.chrome && window.chrome.webview) ? window.chrome.webview : null;
+  var btnApply = null, btnCancel = null, btnRecompute = null;
+
+  function postToHost(obj) {
+    if (wv) {
+      try { wv.postMessage(JSON.stringify(obj)); }
+      catch (e) { console.error(e); }
+    }
+  }
+
+  function onHostMessage(ev) {
+    try {
+      var d = (typeof ev.data === 'string') ? JSON.parse(ev.data) : ev.data;
+      if (!d || d.type !== 'scene' || !d.payload) return;
+      applyScene(d.payload);
+    } catch (e) { console.error(e); }
+  }
+
+  function applyScene(scene) {
+    SC = scene;
+    rooms = [];
+    placementsFlat = [];
+    buildData();
+    buildSidebar();
+    if (mode3d && threeState) { stop3D(); }
+    resize();
+    fitView();
+    draw();
+  }
+
+  function addBridgeButtons() {
+    var toolbar = document.getElementById('toolbar');
+    if (!toolbar) return;
+    var hint = document.getElementById('hint');
+    btnApply = document.createElement('button');
+    btnApply.type = 'button';
+    btnApply.id = 'btnApply';
+    btnApply.textContent = 'Apply';
+    btnApply.style.background = '#238636';
+    btnApply.style.color = '#ffffff';
+    btnApply.onclick = function () { postToHost({ type: 'apply' }); };
+    btnCancel = document.createElement('button');
+    btnCancel.type = 'button';
+    btnCancel.id = 'btnCancel';
+    btnCancel.textContent = 'Cancel';
+    btnCancel.onclick = function () { postToHost({ type: 'cancel' }); };
+    btnRecompute = document.createElement('button');
+    btnRecompute.type = 'button';
+    btnRecompute.id = 'btnRecompute';
+    btnRecompute.textContent = 'Recompute';
+    btnRecompute.onclick = function () { postToHost({ type: 'recompute' }); };
+    if (hint) {
+      toolbar.insertBefore(btnRecompute, hint);
+      toolbar.insertBefore(btnCancel, hint);
+      toolbar.insertBefore(btnApply, hint);
+    } else {
+      toolbar.appendChild(btnApply);
+      toolbar.appendChild(btnCancel);
+      toolbar.appendChild(btnRecompute);
+    }
+  }
+
+  if (wv) {
+    wv.addEventListener('message', onHostMessage);
+    addBridgeButtons();
+  }
+  // ---------- /WebView2 bridge ----------
+
   var view = { scale: 1, tx: 0, ty: 0, w: 0, h: 0 };
   var selectedRoom = null;
   var dragging = false;
