@@ -13,6 +13,7 @@ namespace HVACLoadTerminals.Revit.Testing
         public string Fixture { get; set; } = "";
         public string Method { get; set; } = "";
         public bool Passed { get; set; }
+        public bool Skipped { get; set; }
         public long DurationMs { get; set; }
         public string? Error { get; set; }
     }
@@ -73,10 +74,21 @@ namespace HVACLoadTerminals.Revit.Testing
                 }
                 catch (TargetInvocationException tie)
                 {
-                    sw.Stop();
-                    result.DurationMs = sw.ElapsedMilliseconds;
-                    result.Passed = false;
-                    result.Error = tie.InnerException?.Message ?? tie.Message;
+                    if (tie.InnerException is TestSkippedException skip)
+                    {
+                        sw.Stop();
+                        result.DurationMs = sw.ElapsedMilliseconds;
+                        result.Passed = false;
+                        result.Skipped = true;
+                        result.Error = "Skipped: " + skip.Message;
+                    }
+                    else
+                    {
+                        sw.Stop();
+                        result.DurationMs = sw.ElapsedMilliseconds;
+                        result.Passed = false;
+                        result.Error = tie.InnerException?.Message ?? tie.Message;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -124,6 +136,7 @@ namespace HVACLoadTerminals.Revit.Testing
                 sb.Append("{\"Fixture\":\"").Append(Escape(r.Fixture))
                   .Append("\",\"Method\":\"").Append(Escape(r.Method))
                   .Append("\",\"Passed\":").Append(r.Passed ? "true" : "false")
+                  .Append(",\"Skipped\":").Append(r.Skipped ? "true" : "false")
                   .Append(",\"DurationMs\":").Append(r.DurationMs)
                   .Append(",\"Error\":");
                 if (r.Error == null) sb.Append("null");

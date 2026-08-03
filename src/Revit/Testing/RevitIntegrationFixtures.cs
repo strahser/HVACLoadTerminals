@@ -73,7 +73,9 @@ namespace HVACLoadTerminals.Revit.Testing
 
             var provider = new RevitFamilyCatalogProvider(doc);
             var devices = provider.GetAllDevices();
-            Assert.True(devices != null && devices.Count > 0, "No families collected from document");
+            if (devices == null || devices.Count == 0)
+                throw new TestSkippedException(
+                    "Active document has no HVAC terminal families (Air Terminals / Mechanical Equipment). Open a project that contains them, or this test stays skipped.");
             return true;
         }
 
@@ -88,7 +90,8 @@ namespace HVACLoadTerminals.Revit.Testing
 
             var provider = new RevitFamilyCatalogProvider(doc);
             var devices = provider.GetAllDevices();
-            Assert.True(devices.Count > 0, "No devices to check");
+            if (devices.Count == 0)
+                throw new TestSkippedException("Active document has no HVAC terminal families.");
 
             var withFlow = devices.FirstOrDefault(d => d.MaxFlowRate > 0);
             Assert.NotNull(withFlow, "No device with positive flow found");
@@ -108,7 +111,8 @@ namespace HVACLoadTerminals.Revit.Testing
 
             var provider = new RevitFamilyCatalogProvider(doc);
             var devices = provider.GetAllDevices();
-            Assert.True(devices.Count > 0, "No devices to check");
+            if (devices.Count == 0)
+                throw new TestSkippedException("Active document has no HVAC terminal families.");
 
             foreach (var device in devices)
             {
@@ -165,9 +169,11 @@ namespace HVACLoadTerminals.Revit.Testing
                 "test-device", "TestFamily", "TestType", "TestMfg",
                 340, "Air Flow", HVACSystemType.Supply);
 
+            // StartOffsetMm keeps the first/last devices clear of the corners (same pattern as Core.Tests).
+            var options = new PlacementOptions { WallOffsetMm = 500, StartOffsetMm = 500 };
             var service = new TerminalPlacementService();
             var result = service.CalculatePlacement(
-                room, system, new[] { device }, 500);
+                room, system, new[] { device }, options);
 
             Assert.True(result.Placements.Count > 0, "No placements generated");
 
@@ -201,7 +207,7 @@ namespace HVACLoadTerminals.Revit.Testing
                 "test-device", "TestFamily", "TestType", "TestMfg",
                 340, "Air Flow", HVACSystemType.Supply);
 
-            var options = new PlacementOptions { WallOffsetMm = 500 };
+            var options = new PlacementOptions { WallOffsetMm = 500, StartOffsetMm = 500 };
             var service = new TerminalPlacementService();
             var result = service.CalculatePlacement(
                 room, system, new[] { device }, options);

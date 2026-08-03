@@ -32,9 +32,15 @@ namespace HVACLoadTerminals.Revit.Commands
 
                 int passed = 0;
                 int failed = 0;
+                int skipped = 0;
                 foreach (var r in results)
                 {
-                    if (r.Passed) passed++;
+                    if (r.Skipped)
+                    {
+                        skipped++;
+                        HvacLogger.Warn($"  Test skipped: {r.Fixture}.{r.Method} — {r.Error}");
+                    }
+                    else if (r.Passed) passed++;
                     else
                     {
                         failed++;
@@ -42,10 +48,11 @@ namespace HVACLoadTerminals.Revit.Commands
                     }
                 }
 
-                HvacLogger.Info($"{cmd} finished: {passed}/{results.Count} passed, {failed} failed. Report: {reportPath}");
+                HvacLogger.Info($"{cmd} finished: {passed} passed, {skipped} skipped, {failed} failed. Report: {reportPath}");
 
                 TaskDialog.Show("HVAC Load Terminals — Tests",
                     $"Passed: {passed}/{results.Count}\n" +
+                    $"Skipped: {skipped}\n" +
                     $"Failed: {failed}\n" +
                     $"Report: {reportPath}");
 
