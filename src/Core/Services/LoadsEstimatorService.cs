@@ -60,6 +60,11 @@ namespace HVACLoadTerminals.Core.Services
             {
                 SupplyPerPersonM3h = 30, AreaPerPersonM2 = 6
             };
+            // Generic names ("Помещение", "Лоджия") get office-like ventilation.
+            c.Rules[RoomPurpose.Unknown] = new RoomVentilationRule
+            {
+                SupplyPerPersonM3h = 30, AreaPerPersonM2 = 6
+            };
             c.Rules[RoomPurpose.MeetingRoom] = new RoomVentilationRule
             {
                 SupplyPerPersonM3h = 40, AreaPerPersonM2 = 3
@@ -150,7 +155,12 @@ namespace HVACLoadTerminals.Core.Services
     {
         private readonly LoadEstimationConfig _config;
 
-        public LoadsEstimatorService(LoadEstimationConfig? config = null)
+        public LoadsEstimatorService()
+            : this(null)
+        {
+        }
+
+        public LoadsEstimatorService(LoadEstimationConfig? config)
         {
             _config = config ?? LoadEstimationConfig.WithDefaults();
         }
