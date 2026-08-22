@@ -16,6 +16,9 @@ namespace HVACLoadTerminals.Core.Models
         /// <summary>Heating capacity, Watts. 0 = not applicable.</summary>
         public double HeatingCapacityW { get; }
 
+        /// <summary>Served floor area per unit, m2. 0 = unknown (flow-based sizing).</summary>
+        public double ServiceAreaM2 { get; }
+
         /// <summary>Device footprint width, mm. 0 = unknown.</summary>
         public double WidthMm { get; }
 
@@ -37,7 +40,8 @@ namespace HVACLoadTerminals.Core.Models
             double coolingCapacityW = 0,
             double widthMm = 0,
             double heightMm = 0,
-            double heatingCapacityW = 0)
+            double heatingCapacityW = 0,
+            double serviceAreaM2 = 0)
         {
             Id = id;
             FamilyName = familyName;
@@ -50,6 +54,7 @@ namespace HVACLoadTerminals.Core.Models
             WidthMm = widthMm;
             HeightMm = heightMm;
             HeatingCapacityW = heatingCapacityW;
+            ServiceAreaM2 = serviceAreaM2;
         }
 
         public override string ToString() => $"{FamilyName} - {TypeName} ({MaxFlowRate} m3/h)";

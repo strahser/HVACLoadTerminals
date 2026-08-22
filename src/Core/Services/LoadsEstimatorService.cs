@@ -243,9 +243,9 @@ namespace HVACLoadTerminals.Core.Services
 
             return new EstimatedRoomLoads
             {
-                RoomId = room.Id,
-                RoomName = room.Name,
-                LevelName = room.LevelName,
+                RoomId = room.Id ?? "",
+                RoomName = room.Name ?? "",
+                LevelName = room.LevelName ?? "",
                 Purpose = purpose,
                 HeightM = heightM,
                 VolumeM3 = volume,
