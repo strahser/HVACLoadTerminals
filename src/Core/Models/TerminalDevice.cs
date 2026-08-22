@@ -13,11 +13,18 @@ namespace HVACLoadTerminals.Core.Models
         /// <summary>Cooling capacity, Watts. 0 = not applicable.</summary>
         public double CoolingCapacityW { get; }
 
+        /// <summary>Heating capacity, Watts. 0 = not applicable.</summary>
+        public double HeatingCapacityW { get; }
+
         /// <summary>Device footprint width, mm. 0 = unknown.</summary>
         public double WidthMm { get; }
 
         /// <summary>Device footprint height (depth from the wall), mm. 0 = unknown.</summary>
         public double HeightMm { get; }
+
+        /// <summary>Effective capacity for the given system type, Watts or m3/h.</summary>
+        public double CapacityFor(HVACSystemType type) =>
+            type == HVACSystemType.Heating && HeatingCapacityW > 0 ? HeatingCapacityW : CoolingCapacityW;
 
         public TerminalDevice(
             string id,
@@ -29,7 +36,8 @@ namespace HVACLoadTerminals.Core.Models
             HVACSystemType systemType,
             double coolingCapacityW = 0,
             double widthMm = 0,
-            double heightMm = 0)
+            double heightMm = 0,
+            double heatingCapacityW = 0)
         {
             Id = id;
             FamilyName = familyName;
@@ -41,6 +49,7 @@ namespace HVACLoadTerminals.Core.Models
             CoolingCapacityW = coolingCapacityW;
             WidthMm = widthMm;
             HeightMm = heightMm;
+            HeatingCapacityW = heatingCapacityW;
         }
 
         public override string ToString() => $"{FamilyName} - {TypeName} ({MaxFlowRate} m3/h)";
