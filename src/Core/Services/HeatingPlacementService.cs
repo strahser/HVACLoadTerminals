@@ -92,9 +92,11 @@ namespace HVACLoadTerminals.Core.Services
                 .ToDictionary(g => g.Key, g => g.First());
 
             var windows = openings
-                .Where(o => o.IsExternal &&
-                            options.WindowEnclosureTypes.Contains(o.EnclosureType ?? ""))
+                .Where(o => options.WindowEnclosureTypes.Contains(o.EnclosureType ?? ""))
                 .ToList();
+            // NOTE: raw snapshots leave Opening.IsExternal=false even for façade
+            // windows, so the flag is NOT required here (owner rule: a device under
+            // EVERY window). External context is provided by the host wall lookup.
 
             var placements = new List<DevicePlacement>();
             var warnings = new List<string>();

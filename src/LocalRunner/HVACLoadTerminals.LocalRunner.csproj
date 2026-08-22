@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>HVACLoadTerminals.LocalRunner</RootNamespace>
+    <AssemblyName>HVACLoadTerminals.LocalRunner</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\HVACLoadTerminals.Core.csproj" />
+    <ProjectReference Include="..\Infrastructure\HVACLoadTerminals.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

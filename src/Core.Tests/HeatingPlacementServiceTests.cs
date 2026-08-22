@@ -150,6 +150,22 @@ namespace HVACLoadTerminals.Core.Tests
         }
 
         [Fact]
+        public void Window_Without_External_Flag_Still_Gets_Device()
+        {
+            // Raw snapshots leave Opening.IsExternal=false even for façade windows.
+            var room = new SnapshotRoom { Id = "r1", Name = "Кабинет" };
+            var opening = Window(1500, 1500);
+            opening.IsExternal = false;
+
+            var result = Service.PlaceForRoom(
+                room, RoomPolygon(), new[] { opening }, new[] { BottomWall() },
+                heatingLoadW: 1000, heatingDevices: new[] { Radiator });
+
+            Assert.Single(result.Placements);
+            Assert.True(RoomPolygon().ContainsPoint(result.Placements[0].Position));
+        }
+
+        [Fact]
         public void Insufficient_Power_Produces_Warning()
         {
             var room = new SnapshotRoom { Id = "r1", Name = "Кабинет" };

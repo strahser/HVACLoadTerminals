@@ -58,15 +58,6 @@ namespace HVACLoadTerminals.Core.Services
             if (devices.Count == 0)
                 return Warn($"В каталоге нет приборов типа {systemType} с расходом");
 
-            // --- quantity: area-based and flow-based, take the larger ---
-            int countByArea = 0;
-            foreach (var d in devices)
-            {
-                if (d.ServiceAreaM2 > 0 && roomAreaM2 > 0)
-                    countByArea = Math.Max(countByArea,
-                        (int)Math.Ceiling(roomAreaM2 / d.ServiceAreaM2));
-            }
-
             // Best device: fewest units, ties to higher capacity then min reserve
             // (analog ChooseTerminalFromDB: min count → max flow → k_ef).
             int CountFor(TerminalDevice d) =>
@@ -81,7 +72,9 @@ namespace HVACLoadTerminals.Core.Services
                 .ThenByDescending(d => d.MaxFlowRate)
                 .First();
 
-            int count = Math.Max(CountFor(device), countByArea);
+            // Quantity from the CHOSEN device only (its own service area + flow);
+            // never inflate by other catalog entries.
+            int count = Math.Max(CountFor(device), 1);
             if (count < 1)
                 return Warn("Нагрузка не задана — количество приборов не рассчитать");
 

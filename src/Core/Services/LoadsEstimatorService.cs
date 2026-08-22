@@ -235,10 +235,13 @@ namespace HVACLoadTerminals.Core.Services
                     exhaust = volume * rule.ExhaustAirChangesPerHour;
                 exhaust = Math.Max(exhaust, rule.ExhaustMinimumM3h);
 
-                // Balance: when only exhaust is defined, supply mirrors it and vice versa.
+                // Balance: when only exhaust is defined, supply mirrors it and vice versa
+                // (offices/unknown rooms are supply-exhaust balanced).
                 if (supply <= 0 && exhaust > 0 && rule.SupplyPerPersonM3h <= 0
                     && rule.SupplyAirChangesPerHour <= 0)
                     supply = exhaust;
+                if (exhaust <= 0 && supply > 0 && rule.ExhaustAirChangesPerHour <= 0)
+                    exhaust = supply;
             }
 
             return new EstimatedRoomLoads
