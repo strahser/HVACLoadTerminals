@@ -151,15 +151,51 @@ namespace HVACLoadTerminals.App.ViewModels
         public MainViewModel()
         {
             OpenSnapshotCommand = new RelayCommand(_ => OpenSnapshot());
-            RecalcLoadsCommand = new RelayCommand(_ => Workspace.RegenerateLoads());
+            RecalcLoadsCommand = new RelayCommand(_ =>
+            {
+                try
+                {
+                    Workspace.RegenerateLoads();
+                    AppLogger.Info("RegenerateLoads OK, rooms=" + Workspace.Rooms.Count);
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = "Ошибка пересчёта нагрузок: " + ex.Message;
+                    AppLogger.Error("RegenerateLoads failed", ex);
+                }
+            });
             ApplyPurposeCommand = new RelayCommand(p =>
                 Workspace.ApplyPurpose(FilterVisible, p as string ?? ""));
-            CalculateCommand = new RelayCommand(_ => Workspace.Calculate());
+            CalculateCommand = new RelayCommand(_ => CalculateSafe());
             SaveProjectCommand = new RelayCommand(_ => SaveProject());
             LoadProjectCommand = new RelayCommand(_ => LoadProject());
             ExportHtmlCommand = new RelayCommand(_ => ExportHtml());
 
+            Workspace.ErrorSink = msg =>
+            {
+                StatusMessage = msg;
+                AppLogger.Error(msg);
+            };
             Workspace.StateChanged += OnStateChanged;
+
+            AppLogger.Info("MainViewModel initialized");
+        }
+
+        private void CalculateSafe()
+        {
+            try
+            {
+                var state = Workspace.Calculate();
+                AppLogger.Info(string.Format(
+                    "Calculate: devices={0} (H={1} S={2} E={3}) warnings={4} {5:F0} ms",
+                    state.TotalDevices, state.HeatingCount, state.SupplyCount,
+                    state.ExhaustCount, state.Status, state.ElapsedMs));
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка расчёта: " + ex.Message;
+                AppLogger.Error("Calculate failed", ex);
+            }
         }
 
         // ------------------------------------------------------------------
@@ -179,10 +215,13 @@ namespace HVACLoadTerminals.App.ViewModels
             try
             {
                 Workspace.LoadSnapshot(dlg.FileName);
+                AppLogger.Info("Snapshot loaded: " + dlg.FileName +
+                               ", rooms=" + Workspace.Rooms.Count);
             }
             catch (Exception ex)
             {
                 StatusMessage = "Ошибка чтения снимка: " + ex.Message;
+                AppLogger.Error("LoadSnapshot failed: " + dlg.FileName, ex);
             }
         }
 
@@ -200,28 +239,49 @@ namespace HVACLoadTerminals.App.ViewModels
 
         private void OnStateChanged(WorkspaceState state)
         {
-            StatusMessage = state.Status;
-            HasRooms = Workspace.Rooms.Count > 0;
+            try
+            {
+                StatusMessage = state.Status;
+                HasRooms = Workspace.Rooms.Count > 0;
 
-            var levels = new[] { "Все уровни" }
-                .Concat(state.Levels).Distinct().ToList();
-            Levels.Clear();
-            foreach (var l in levels)
-                Levels.Add(l);
-            if (!Levels.Contains(SelectedLevel))
-                SelectedLevel = "Все уровни";
+                var levels = new[] { "Все уровни" }
+                    .Concat(state.Levels).Distinct().ToList();
+                Levels.Clear();
+                foreach (var l in levels)
+                    Levels.Add(l);
+                if (!Levels.Contains(SelectedLevel))
+                    SelectedLevel = "Все уровни";
 
-            OnPropertyChanged(nameof(RoomsView));
-            RoomsView.Refresh();
+                OnPropertyChanged(nameof(RoomsView));
+                RoomsView.Refresh();
 
-            Placements.Clear();
-            foreach (var row in state.Placements)
-                Placements.Add(row);
+                Placements.Clear();
+                foreach (var row in state.Placements)
+                    Placements.Add(row);
 
-            PlotLevel();
+                PlotLevel();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка обновления экрана: " + ex.Message;
+                AppLogger.Error("OnStateChanged failed", ex);
+            }
         }
 
         private void PlotLevel()
+        {
+            try
+            {
+                PlotLevelCore();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка построения плана: " + ex.Message;
+                AppLogger.Error("PlotLevel failed", ex);
+            }
+        }
+
+        private void PlotLevelCore()
         {
             var snapshot = Workspace.CurrentSnapshot;
             var model = new PlotModel

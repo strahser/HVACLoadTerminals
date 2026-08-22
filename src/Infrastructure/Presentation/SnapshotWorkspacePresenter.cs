@@ -78,6 +78,21 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
         public event Action<WorkspaceState>? StateChanged;
 
+        /// <summary>Host-provided sink for non-fatal errors (status bar + log).</summary>
+        public Action<string>? ErrorSink { get; set; }
+
+        private void SafeRaise(WorkspaceState state, string context)
+        {
+            try
+            {
+                StateChanged?.Invoke(state);
+            }
+            catch (Exception ex)
+            {
+                ErrorSink?.Invoke($"{context}: ошибка обновления UI — {ex.Message}");
+            }
+        }
+
         // ------------------------------------------------------------------
         // Operations
         // ------------------------------------------------------------------
@@ -240,7 +255,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
             LastRawPlacements = placements;
             var state = BuildState(placements, warnings, kefByKey, sw.Elapsed.TotalMilliseconds);
-            StateChanged?.Invoke(state);
+            SafeRaise(state, "Обновление");
             return state;
         }
 
@@ -287,7 +302,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 Status = $"Проект загружен: {Rooms.Count} помещений, " +
                          $"{_lastPlacementRows.Count} приборов"
             };
-            StateChanged?.Invoke(state);
+            SafeRaise(state, "Обновление");
         }
 
         private class ProjectDto
@@ -394,7 +409,14 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         e.PropertyName == nameof(RoomRow.Supply) ||
                         e.PropertyName == nameof(RoomRow.Exhaust))
                     {
-                        Calculate();
+                        try
+                        {
+                            Calculate();
+                        }
+                        catch (Exception ex)
+                        {
+                            ErrorSink?.Invoke("Живой пересчёт: " + ex.Message);
+                        }
                     }
                 };
             }
