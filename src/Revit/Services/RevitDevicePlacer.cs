@@ -39,7 +39,16 @@ namespace HVACLoadTerminals.Revit.Services
         /// </summary>
         /// <param name="placements">Placements to create in the model.</param>
         /// <param name="tx">An already-started transaction owned by the caller.</param>
-        public void PlaceDevicesInTransaction(IReadOnlyList<DevicePlacement> placements, Transaction tx)
+        /// <param name="commentsFactory">Optional marker builder: the returned text is
+        /// written to the instance Comments parameter (idempotency markers, plan C3.2).
+        /// When null, legacy "System: &lt;name&gt;" comment is written.</param>
+        /// <param name="levelResolver">Optional level lookup by placement room id;
+        /// tried first (snapshot room ids may belong to a linked document).</param>
+        public void PlaceDevicesInTransaction(
+            IReadOnlyList<DevicePlacement> placements,
+            Transaction tx,
+            Func<DevicePlacement, string>? commentsFactory = null,
+            Func<string, Level?>? levelResolver = null)
         {
             if (placements == null || placements.Count == 0) return;
             if (tx == null) throw new ArgumentNullException(nameof(tx));
@@ -54,7 +63,9 @@ namespace HVACLoadTerminals.Revit.Services
                 if (!symbolMap.TryGetValue(placement.Device.FamilyName, out var symbol))
                     continue;
 
-                var level = GetLevelForRoom(placement.RoomId) ?? GetFirstLevel();
+                var level = levelResolver?.Invoke(placement.RoomId)
+                    ?? GetLevelForRoom(placement.RoomId)
+                    ?? GetFirstLevel();
                 if (level == null) continue;
 
                 var xyz = new XYZ(placement.Position.X, placement.Position.Y, level.Elevation);
@@ -74,8 +85,60 @@ namespace HVACLoadTerminals.Revit.Services
 
                 ApplyRotation(instance, xyz, placement.Rotation);
                 ApplyAirflow(instance, placement.Device);
-                ApplyComments(instance, placement);
+
+                string? comments = commentsFactory?.Invoke(placement);
+                if (!string.IsNullOrEmpty(comments))
+                    SetComments(instance, comments!);
+                else
+                    SetComments(instance, $"System: {placement.SystemName}");
             }
+        }
+
+        /// <summary>
+        /// Deletes non-type family instances whose Comments start with
+        /// <paramref name="markerPrefix"/>. Returns the number deleted. Must be called
+        /// inside an active transaction ("Заменить" idempotency mode).
+        /// </summary>
+        public int DeleteMarkedInstances(string markerPrefix)
+        {
+            int deleted = 0;
+            var instances = new FilteredElementCollector(_doc)
+                .WhereElementIsNotElementType()
+                .OfClass(typeof(FamilyInstance));
+
+            foreach (var fi in instances.Cast<FamilyInstance>().ToList())
+            {
+                var p = fi.LookupParameter("Comments");
+                string value = p?.AsString() ?? "";
+                if (!string.IsNullOrEmpty(value) &&
+                    value.StartsWith(markerPrefix, StringComparison.Ordinal))
+                {
+                    _doc.Delete(fi.Id);
+                    deleted++;
+                }
+            }
+            return deleted;
+        }
+
+        /// <summary>
+        /// Collects Comments of all family instances starting with "HLT|" —
+        /// idempotency markers placed by this plugin.
+        /// </summary>
+        public List<string> CollectMarkers()
+        {
+            var result = new List<string>();
+            var instances = new FilteredElementCollector(_doc)
+                .WhereElementIsNotElementType()
+                .OfClass(typeof(FamilyInstance));
+
+            foreach (var fi in instances.Cast<FamilyInstance>())
+            {
+                var p = fi.LookupParameter("Comments");
+                string value = p?.AsString() ?? "";
+                if (value.StartsWith("HLT|", StringComparison.Ordinal))
+                    result.Add(value);
+            }
+            return result;
         }
 
         public void RemovePlacements(string roomId)
@@ -243,16 +306,14 @@ namespace HVACLoadTerminals.Revit.Services
         }
 
         /// <summary>
-        /// Writes the system name into the instance Comments parameter.
+        /// Writes text into the instance Comments parameter (idempotency marker
+        /// or legacy system name).
         /// </summary>
-        private static void ApplyComments(FamilyInstance instance, DevicePlacement placement)
+        private static void SetComments(FamilyInstance instance, string text)
         {
-            if (!string.IsNullOrEmpty(placement.SystemName))
-            {
-                var comments = instance.LookupParameter("Comments");
-                if (comments != null && !comments.IsReadOnly)
-                    comments.Set($"System: {placement.SystemName}");
-            }
+            var comments = instance.LookupParameter("Comments");
+            if (comments != null && !comments.IsReadOnly)
+                comments.Set(text);
         }
 
         private Level? GetLevelForRoom(string roomId)

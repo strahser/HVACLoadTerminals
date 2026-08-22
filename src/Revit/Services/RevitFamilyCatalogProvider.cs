@@ -24,6 +24,12 @@ namespace HVACLoadTerminals.Revit.Services
             "Cooling Capacity", "Cooling Power", "Холодопроизводительность", "Охлаждение", "Cooling Load"
         };
 
+        private static readonly string[] HeatingCandidates =
+        {
+            "Heating Capacity", "Heat Capacity", "Тепловая мощность", "Тепломощность",
+            "Мощность отопления", "Номинальный тепловой поток", "Тепловой поток"
+        };
+
         private static readonly string[] WidthCandidates = { "Width", "Ширина" };
 
         private static readonly string[] HeightCandidates = { "Height", "Высота" };
@@ -90,7 +96,9 @@ namespace HVACLoadTerminals.Revit.Services
                     {
                         type = IsFanCoilName(fam.Name)
                             ? HVACSystemType.FanCoil
-                            : HVACSystemType.Cooling;
+                            : IsHeatingName(fam.Name)
+                                ? HVACSystemType.Heating
+                                : HVACSystemType.Cooling;
                     }
                     else
                     {
@@ -100,6 +108,8 @@ namespace HVACLoadTerminals.Revit.Services
                     double flow = ReadDoubleParam(symbol, FlowCandidates,
                         UnitTypeId.CubicMetersPerHour, out string flowParamName);
                     double cooling = ReadDoubleParam(symbol, CoolingCandidates,
+                        UnitTypeId.Watts, out _);
+                    double heating = ReadDoubleParam(symbol, HeatingCandidates,
                         UnitTypeId.Watts, out _);
                     double w = ReadDoubleParam(symbol, WidthCandidates,
                         UnitTypeId.Millimeters, out _);
@@ -116,7 +126,8 @@ namespace HVACLoadTerminals.Revit.Services
                         type.Value,
                         cooling,
                         w,
-                        h));
+                        h,
+                        heating));
                 }
                 catch
                 {
@@ -168,5 +179,14 @@ namespace HVACLoadTerminals.Revit.Services
             name.IndexOf("fan coil", StringComparison.OrdinalIgnoreCase) >= 0 ||
             name.IndexOf("fcu", StringComparison.OrdinalIgnoreCase) >= 0 ||
             name.IndexOf("кассет", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        /// <summary>Heating devices (radiators/convectors) — plan card C3.1.</summary>
+        private static bool IsHeatingName(string name) =>
+            name.IndexOf("радиатор", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("radiator", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("конвектор", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("convector", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("регистр", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("отопит", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 }

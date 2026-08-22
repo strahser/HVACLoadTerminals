@@ -56,11 +56,18 @@ namespace HVACLoadTerminals.Revit
                 assembly.Location,
                 "HVACLoadTerminals.Revit.Commands.RevitIndividualPlacementCommand");
 
+            var snapshotBtnData = new PushButtonData(
+                "SnapshotPlacement",
+                "По снимку\nпомещений",
+                assembly.Location,
+                "HVACLoadTerminals.Revit.Commands.ImportSnapshotPlacementCommand");
+
             panel.AddItem(placeBtnData);
             panel.AddItem(reviewBtnData);
             panel.AddItem(exportBtnData);
             panel.AddItem(massBtnData);
             panel.AddItem(individualBtnData);
+            panel.AddItem(snapshotBtnData);
             panel.AddItem(runTestsBtnData);
 
             return Result.Succeeded;
