@@ -10,7 +10,6 @@ namespace HVACLoadTerminals.App
         {
             InitializeComponent();
             DataContext = AppHost.Services.GetRequiredService<MainViewModel>();
-            Loaded += (s, e) => ((MainViewModel)DataContext).OnLoaded();
         }
     }
 }

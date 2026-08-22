@@ -42,8 +42,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
         private RoomSnapshot? _snapshot;
         private string _snapshotPath = "";
-        private List<RoomRow> _rooms = new List<RoomRow>();
-        private List<PlacementRow> _lastPlacementRows = new List<PlacementRow>();
+                private List<PlacementRow> _lastPlacementRows = new List<PlacementRow>();
 
         /// <summary>Current snapshot for hosts that need geometry (OxyPlot etc.).</summary>
         public RoomSnapshot? CurrentSnapshot => _snapshot;
@@ -68,7 +67,10 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public CeilingCountRule[] CountRules { get; } =
             Enum.GetValues(typeof(CeilingCountRule)).Cast<CeilingCountRule>().ToArray();
 
-        public IReadOnlyList<RoomRow> Rooms => _rooms;
+        /// <summary>Persistent collection — hosts bind to this instance once;
+        /// it is mutated in place on every load.</summary>
+        public System.Collections.ObjectModel.ObservableCollection<RoomRow> Rooms { get; } =
+            new System.Collections.ObjectModel.ObservableCollection<RoomRow>();
 
         /// <summary>Raw placements of the last Calculate — for model writers.</summary>
         public IReadOnlyList<DevicePlacement> LastRawPlacements { get; private set; }
@@ -95,10 +97,11 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             var loads = _estimator.EstimateAll(_snapshot);
             var byId = loads.GroupBy(l => l.RoomId).ToDictionary(g => g.Key, g => g.First());
 
-            _rooms = _snapshot.Rooms.Select(r =>
+            Rooms.Clear();
+            foreach (var r in _snapshot.Rooms)
             {
                 byId.TryGetValue(r.Id ?? "", out var l);
-                return new RoomRow
+                Rooms.Add(new RoomRow
                 {
                     RoomId = r.Id ?? "",
                     Number = r.Number ?? "",
@@ -110,18 +113,18 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     HeatingW = Math.Round(l?.HeatingLoadW ?? 0),
                     Supply = Math.Round(l?.SupplyFlowM3h ?? 0),
                     Exhaust = Math.Round(l?.ExhaustFlowM3h ?? 0)
-                };
-            }).ToList();
+                });
+            }
 
             HookLiveRecalc();
-            RaiseState($"Снимок: {_rooms.Count} помещений, " +
+            RaiseState($"Снимок: {Rooms.Count} помещений, " +
                        $"ΣQ={loads.Sum(x => x.HeatingLoadW) / 1000:F0} кВт");
         }
 
         public void ApplyPurpose(Func<RoomRow, bool> rowFilter, string purpose)
         {
             int n = 0;
-            foreach (var row in _rooms.Where(rowFilter))
+            foreach (var row in Rooms.Where(rowFilter))
             {
                 row.Purpose = purpose;
                 n++;
@@ -132,7 +135,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// <summary>Full recalculation of all three classes. Raises StateChanged.</summary>
         public WorkspaceState Calculate()
         {
-            if (_snapshot == null || _rooms.Count == 0)
+            if (_snapshot == null || Rooms.Count == 0)
             {
                 var empty = new WorkspaceState { Status = "Откройте снимок и сгенерируйте нагрузки" };
                 StateChanged?.Invoke(empty);
@@ -158,7 +161,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             var kefByKey = new Dictionary<string, double>();
             var sw = System.Diagnostics.Stopwatch.StartNew();
 
-            foreach (var row in _rooms)
+            foreach (var row in Rooms)
             {
                 if (!roomsById.TryGetValue(row.RoomId, out var snapRoom))
                     continue;
@@ -253,7 +256,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             var dto = new ProjectDto
             {
                 SnapshotPath = _snapshotPath,
-                Rooms = _rooms.ToList(),
+                Rooms = Rooms.ToList(),
                 Placements = _lastPlacementRows
             };
             System.IO.File.WriteAllText(path,
@@ -271,15 +274,17 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             if (System.IO.File.Exists(_snapshotPath))
                 _snapshot = _loader.LoadFromFile(_snapshotPath);
 
-            _rooms = dto.Rooms ?? new List<RoomRow>();
+            Rooms.Clear();
+            foreach (var row in dto.Rooms ?? new List<RoomRow>())
+                Rooms.Add(row);
             HookLiveRecalc();
 
             var state = new WorkspaceState
             {
-                Rooms = _rooms.ToList(),
+                Rooms = Rooms.ToList(),
                 Placements = _lastPlacementRows = dto.Placements ?? new List<PlacementRow>(),
-                Levels = _rooms.Select(r => r.LevelName).Distinct().ToList(),
-                Status = $"Проект загружен: {_rooms.Count} помещений, " +
+                Levels = Rooms.Select(r => r.LevelName).Distinct().ToList(),
+                Status = $"Проект загружен: {Rooms.Count} помещений, " +
                          $"{_lastPlacementRows.Count} приборов"
             };
             StateChanged?.Invoke(state);
@@ -315,9 +320,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             _lastPlacementRows = rows;
             return new WorkspaceState
             {
-                Rooms = _rooms.ToList(),
+                Rooms = Rooms.ToList(),
                 Placements = rows,
-                Levels = _rooms.Select(r => r.LevelName).Distinct().ToList(),
+                Levels = Rooms.Select(r => r.LevelName).Distinct().ToList(),
                 Status = $"Размещение: {placements.Count} приборов за {elapsedMs:F0} мс, " +
                          $"предупреждений: {warnings.Count}",
                 TotalDevices = placements.Count,
@@ -333,7 +338,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         {
             StateChanged?.Invoke(new WorkspaceState
             {
-                Rooms = _rooms.ToList(),
+                Rooms = Rooms.ToList(),
                 Status = status
             });
         }
@@ -380,7 +385,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
         private void HookLiveRecalc()
         {
-            foreach (var row in _rooms)
+            foreach (var row in Rooms)
             {
                 row.PropertyChanged += (_, e) =>
                 {

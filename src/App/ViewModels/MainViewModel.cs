@@ -3,139 +3,38 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using HVACLoadTerminals.App.Commands;
-using HVACLoadTerminals.Core.Interfaces;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
-using HVACLoadTerminals.Infrastructure.Data;
 using HVACLoadTerminals.Infrastructure.Presentation;
-using HVACLoadTerminals.Infrastructure.Services;
 using HVACLoadTerminals.Infrastructure.Visualization;
 using OxyPlot;
 using OxyPlot.Series;
 
 namespace HVACLoadTerminals.App.ViewModels
 {
+    /// <summary>
+    /// Thin host over <see cref="SnapshotWorkspacePresenter"/>: bindings, level
+    /// filter, OxyPlot preview and project/HTML commands. All logic lives in the
+    /// presenter so the Revit stand shares it unchanged.
+    /// </summary>
     public class MainViewModel : INotifyPropertyChanged
     {
-        private readonly ITerminalPlacementService _placementService;
-        private readonly IPolygonVisualizer _visualizer;
-        private readonly DemoRoomDataService _demoService;
-        private readonly JsonRoomDataStore _jsonStore;
-        private readonly TerminalSelectionService _selectionService;
-
-        public ObservableCollection<RoomPolygon> Rooms { get; } = new();
-        public ObservableCollection<HVACSystem> SelectedRoomSystems { get; } = new();
-        public ObservableCollection<TerminalDevice> DeviceCatalog { get; } = new();
-
-        private RoomPolygon? _selectedRoom;
-        public RoomPolygon? SelectedRoom
-        {
-            get => _selectedRoom;
-            set
-            {
-                _selectedRoom = value;
-                OnPropertyChanged(nameof(SelectedRoom));
-                UpdateSystems();
-            }
-        }
-
-        private PlotModel? _plotModel;
-        public PlotModel? PlotModel
-        {
-            get => _plotModel;
-            set { _plotModel = value; OnPropertyChanged(nameof(PlotModel)); }
-        }
-
-        private string _statusMessage = "Ready";
-        public string StatusMessage
-        {
-            get => _statusMessage;
-            set { _statusMessage = value; OnPropertyChanged(nameof(StatusMessage)); }
-        }
-
-        // ---- Placement Options (UI-bound) ----
-
-        private PlacementMode _currentMode = PlacementMode.ByCalculation;
-        public PlacementMode CurrentMode
-        {
-            get => _currentMode;
-            set { _currentMode = value; OnPropertyChanged(nameof(CurrentMode)); }
-        }
-
-        private double _wallOffsetMm = 500;
-        public double WallOffsetMm
-        {
-            get => _wallOffsetMm;
-            set { _wallOffsetMm = value; OnPropertyChanged(nameof(WallOffsetMm)); }
-        }
-
-        private int _fixedCount = 1;
-        public int FixedCount
-        {
-            get => _fixedCount;
-            set { _fixedCount = value; OnPropertyChanged(nameof(FixedCount)); }
-        }
-
-        private int _stepCount = 1;
-        public int StepCount
-        {
-            get => _stepCount;
-            set { _stepCount = value; OnPropertyChanged(nameof(StepCount)); }
-        }
-
-        private int _maxCount = 50;
-        public int MaxCount
-        {
-            get => _maxCount;
-            set { _maxCount = value; OnPropertyChanged(nameof(MaxCount)); }
-        }
-
-        private PlacementSide _sidePreference = PlacementSide.Any;
-        public PlacementSide SidePreference
-        {
-            get => _sidePreference;
-            set { _sidePreference = value; OnPropertyChanged(nameof(SidePreference)); }
-        }
-
-        private CoordinateSystem _coordinateSystem = CoordinateSystem.Auto;
-        public CoordinateSystem CoordinateSystem
-        {
-            get => _coordinateSystem;
-            set { _coordinateSystem = value; OnPropertyChanged(nameof(CoordinateSystem)); }
-        }
-
-        private string _lastSceneJson = string.Empty;
-
-        /// <summary>Array values for ComboBox ItemSource bindings.</summary>
-        public PlacementMode[] PlacementModes { get; } = Enum.GetValues(typeof(PlacementMode)).Cast<PlacementMode>().ToArray();
-        public PlacementSide[] PlacementSides { get; } = Enum.GetValues(typeof(PlacementSide)).Cast<PlacementSide>().ToArray();
-        public CoordinateSystem[] CoordinateSystems { get; } = Enum.GetValues(typeof(CoordinateSystem)).Cast<CoordinateSystem>().ToArray();
-
-        // ---- Commands ----
-
-        public ICommand CalculatePlacementCommand { get; }
-        public ICommand ShowAllRoomsCommand { get; }
-        public ICommand ExportToJsonCommand { get; }
-        public ICommand ImportFromJsonCommand { get; }
-        public ICommand ShowHtmlPreviewCommand { get; }
-
-        // ---- Snapshot workspace (Phase 2/2.3): thin host over the presenter ----
-
         public SnapshotWorkspacePresenter Workspace { get; } = new();
 
-        public ObservableCollection<PlacementRow> Placements { get; }
-            = new ObservableCollection<PlacementRow>();
+        public ObservableCollection<PlacementRow> Placements { get; } =
+            new ObservableCollection<PlacementRow>();
 
-        private ICollectionView? _snapshotRoomsView;
-        public ICollectionView SnapshotRoomsView =>
-            _snapshotRoomsView ??= CollectionViewSource.GetDefaultView(Workspace.Rooms);
+        private ICollectionView? _roomsView;
 
-        public ObservableCollection<string> Levels { get; } = new();
+        public ICollectionView RoomsView =>
+            _roomsView ??= CollectionViewSource.GetDefaultView(Workspace.Rooms);
+
+        public ObservableCollection<string> Levels { get; } =
+            new ObservableCollection<string> { "Все уровни" };
 
         private string _selectedLevel = "Все уровни";
         public string SelectedLevel
@@ -145,12 +44,13 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 _selectedLevel = value;
                 OnPropertyChanged(nameof(SelectedLevel));
-                SnapshotRoomsView.Refresh();
-                PlotSnapshotLevel();
+                RoomsView.Refresh();
+                PlotLevel();
             }
         }
 
-        /// <summary>Owner requirement: device length ≥ share of window width.</summary>
+        // ---- Options (pass-through to presenter) ----
+
         public double MinLengthRatio
         {
             get => Workspace.MinWindowLengthRatio;
@@ -169,6 +69,17 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 Workspace.SupplyRule = value;
                 OnPropertyChanged(nameof(SupplyRule));
+                RecalcIfLive();
+            }
+        }
+
+        public CeilingCountRule ExhaustRule
+        {
+            get => Workspace.ExhaustRule;
+            set
+            {
+                Workspace.ExhaustRule = value;
+                OnPropertyChanged(nameof(ExhaustRule));
                 RecalcIfLive();
             }
         }
@@ -208,259 +119,59 @@ namespace HVACLoadTerminals.App.ViewModels
         public CeilingCountRule[] CountRules { get; } =
             Enum.GetValues(typeof(CeilingCountRule)).Cast<CeilingCountRule>().ToArray();
 
+        private string _statusMessage = "Шаг 1. Откройте снимок помещений HeatLossRevit2 (*.json)";
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set { _statusMessage = value; OnPropertyChanged(nameof(StatusMessage)); }
+        }
+
+        private bool _hasRooms;
+        public bool HasRooms
+        {
+            get => _hasRooms;
+            set { _hasRooms = value; OnPropertyChanged(nameof(HasRooms)); }
+        }
+
         public ICommand OpenSnapshotCommand { get; }
-        public ICommand GenerateLoadsCommand { get; }
+        public ICommand RecalcLoadsCommand { get; }
         public ICommand ApplyPurposeCommand { get; }
-        public ICommand CalculateSnapshotPlacementsCommand { get; }
+        public ICommand CalculateCommand { get; }
         public ICommand SaveProjectCommand { get; }
         public ICommand LoadProjectCommand { get; }
+        public ICommand ExportHtmlCommand { get; }
 
-        private PlotModel? _snapshotPlotModel;
-        public PlotModel? SnapshotPlotModel
+        private PlotModel? _plotModel;
+        public PlotModel? PlotModel
         {
-            get => _snapshotPlotModel;
-            set { _snapshotPlotModel = value; OnPropertyChanged(nameof(SnapshotPlotModel)); }
+            get => _plotModel;
+            set { _plotModel = value; OnPropertyChanged(nameof(PlotModel)); }
         }
 
-        public MainViewModel(
-            ITerminalPlacementService placementService,
-            IPolygonVisualizer visualizer,
-            DemoRoomDataService demoService,
-            JsonRoomDataStore jsonStore,
-            TerminalSelectionService selectionService)
+        public MainViewModel()
         {
-            _placementService = placementService;
-            _visualizer = visualizer;
-            _demoService = demoService;
-            _jsonStore = jsonStore;
-            _selectionService = selectionService;
-
-            CalculatePlacementCommand = new RelayCommand(_ => CalculatePlacement());
-            ShowAllRoomsCommand = new RelayCommand(_ => ShowAllRooms());
-            ExportToJsonCommand = new RelayCommand(_ => ExportToJson());
-            ImportFromJsonCommand = new RelayCommand(_ => ImportFromJson());
-            ShowHtmlPreviewCommand = new RelayCommand(_ => ShowHtmlPreview());
-
             OpenSnapshotCommand = new RelayCommand(_ => OpenSnapshot());
-            GenerateLoadsCommand = new RelayCommand(_ => Workspace.RegenerateLoads());
-            ApplyPurposeCommand = new RelayCommand(p => ApplyPurpose(p as string ?? ""));
-            CalculateSnapshotPlacementsCommand = new RelayCommand(_ => Workspace.Calculate());
+            RecalcLoadsCommand = new RelayCommand(_ => Workspace.RegenerateLoads());
+            ApplyPurposeCommand = new RelayCommand(p =>
+                Workspace.ApplyPurpose(FilterVisible, p as string ?? ""));
+            CalculateCommand = new RelayCommand(_ => Workspace.Calculate());
             SaveProjectCommand = new RelayCommand(_ => SaveProject());
             LoadProjectCommand = new RelayCommand(_ => LoadProject());
+            ExportHtmlCommand = new RelayCommand(_ => ExportHtml());
 
-            Workspace.StateChanged += OnWorkspaceStateChanged;
-
-            LoadDemoCatalog();
+            Workspace.StateChanged += OnStateChanged;
         }
-
-        public void OnLoaded()
-        {
-            LoadDemoRooms();
-        }
-
-        private void LoadDemoRooms()
-        {
-            Rooms.Clear();
-            foreach (var room in _demoService.CreateDemoRooms())
-                Rooms.Add(room);
-            SelectedRoom = Rooms.FirstOrDefault();
-            StatusMessage = $"Loaded {Rooms.Count} demo rooms";
-        }
-
-        private void LoadDemoCatalog()
-        {
-            DeviceCatalog.Clear();
-            foreach (var device in CatalogFactory.CreateDemo())
-                DeviceCatalog.Add(device);
-        }
-
-        private void UpdateSystems()
-        {
-            SelectedRoomSystems.Clear();
-            if (SelectedRoom != null)
-                foreach (var sys in SelectedRoom.Systems)
-                    SelectedRoomSystems.Add(sys);
-        }
-
-        // ---- Build PlacementOptions from UI state ----
-
-        private PlacementOptions BuildCurrentOptions() => new PlacementOptions
-        {
-            Mode = CurrentMode,
-            WallOffsetMm = WallOffsetMm,
-            FixedCount = FixedCount,
-            StepCount = StepCount,
-            MaxCount = MaxCount,
-            SidePreference = SidePreference,
-            CoordinateSystem = CoordinateSystem
-        };
-
-        // ---- Build room requests using per-room or current options ----
-
-        private List<RoomPlacementRequest> BuildRoomRequests()
-        {
-            var options = BuildCurrentOptions();
-            return Rooms.Select(r => new RoomPlacementRequest(
-                r,
-                new RoomPlacementConfig(r.RoomId, null, options))).ToList();
-        }
-
-        // ---- Existing commands ----
-
-        private void CalculatePlacement()
-        {
-            if (Rooms.Count == 0)
-            {
-                StatusMessage = "No rooms loaded";
-                return;
-            }
-
-            var requests = BuildRoomRequests();
-            var devices = DeviceCatalog.ToList();
-
-            // Use request-based overload (on concrete type) to apply PlacementOptions
-            IReadOnlyList<PlacementResult> allResults;
-            if (_placementService is TerminalPlacementService svc)
-            {
-                allResults = svc.CalculateAllPlacements(requests, devices);
-            }
-            else
-            {
-                // Fallback: interface overload ignores options
-                allResults = _placementService.CalculateAllPlacements(
-                    Rooms.ToList(),
-                    new CatalogAdapter(devices));
-            }
-
-            // Show selected room if any, otherwise show all rooms
-            var roomToPlot = SelectedRoom;
-            if (roomToPlot != null)
-            {
-                var selectedResults = allResults
-                    .Where(r => r.Room.RoomId == roomToPlot.RoomId)
-                    .ToList();
-                PlotModel = BuildPlotModel(roomToPlot.RoomName, selectedResults);
-            }
-            else
-            {
-                PlotModel = BuildPlotModel("All Rooms", allResults);
-            }
-
-            // Cache scene JSON for HTML preview
-            _lastSceneJson = PlacementSceneSerializer.ToJson(allResults, "Terminal Placement");
-            StatusMessage = $"Calculated {allResults.Sum(r => r.Placements.Count)} placements across {allResults.Count} rooms";
-        }
-
-        private void ShowHtmlPreview()
-        {
-            if (string.IsNullOrWhiteSpace(_lastSceneJson) || _lastSceneJson == "{\"Title\":\"\",\"Rooms\":[]}")
-            {
-                // Compute first if not done yet
-                CalculatePlacement();
-                if (string.IsNullOrWhiteSpace(_lastSceneJson))
-                {
-                    StatusMessage = "Nothing to preview — compute placement first";
-                    return;
-                }
-            }
-
-            var cmd = new OpenHtmlPreviewCommand(() => _lastSceneJson);
-            cmd.Execute(null);
-        }
-
-        private PlotModel BuildPlotModel(string title, IReadOnlyList<PlacementResult> results)
-        {
-            var model = new PlotModel
-            {
-                Title = title + " - Placement Results",
-                PlotType = PlotType.XY,
-                Background = OxyColors.White
-            };
-
-            model.Axes.Add(new OxyPlot.Axes.LinearAxis
-            {
-                Position = OxyPlot.Axes.AxisPosition.Bottom,
-                Title = "X"
-            });
-            model.Axes.Add(new OxyPlot.Axes.LinearAxis
-            {
-                Position = OxyPlot.Axes.AxisPosition.Left,
-                Title = "Y"
-            });
-
-            foreach (var result in results)
-            {
-                var floorLine = new OxyPlot.Series.LineSeries
-                {
-                    Color = OxyColors.DodgerBlue,
-                    StrokeThickness = 2,
-                    Title = result.Room.RoomName
-                };
-                foreach (var v in result.Room.Boundary.Vertices)
-                    floorLine.Points.Add(new DataPoint(v.X, v.Y));
-                floorLine.Points.Add(floorLine.Points[0]);
-                model.Series.Add(floorLine);
-            }
-
-            int colorIdx = 0;
-            var colors = new[] { OxyColors.Red, OxyColors.Green, OxyColors.Orange, OxyColors.Purple };
-            foreach (var result in results)
-            {
-                var scatter = new OxyPlot.Series.ScatterSeries
-                {
-                    MarkerType = OxyPlot.MarkerType.Circle,
-                    MarkerSize = 8,
-                    MarkerFill = colors[colorIdx % colors.Length],
-                    MarkerStroke = OxyColors.Black,
-                    MarkerStrokeThickness = 1,
-                    Title = result.Room.RoomName
-                };
-
-                foreach (var p in result.Placements)
-                    scatter.Points.Add(new ScatterPoint(p.Position.X, p.Position.Y));
-
-                model.Series.Add(scatter);
-                colorIdx++;
-            }
-
-            return model;
-        }
-
-        private void ShowAllRooms()
-        {
-            _visualizer.ShowAllRooms(Rooms.ToList());
-            StatusMessage = "Showing all rooms";
-        }
-
-        private void ExportToJson()
-        {
-            _jsonStore.SaveRooms(Rooms.ToList());
-            StatusMessage = "Exported rooms to JSON";
-        }
-
-        private void ImportFromJson()
-        {
-            var loaded = _jsonStore.LoadRooms();
-            Rooms.Clear();
-            foreach (var r in loaded) Rooms.Add(r);
-            SelectedRoom = Rooms.FirstOrDefault();
-            StatusMessage = $"Imported {Rooms.Count} rooms from JSON";
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged(string name) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         // ------------------------------------------------------------------
-        // Snapshot workspace methods — thin host over the presenter (C2.3)
+        // Host operations
         // ------------------------------------------------------------------
 
         private void OpenSnapshot()
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Title = "Открыть снимок помещений",
-                Filter = "Снимки HeatLossRevit2 (*.json)|*.json|Все файлы|*.*"
+                Title = "Открыть снимок помещений HeatLossRevit2",
+                Filter = "Снимки помещений (*.json)|*.json|Все файлы|*.*"
             };
             if (dlg.ShowDialog() != true)
                 return;
@@ -475,12 +186,11 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
-        private void ApplyPurpose(string purpose)
-        {
-            Workspace.ApplyPurpose(
-                r => SelectedLevel == "Все уровни" || r.LevelName == SelectedLevel,
-                purpose);
-        }
+        private void ApplyPurpose(string purpose) =>
+            Workspace.ApplyPurpose(FilterVisible, purpose);
+
+        private bool FilterVisible(RoomRow row) =>
+            SelectedLevel == "Все уровни" || row.LevelName == SelectedLevel;
 
         private void RecalcIfLive()
         {
@@ -488,28 +198,30 @@ namespace HVACLoadTerminals.App.ViewModels
                 Workspace.Calculate();
         }
 
-        private void OnWorkspaceStateChanged(WorkspaceState state)
+        private void OnStateChanged(WorkspaceState state)
         {
             StatusMessage = state.Status;
+            HasRooms = Workspace.Rooms.Count > 0;
 
+            var levels = new[] { "Все уровни" }
+                .Concat(state.Levels).Distinct().ToList();
             Levels.Clear();
-            Levels.Add("Все уровни");
-            foreach (var level in state.Levels)
-                Levels.Add(level);
-            OnPropertyChanged(nameof(SnapshotRoomsView));
-            SnapshotRoomsView?.Refresh();
+            foreach (var l in levels)
+                Levels.Add(l);
+            if (!Levels.Contains(SelectedLevel))
+                SelectedLevel = "Все уровни";
 
-            if (!state.IsCalculation && state.Placements.Count == 0)
-                return;
+            OnPropertyChanged(nameof(RoomsView));
+            RoomsView.Refresh();
 
             Placements.Clear();
             foreach (var row in state.Placements)
                 Placements.Add(row);
 
-            PlotSnapshotLevel();
+            PlotLevel();
         }
 
-        private void PlotSnapshotLevel()
+        private void PlotLevel()
         {
             var snapshot = Workspace.CurrentSnapshot;
             var model = new PlotModel
@@ -529,17 +241,15 @@ namespace HVACLoadTerminals.App.ViewModels
 
             if (snapshot == null)
             {
-                SnapshotPlotModel = model;
+                PlotModel = model;
                 return;
             }
 
             bool allLevels = SelectedLevel == "Все уровни";
-            var levelRooms = snapshot.Rooms
-                .Where(r => allLevels || r.LevelName == SelectedLevel)
-                .ToList();
-
-            foreach (var room in levelRooms)
+            foreach (var room in snapshot.Rooms)
             {
+                if (!allLevels && room.LevelName != SelectedLevel)
+                    continue;
                 var polygon = room.ToPolygon();
                 if (polygon == null)
                     continue;
@@ -581,8 +291,12 @@ namespace HVACLoadTerminals.App.ViewModels
                 model.Series.Add(scatter);
             }
 
-            SnapshotPlotModel = model;
+            PlotModel = model;
         }
+
+        // ------------------------------------------------------------------
+        // Project / HTML
+        // ------------------------------------------------------------------
 
         private void SaveProject()
         {
@@ -621,7 +335,6 @@ namespace HVACLoadTerminals.App.ViewModels
             try
             {
                 Workspace.LoadProject(dlg.FileName); // raises StateChanged
-                PlotSnapshotLevel();
             }
             catch (Exception ex)
             {
@@ -629,15 +342,54 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
-
-        private class CatalogAdapter : ITerminalCatalogRepository
+        /// <summary>Self-contained HTML scene of the current placements.</summary>
+        private void ExportHtml()
         {
-            private readonly List<TerminalDevice> _devices;
-            public CatalogAdapter(List<TerminalDevice> devices) => _devices = devices;
-            public IReadOnlyList<TerminalDevice> GetAllDevices() => _devices;
-            public IReadOnlyList<TerminalDevice> GetDevicesBySystemType(HVACSystemType type) =>
-                _devices.Where(d => d.SystemType == type).ToList();
-            public TerminalDevice? GetDeviceById(string id) => _devices.FirstOrDefault(d => d.Id == id);
+            var raw = Workspace.LastRawPlacements;
+            var snapshot = Workspace.CurrentSnapshot;
+            if (raw.Count == 0 || snapshot == null)
+            {
+                StatusMessage = "Рассчитайте размещение перед экспортом HTML";
+                return;
+            }
+
+            try
+            {
+                var roomsById = new Dictionary<string, SnapshotRoom>();
+                foreach (var room in snapshot.Rooms)
+                    roomsById[room.Id] = room;
+
+                var results = raw.GroupBy(p => p.RoomId)
+                    .Select(g =>
+                    {
+                        if (!roomsById.TryGetValue(g.Key, out var room))
+                            return null;
+                        var polygon = room.ToPolygon();
+                        if (polygon == null)
+                            return null;
+                        var rp = new RoomPolygon(
+                            room.Id, $"{room.Number}. {room.Name}", polygon,
+                            room.LevelElevation, Array.Empty<HVACSystem>());
+                        return new PlacementResult(rp, g.ToList(), true, null);
+                    })
+                    .Where(r => r != null)
+                    .Cast<PlacementResult>()
+                    .ToList();
+
+                string json = PlacementSceneSerializer.ToJson(results,
+                    $"Расстановка — {SelectedLevel}");
+                var cmd = new OpenHtmlPreviewCommand(() => json);
+                cmd.Execute(null);
+                StatusMessage = "HTML-превью открыт";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка экспорта HTML: " + ex.Message;
+            }
         }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string name) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
