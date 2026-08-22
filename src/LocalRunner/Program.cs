@@ -103,21 +103,7 @@ namespace HVACLoadTerminals.LocalRunner
             return 0;
         }
 
-        private static List<TerminalDevice> BuildDemoCatalog() => new List<TerminalDevice>
-        {
-            new TerminalDevice("D001", "Диффузор", "600x600", "", 340, "",
-                HVACSystemType.Supply, serviceAreaM2: 20),
-            new TerminalDevice("D002", "Диффузор", "300x300", "", 170, "",
-                HVACSystemType.Supply, serviceAreaM2: 10),
-            new TerminalDevice("D003", "Решётка", "800x200", "", 500, "",
-                HVACSystemType.Exhaust),
-            new TerminalDevice("D004", "Решётка", "400x200", "", 250, "",
-                HVACSystemType.Exhaust),
-            new TerminalDevice("R001", "Радиатор", "РС-500 1000мм", "", 0, "",
-                HVACSystemType.Heating, widthMm: 1000, heatingCapacityW: 1000),
-            new TerminalDevice("R002", "Радиатор", "РС-500 500мм", "", 0, "",
-                HVACSystemType.Heating, widthMm: 500, heatingCapacityW: 500)
-        };
+        private static List<TerminalDevice> BuildDemoCatalog() => new List<TerminalDevice>(CatalogFactory.CreateDemo());
 
         private static List<PlacementResult> WrapAsResults(
             SnapshotBuildResult build, RoomSnapshot snapshot)

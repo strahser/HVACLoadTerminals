@@ -7,12 +7,12 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using HVACLoadTerminals.App.Commands;
-using HVACLoadTerminals.App.Services;
 using HVACLoadTerminals.Core.Interfaces;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
 using HVACLoadTerminals.Infrastructure.Data;
+using HVACLoadTerminals.Infrastructure.Presentation;
 using HVACLoadTerminals.Infrastructure.Services;
 using HVACLoadTerminals.Infrastructure.Visualization;
 using OxyPlot;
@@ -124,26 +124,16 @@ namespace HVACLoadTerminals.App.ViewModels
         public ICommand ImportFromJsonCommand { get; }
         public ICommand ShowHtmlPreviewCommand { get; }
 
-        // ---- Snapshot workspace (Phase 2) ----
+        // ---- Snapshot workspace (Phase 2/2.3): thin host over the presenter ----
 
-        private readonly LoadsEstimatorService _estimator = new();
-        private readonly HeatingPlacementService _heatingService = new();
-        private readonly CeilingPlacementService _ceilingService = new();
-        private readonly PlacementProjectStore _projectStore = new();
+        public SnapshotWorkspacePresenter Workspace { get; } = new();
 
-        private RoomSnapshot? _snapshot;
-        private string _snapshotPath = "";
-        private Dictionary<string, EstimatedRoomLoads> _loadsByRoom = new();
-
-        public ObservableCollection<RoomRowViewModel> SnapshotRooms { get; }
-            = new ObservableCollection<RoomRowViewModel>();
-
-        public ObservableCollection<PlacementRowViewModel> Placements { get; }
-            = new ObservableCollection<PlacementRowViewModel>();
+        public ObservableCollection<PlacementRow> Placements { get; }
+            = new ObservableCollection<PlacementRow>();
 
         private ICollectionView? _snapshotRoomsView;
         public ICollectionView SnapshotRoomsView =>
-            _snapshotRoomsView ??= CollectionViewSource.GetDefaultView(SnapshotRooms);
+            _snapshotRoomsView ??= CollectionViewSource.GetDefaultView(Workspace.Rooms);
 
         public ObservableCollection<string> Levels { get; } = new();
 
@@ -156,16 +146,67 @@ namespace HVACLoadTerminals.App.ViewModels
                 _selectedLevel = value;
                 OnPropertyChanged(nameof(SelectedLevel));
                 SnapshotRoomsView.Refresh();
+                PlotSnapshotLevel();
             }
         }
 
-        /// <summary>Owner requirement: grille/radiator length coverage of openings.</summary>
-        private double _minLengthRatio = 0.6;
+        /// <summary>Owner requirement: device length ≥ share of window width.</summary>
         public double MinLengthRatio
         {
-            get => _minLengthRatio;
-            set { _minLengthRatio = value; OnPropertyChanged(nameof(MinLengthRatio)); }
+            get => Workspace.MinWindowLengthRatio;
+            set
+            {
+                Workspace.MinWindowLengthRatio = value;
+                OnPropertyChanged(nameof(MinLengthRatio));
+                RecalcIfLive();
+            }
         }
+
+        public CeilingCountRule SupplyRule
+        {
+            get => Workspace.SupplyRule;
+            set
+            {
+                Workspace.SupplyRule = value;
+                OnPropertyChanged(nameof(SupplyRule));
+                RecalcIfLive();
+            }
+        }
+
+        public int FixedSupplyCount
+        {
+            get => Workspace.FixedSupplyCount;
+            set
+            {
+                Workspace.FixedSupplyCount = Math.Max(1, value);
+                OnPropertyChanged(nameof(FixedSupplyCount));
+                RecalcIfLive();
+            }
+        }
+
+        public double GrilleVelocityMs
+        {
+            get => Workspace.GrilleVelocityMs;
+            set
+            {
+                Workspace.GrilleVelocityMs = value;
+                OnPropertyChanged(nameof(GrilleVelocityMs));
+                RecalcIfLive();
+            }
+        }
+
+        public bool LiveRecalc
+        {
+            get => Workspace.LiveRecalc;
+            set
+            {
+                Workspace.LiveRecalc = value;
+                OnPropertyChanged(nameof(LiveRecalc));
+            }
+        }
+
+        public CeilingCountRule[] CountRules { get; } =
+            Enum.GetValues(typeof(CeilingCountRule)).Cast<CeilingCountRule>().ToArray();
 
         public ICommand OpenSnapshotCommand { get; }
         public ICommand GenerateLoadsCommand { get; }
@@ -201,11 +242,13 @@ namespace HVACLoadTerminals.App.ViewModels
             ShowHtmlPreviewCommand = new RelayCommand(_ => ShowHtmlPreview());
 
             OpenSnapshotCommand = new RelayCommand(_ => OpenSnapshot());
-            GenerateLoadsCommand = new RelayCommand(_ => GenerateLoads());
+            GenerateLoadsCommand = new RelayCommand(_ => Workspace.RegenerateLoads());
             ApplyPurposeCommand = new RelayCommand(p => ApplyPurpose(p as string ?? ""));
-            CalculateSnapshotPlacementsCommand = new RelayCommand(_ => CalculateSnapshotPlacements());
+            CalculateSnapshotPlacementsCommand = new RelayCommand(_ => Workspace.Calculate());
             SaveProjectCommand = new RelayCommand(_ => SaveProject());
             LoadProjectCommand = new RelayCommand(_ => LoadProject());
+
+            Workspace.StateChanged += OnWorkspaceStateChanged;
 
             LoadDemoCatalog();
         }
@@ -227,14 +270,8 @@ namespace HVACLoadTerminals.App.ViewModels
         private void LoadDemoCatalog()
         {
             DeviceCatalog.Clear();
-            DeviceCatalog.Add(new TerminalDevice("D001", "Диффузор", "600x600", "BrandA", 340, "AirFlow", HVACSystemType.Supply, serviceAreaM2: 20));
-            DeviceCatalog.Add(new TerminalDevice("D002", "Диффузор", "300x300", "BrandA", 170, "AirFlow", HVACSystemType.Supply, serviceAreaM2: 10));
-            DeviceCatalog.Add(new TerminalDevice("D003", "Решётка", "800x200", "BrandB", 500, "AirFlow", HVACSystemType.Exhaust));
-            DeviceCatalog.Add(new TerminalDevice("D004", "Решётка", "400x200", "BrandB", 250, "AirFlow", HVACSystemType.Exhaust));
-            DeviceCatalog.Add(new TerminalDevice("D005", "Фанкойл", "Кассета 600x600", "BrandC", 800, "AirFlow", HVACSystemType.FanCoil, serviceAreaM2: 15));
-            DeviceCatalog.Add(new TerminalDevice("D006", "Фанкойл", "Канальный 300L", "BrandC", 1200, "AirFlow", HVACSystemType.FanCoil));
-            DeviceCatalog.Add(new TerminalDevice("R001", "Радиатор", "РС-500 1000мм", "", 0, "", HVACSystemType.Heating, widthMm: 1000, heatingCapacityW: 1000));
-            DeviceCatalog.Add(new TerminalDevice("R002", "Радиатор", "РС-500 500мм", "", 0, "", HVACSystemType.Heating, widthMm: 500, heatingCapacityW: 500));
+            foreach (var device in CatalogFactory.CreateDemo())
+                DeviceCatalog.Add(device);
         }
 
         private void UpdateSystems()
@@ -415,7 +452,7 @@ namespace HVACLoadTerminals.App.ViewModels
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         // ------------------------------------------------------------------
-        // Snapshot workspace methods (Phase 2, cards C2.1 + C2.2)
+        // Snapshot workspace methods — thin host over the presenter (C2.3)
         // ------------------------------------------------------------------
 
         private void OpenSnapshot()
@@ -430,172 +467,51 @@ namespace HVACLoadTerminals.App.ViewModels
 
             try
             {
-                var loader = new RoomSnapshotLoader();
-                _snapshot = loader.LoadFromFile(dlg.FileName);
-                _snapshotPath = dlg.FileName;
+                Workspace.LoadSnapshot(dlg.FileName);
             }
             catch (Exception ex)
             {
                 StatusMessage = "Ошибка чтения снимка: " + ex.Message;
-                return;
             }
-
-            GenerateLoads();
-        }
-
-        private void GenerateLoads()
-        {
-            if (_snapshot == null)
-            {
-                StatusMessage = "Сначала откройте снимок";
-                return;
-            }
-
-            var loads = _estimator.EstimateAll(_snapshot);
-            _loadsByRoom = loads.ToDictionary(l => l.RoomId);
-
-            SnapshotRooms.Clear();
-            foreach (var room in _snapshot.Rooms)
-            {
-                var l = _loadsByRoom.TryGetValue(room.Id ?? "", out var found) ? found : null;
-                SnapshotRooms.Add(new RoomRowViewModel
-                {
-                    RoomId = room.Id,
-                    Number = room.Number,
-                    Name = room.Name,
-                    LevelName = room.LevelName,
-                    Area = room.Area,
-                    IsCorner = room.IsCorner,
-                    Purpose = l?.Purpose.ToString() ?? "",
-                    HeatingW = Math.Round(l?.HeatingLoadW ?? 0),
-                    Supply = Math.Round(l?.SupplyFlowM3h ?? 0),
-                    Exhaust = Math.Round(l?.ExhaustFlowM3h ?? 0)
-                });
-            }
-
-            Levels.Clear();
-            Levels.Add("Все уровни");
-            foreach (var level in SnapshotRooms.Select(r => r.LevelName).Distinct())
-                Levels.Add(level);
-            SelectedLevel = "Все уровни";
-
-            StatusMessage = $"Снимок: {SnapshotRooms.Count} помещений, ΣQ=" +
-                $"{loads.Sum(x => x.HeatingLoadW) / 1000:F0} кВт";
         }
 
         private void ApplyPurpose(string purpose)
         {
-            int n = 0;
-            foreach (var row in SnapshotRoomsView.OfType<RoomRowViewModel>())
-            {
-                row.Purpose = purpose;
-                n++;
-            }
-            StatusMessage = $"Назначение «{purpose}» применено к {n} помещениям";
+            Workspace.ApplyPurpose(
+                r => SelectedLevel == "Все уровни" || r.LevelName == SelectedLevel,
+                purpose);
         }
 
-        private void CalculateSnapshotPlacements()
+        private void RecalcIfLive()
         {
-            if (_snapshot == null || SnapshotRooms.Count == 0)
-            {
-                StatusMessage = "Откройте снимок и сгенерируйте нагрузки";
+            if (LiveRecalc && Workspace.Rooms.Count > 0)
+                Workspace.Calculate();
+        }
+
+        private void OnWorkspaceStateChanged(WorkspaceState state)
+        {
+            StatusMessage = state.Status;
+
+            Levels.Clear();
+            Levels.Add("Все уровни");
+            foreach (var level in state.Levels)
+                Levels.Add(level);
+            OnPropertyChanged(nameof(SnapshotRoomsView));
+            SnapshotRoomsView?.Refresh();
+
+            if (!state.IsCalculation && state.Placements.Count == 0)
                 return;
-            }
 
             Placements.Clear();
-            var catalog = DeviceCatalog.ToList();
-            var roomsById = _snapshot.Rooms.ToDictionary(r => r.Id);
-            var openingsByRoom = _snapshot.Openings
-                .GroupBy(o => o.SpaceId)
-                .ToDictionary(g => g.Key, g => (IEnumerable<SnapshotOpening>)g.ToList());
-            var wallsByRoom = _snapshot.Walls
-                .GroupBy(w => w.SpaceId)
-                .ToDictionary(g => g.Key, g => (IEnumerable<SnapshotWall>)g.ToList());
+            foreach (var row in state.Placements)
+                Placements.Add(row);
 
-            int warnCount = 0;
-            foreach (var row in SnapshotRooms)
-            {
-                if (!roomsById.TryGetValue(row.RoomId, out var snapRoom))
-                    continue;
-                var polygon = snapRoom.ToPolygon();
-                if (polygon == null)
-                {
-                    row.Warning = "нет контура";
-                    warnCount++;
-                    continue;
-                }
-                openingsByRoom.TryGetValue(row.RoomId, out var openings);
-                wallsByRoom.TryGetValue(row.RoomId, out var walls);
-
-                var roomWarnings = new List<string>();
-
-                // 1. Heating under every window.
-                if (row.HeatingW > 0)
-                {
-                    var heatingOptions = new HeatingPlacementOptions
-                    {
-                        MinLengthToWindowRatio = MinLengthRatio
-                    };
-                    var res = _heatingService.PlaceForRoom(
-                        snapRoom, polygon, openings, walls,
-                        row.HeatingW, catalog, heatingOptions);
-                    AddPlacementRows(res.Placements, row, snapRoom);
-                    roomWarnings.AddRange(res.Warnings);
-                }
-
-                // 2. Ceiling supply diffusers by service area / flow.
-                if (row.Supply > 0)
-                {
-                    var res = _ceilingService.PlaceForRoom(
-                        row.RoomId, polygon, row.Supply, row.Area,
-                        HVACSystemType.Supply, catalog, "Приток");
-                    AddPlacementRows(res.Placements, row, snapRoom);
-                    roomWarnings.AddRange(res.Warnings);
-                }
-
-                // 3. Exhaust grilles positioned on the ceiling plane.
-                if (row.Exhaust > 0)
-                {
-                    var res = _ceilingService.PlaceForRoom(
-                        row.RoomId, polygon, row.Exhaust, row.Area,
-                        HVACSystemType.Exhaust, catalog, "Вытяжка");
-                    AddPlacementRows(res.Placements, row, snapRoom);
-                    roomWarnings.AddRange(res.Warnings);
-                }
-
-                row.Warning = roomWarnings.Count > 0
-                    ? string.Join("; ", roomWarnings.Distinct())
-                    : "";
-                warnCount += roomWarnings.Count;
-            }
-
-            StatusMessage = $"Размещение: {Placements.Count} приборов, предупреждений: {warnCount}";
             PlotSnapshotLevel();
-        }
-
-        private void AddPlacementRows(
-            IReadOnlyList<DevicePlacement> placements,
-            RoomRowViewModel row,
-            SnapshotRoom snapRoom)
-        {
-            foreach (var p in placements)
-            {
-                Placements.Add(new PlacementRowViewModel
-                {
-                    RoomName = $"{row.Number}. {row.Name}",
-                    LevelName = row.LevelName,
-                    Family = p.Device.FamilyName,
-                    TypeName = p.Device.TypeName,
-                    SystemName = p.SystemName,
-                    X = Math.Round(p.Position.X, 3),
-                    Y = Math.Round(p.Position.Y, 3),
-                    RotationDeg = Math.Round(p.Rotation * 180.0 / Math.PI, 1)
-                });
-            }
         }
 
         private void PlotSnapshotLevel()
         {
+            var snapshot = Workspace.CurrentSnapshot;
             var model = new PlotModel
             {
                 Title = $"Расстановка — {SelectedLevel}",
@@ -611,14 +527,14 @@ namespace HVACLoadTerminals.App.ViewModels
                 Position = OxyPlot.Axes.AxisPosition.Left, Title = "Y"
             });
 
-            if (_snapshot == null)
+            if (snapshot == null)
             {
                 SnapshotPlotModel = model;
                 return;
             }
 
             bool allLevels = SelectedLevel == "Все уровни";
-            var levelRooms = _snapshot.Rooms
+            var levelRooms = snapshot.Rooms
                 .Where(r => allLevels || r.LevelName == SelectedLevel)
                 .ToList();
 
@@ -670,7 +586,7 @@ namespace HVACLoadTerminals.App.ViewModels
 
         private void SaveProject()
         {
-            if (SnapshotRooms.Count == 0)
+            if (Workspace.Rooms.Count == 0)
             {
                 StatusMessage = "Нет проекта для сохранения";
                 return;
@@ -682,8 +598,15 @@ namespace HVACLoadTerminals.App.ViewModels
             if (dlg.ShowDialog() != true)
                 return;
 
-            _projectStore.Save(dlg.FileName, _snapshotPath, SnapshotRooms.ToList(), Placements.ToList());
-            StatusMessage = $"Проект сохранён: {dlg.FileName}";
+            try
+            {
+                Workspace.SaveProject(dlg.FileName);
+                StatusMessage = $"Проект сохранён: {dlg.FileName}";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка сохранения: " + ex.Message;
+            }
         }
 
         private void LoadProject()
@@ -697,37 +620,15 @@ namespace HVACLoadTerminals.App.ViewModels
 
             try
             {
-                var (snapshotPath, rooms, placements) = _projectStore.Load(dlg.FileName);
-                _snapshotPath = snapshotPath;
-
-                SnapshotRooms.Clear();
-                foreach (var r in rooms)
-                    SnapshotRooms.Add(r);
-
-                Levels.Clear();
-                Levels.Add("Все уровни");
-                foreach (var level in SnapshotRooms.Select(r => r.LevelName).Distinct())
-                    Levels.Add(level);
-
-                Placements.Clear();
-                foreach (var p in placements)
-                    Placements.Add(p);
-
-                // Restore geometry when the snapshot is reachable.
-                if (System.IO.File.Exists(_snapshotPath))
-                {
-                    _snapshot = new RoomSnapshotLoader().LoadFromFile(_snapshotPath);
-                    PlotSnapshotLevel();
-                }
-
-                StatusMessage = $"Проект загружен: {rooms.Count} помещений, " +
-                    $"{placements.Count} приборов";
+                Workspace.LoadProject(dlg.FileName); // raises StateChanged
+                PlotSnapshotLevel();
             }
             catch (Exception ex)
             {
                 StatusMessage = "Ошибка загрузки проекта: " + ex.Message;
             }
         }
+
 
         private class CatalogAdapter : ITerminalCatalogRepository
         {

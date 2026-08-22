@@ -5,6 +5,19 @@ using HVACLoadTerminals.Core.Models;
 
 namespace HVACLoadTerminals.Core.Services
 {
+    /// <summary>Rule for choosing the device count (plan card C2.3).</summary>
+    public enum CeilingCountRule
+    {
+        /// <summary>Analog priority: area vs flow — the larger.</summary>
+        Auto,
+        /// <summary>Pure ceil(area / serviceArea).</summary>
+        ByArea,
+        /// <summary>Pure ceil(flow / maxFlow).</summary>
+        ByFlow,
+        /// <summary>User-fixed count.</summary>
+        Fixed
+    }
+
     /// <summary>Placement policy for ceiling devices (diffusers, cassette fan coils) —
     /// plan card C1.2; grid over the service area, algorithms adapted from the
     /// InsertTerminalsPandas analog.</summary>
@@ -15,6 +28,11 @@ namespace HVACLoadTerminals.Core.Services
 
         /// <summary>Minimum distance between device centres, mm.</summary>
         public double MinDistanceMm { get; set; } = 1000;
+
+        public CeilingCountRule CountRule { get; set; } = CeilingCountRule.Auto;
+
+        /// <summary>Count for <see cref="CeilingCountRule.Fixed"/>.</summary>
+        public int FixedCount { get; set; } = 2;
     }
 
     /// <summary>Placements plus human-readable warnings for one room.</summary>
@@ -74,7 +92,18 @@ namespace HVACLoadTerminals.Core.Services
 
             // Quantity from the CHOSEN device only (its own service area + flow);
             // never inflate by other catalog entries.
-            int count = Math.Max(CountFor(device), 1);
+            int count = options.CountRule switch
+            {
+                CeilingCountRule.ByArea => device.ServiceAreaM2 > 0 && roomAreaM2 > 0
+                    ? (int)Math.Ceiling(roomAreaM2 / device.ServiceAreaM2)
+                    : CountFor(device),
+                CeilingCountRule.ByFlow => requiredFlow > 0
+                    ? (int)Math.Ceiling(requiredFlow / device.MaxFlowRate)
+                    : 1,
+                CeilingCountRule.Fixed => Math.Max(1, options.FixedCount),
+                _ => CountFor(device)
+            };
+            count = Math.Max(count, 1);
             if (count < 1)
                 return Warn("Нагрузка не задана — количество приборов не рассчитать");
 

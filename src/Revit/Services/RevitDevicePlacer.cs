@@ -121,6 +121,32 @@ namespace HVACLoadTerminals.Revit.Services
         }
 
         /// <summary>
+        /// Deletes non-type family instances whose Comments are exactly one of
+        /// <paramref name="markers"/>. Returns the number deleted. Must be called
+        /// inside an active transaction (idempotent "replace" semantics).
+        /// </summary>
+        public int DeleteMarkedInstancesExact(ICollection<string> markers)
+        {
+            int deleted = 0;
+            var set = new HashSet<string>(markers, StringComparer.Ordinal);
+            var instances = new FilteredElementCollector(_doc)
+                .WhereElementIsNotElementType()
+                .OfClass(typeof(FamilyInstance));
+
+            foreach (var fi in instances.Cast<FamilyInstance>().ToList())
+            {
+                var p = fi.LookupParameter("Comments");
+                string value = p?.AsString() ?? "";
+                if (!string.IsNullOrEmpty(value) && set.Contains(value))
+                {
+                    _doc.Delete(fi.Id);
+                    deleted++;
+                }
+            }
+            return deleted;
+        }
+
+        /// <summary>
         /// Collects Comments of all family instances starting with "HLT|" —
         /// idempotency markers placed by this plugin.
         /// </summary>

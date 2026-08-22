@@ -62,12 +62,19 @@ namespace HVACLoadTerminals.Revit
                 assembly.Location,
                 "HVACLoadTerminals.Revit.Commands.ImportSnapshotPlacementCommand");
 
+            var standBtnData = new PushButtonData(
+                "SnapshotStand",
+                "Стенд\nрасстановки",
+                assembly.Location,
+                "HVACLoadTerminals.Revit.Commands.SnapshotStandCommand");
+
             panel.AddItem(placeBtnData);
             panel.AddItem(reviewBtnData);
             panel.AddItem(exportBtnData);
             panel.AddItem(massBtnData);
             panel.AddItem(individualBtnData);
             panel.AddItem(snapshotBtnData);
+            panel.AddItem(standBtnData);
             panel.AddItem(runTestsBtnData);
 
             return Result.Succeeded;

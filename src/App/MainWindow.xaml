@@ -54,9 +54,20 @@
                     <TextBlock Text="Доля длины прибора от окна:" VerticalAlignment="Center" Margin="12,0,4,0"/>
                     <TextBox Text="{Binding MinLengthRatio, UpdateSourceTrigger=PropertyChanged}"
                              Width="45" VerticalContentAlignment="Center" Padding="4,2"/>
+                    <TextBlock Text="Приток:" VerticalAlignment="Center" Margin="12,0,4,0"/>
+                    <ComboBox ItemsSource="{Binding CountRules}" SelectedItem="{Binding SupplyRule}"
+                              Width="100" Margin="0,0,6,0"/>
+                    <TextBlock Text="N=" VerticalAlignment="Center" Margin="0,0,2,0"/>
+                    <TextBox Text="{Binding FixedSupplyCount, UpdateSourceTrigger=PropertyChanged}"
+                             Width="35" VerticalContentAlignment="Center" Padding="4,2"/>
+                    <TextBlock Text="v решётки, м/с:" VerticalAlignment="Center" Margin="12,0,4,0"/>
+                    <TextBox Text="{Binding GrilleVelocityMs, UpdateSourceTrigger=PropertyChanged}"
+                             Width="35" VerticalContentAlignment="Center" Padding="4,2"/>
+                    <CheckBox Content="Живой пересчёт" IsChecked="{Binding LiveRecalc}"
+                              VerticalAlignment="Center" Margin="12,0,0,0"/>
                     <Button Style="{StaticResource ActionButton}"
                             Command="{Binding CalculateSnapshotPlacementsCommand}">
-                        ▶ Рассчитать размещение
+                        ▶ Рассчитать
                     </Button>
                     <Button Style="{StaticResource ActionButton}"
                             Command="{Binding SaveProjectCommand}">
@@ -120,6 +131,7 @@
                                 <DataGridTextColumn Header="X" Binding="{Binding X}" Width="70"/>
                                 <DataGridTextColumn Header="Y" Binding="{Binding Y}" Width="70"/>
                                 <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="60"/>
+                                <DataGridTextColumn Header="k_ef" Binding="{Binding KEf, StringFormat=F2}" Width="50"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </DockPanel>

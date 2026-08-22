@@ -1,0 +1,78 @@
+<Window x:Class="HVACLoadTerminals.Revit.UI.SnapshotPlacementWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Стенд расстановки по снимку (modeless)"
+        Height="700" Width="1250"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="3"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <StatusBar DockPanel.Dock="Bottom">
+            <TextBlock x:Name="StatusText" Text="Готово"/>
+        </StatusBar>
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4">
+            <Button Content="Открыть снимок…" Click="OpenSnapshot_Click"/>
+            <Button Content="Нагрузки" Click="RegenLoads_Click"/>
+            <TextBlock Text="Доля от окна:" VerticalAlignment="Center" Margin="10,0,3,0"/>
+            <TextBox Text="{Binding MinWindowLengthRatio, UpdateSourceTrigger=PropertyChanged}"
+                     Width="42" VerticalContentAlignment="Center" Padding="4,2"/>
+            <TextBlock Text="Приток:" VerticalAlignment="Center" Margin="10,0,3,0"/>
+            <ComboBox ItemsSource="{Binding CountRules}" SelectedItem="{Binding SupplyRule}"
+                      Width="100"/>
+            <TextBlock Text="N=" VerticalAlignment="Center" Margin="8,0,2,0"/>
+            <TextBox Text="{Binding FixedSupplyCount, UpdateSourceTrigger=PropertyChanged}"
+                     Width="32" VerticalContentAlignment="Center" Padding="4,2"/>
+            <CheckBox Content="Живой пересчёт" IsChecked="{Binding LiveRecalc}"
+                      VerticalAlignment="Center" Margin="10,0,0,0"/>
+            <Button Content="▶ Рассчитать" Click="Calculate_Click" FontWeight="Bold"/>
+            <Button Content="✔ Записать в модель (ExternalEvent)"
+                    Click="Place_Click" Background="#E8F5E9" FontWeight="Bold"/>
+        </StackPanel>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <DataGrid Grid.Row="0" x:Name="RoomsGrid"
+                      AutoGenerateColumns="False" CanUserAddRows="False"
+                      AlternatingRowBackground="#FAFAFA">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="45"/>
+                    <DataGridTextColumn Header="Помещение" Binding="{Binding Name}" Width="140"/>
+                    <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="90"/>
+                    <DataGridTextColumn Header="S, м²" Binding="{Binding Area, StringFormat=F1}" Width="60"/>
+                    <DataGridCheckBoxColumn Header="Угл." Binding="{Binding IsCorner}" Width="42"/>
+                    <DataGridTextColumn Header="Назначение" Binding="{Binding Purpose}" Width="90"/>
+                    <DataGridTextColumn Header="Q, Вт" Binding="{Binding HeatingW}" Width="80"/>
+                    <DataGridTextColumn Header="Приток" Binding="{Binding Supply}" Width="70"/>
+                    <DataGridTextColumn Header="Вытяжка" Binding="{Binding Exhaust}" Width="70"/>
+                    <DataGridTextColumn Header="Примечание" Binding="{Binding Warning}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <DataGrid Grid.Row="1" x:Name="PlacementsGrid"
+                      AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                      AlternatingRowBackground="#FAFAFA" Margin="0,4,0,0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="RoomId" Binding="{Binding RoomName}" Width="90"/>
+                    <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
+                    <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
+                    <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
+                    <DataGridTextColumn Header="X" Binding="{Binding X}" Width="75"/>
+                    <DataGridTextColumn Header="Y" Binding="{Binding Y}" Width="75"/>
+                    <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>
+                    <DataGridTextColumn Header="k_ef" Binding="{Binding KEf, StringFormat=F2}" Width="55"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
+</Window>
