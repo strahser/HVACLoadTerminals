@@ -7,128 +7,225 @@
         xmlns:vm="clr-namespace:HVACLoadTerminals.App.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
-        Title="HVAC Load Terminals - Placement Designer"
-        Height="800" Width="1200"
+        Title="HVAC Load Terminals — расстановка приборов"
+        Height="850" Width="1400"
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
         <Style TargetType="Button" x:Key="ActionButton">
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="3"/>
             <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <Style TargetType="Label" x:Key="SectionHeader">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Margin" Value="0,8,0,4"/>
         </Style>
     </Window.Resources>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="300"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <DockPanel>
+        <StatusBar DockPanel.Dock="Bottom">
+            <TextBlock Text="{Binding StatusMessage}"/>
+        </StatusBar>
+        <TabControl>
+        <!-- ============ ВКЛАДКА 1: СНИМОК ПОМЕЩЕНИЙ ============ -->
+        <TabItem Header="Снимок помещений">
+            <Grid Margin="6">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="2*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-        <Border Grid.Column="0" Background="#F5F5F5" Padding="8" BorderBrush="#DDD" BorderThickness="0,0,1,0">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                    <Label Style="{StaticResource SectionHeader}">Projects &amp; Rooms</Label>
-                    <ListBox x:Name="RoomListBox"
-                             ItemsSource="{Binding Rooms}"
-                             SelectedItem="{Binding SelectedRoom}"
-                             DisplayMemberPath="RoomName"
-                             Height="200"/>
-
-                    <Label Style="{StaticResource SectionHeader}">System Data</Label>
-                    <DataGrid x:Name="SystemGrid"
-                              ItemsSource="{Binding SelectedRoomSystems}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              Height="120">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="System" Binding="{Binding Name}" Width="*"/>
-                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="60"/>
-                            <DataGridTextColumn Header="Flow" Binding="{Binding FlowRate}" Width="60"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <Label Style="{StaticResource SectionHeader}">Device Catalog</Label>
-                    <DataGrid x:Name="CatalogGrid"
-                              ItemsSource="{Binding DeviceCatalog}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              Height="120">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Device" Binding="{Binding FamilyName}" Width="*"/>
-                            <DataGridTextColumn Header="Max Flow" Binding="{Binding MaxFlowRate}" Width="60"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <Label Style="{StaticResource SectionHeader}">Actions</Label>
+                <!-- Панель инструментов -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
                     <Button Style="{StaticResource ActionButton}"
-                            Command="{Binding CalculatePlacementCommand}">
-                        Calculate Placement
+                            Command="{Binding OpenSnapshotCommand}">
+                        Открыть снимок…
                     </Button>
                     <Button Style="{StaticResource ActionButton}"
-                            Command="{Binding ShowHtmlPreviewCommand}">
-                        Show HTML Preview
+                            Command="{Binding GenerateLoadsCommand}">
+                        Пересчитать нагрузки
+                    </Button>
+                    <TextBlock Text="Назначение:" VerticalAlignment="Center" Margin="12,0,4,0"/>
+                    <TextBox x:Name="PurposeBox" Text="Office" Width="110"
+                             VerticalContentAlignment="Center" Padding="4,2"/>
+                    <Button Style="{StaticResource ActionButton}"
+                            Command="{Binding ApplyPurposeCommand}"
+                            CommandParameter="{Binding Text, ElementName=PurposeBox}">
+                        Применить к отфильтрованным
+                    </Button>
+                    <TextBlock Text="Доля длины прибора от окна:" VerticalAlignment="Center" Margin="12,0,4,0"/>
+                    <TextBox Text="{Binding MinLengthRatio, UpdateSourceTrigger=PropertyChanged}"
+                             Width="45" VerticalContentAlignment="Center" Padding="4,2"/>
+                    <Button Style="{StaticResource ActionButton}"
+                            Command="{Binding CalculateSnapshotPlacementsCommand}">
+                        ▶ Рассчитать размещение
                     </Button>
                     <Button Style="{StaticResource ActionButton}"
-                            Command="{Binding ShowAllRoomsCommand}">
-                        Show All Rooms
+                            Command="{Binding SaveProjectCommand}">
+                        Сохранить проект
                     </Button>
                     <Button Style="{StaticResource ActionButton}"
-                            Command="{Binding ExportToJsonCommand}">
-                        Export to JSON
+                            Command="{Binding LoadProjectCommand}">
+                        Загрузить проект
                     </Button>
-                    <Button Style="{StaticResource ActionButton}"
-                            Command="{Binding ImportFromJsonCommand}">
-                        Import from JSON
-                    </Button>
-
-                    <Label Style="{StaticResource SectionHeader}">Placement Options</Label>
-                    <StackPanel Margin="0,0,0,4">
-                        <TextBlock Text="Mode" Margin="0,0,0,2" FontSize="11"/>
-                        <ComboBox ItemsSource="{Binding PlacementModes}"
-                                  SelectedItem="{Binding CurrentMode}"
-                                  Margin="0,0,0,6"/>
-                        <TextBlock Text="Wall Offset (mm)" Margin="0,0,0,2" FontSize="11"/>
-                        <TextBox Text="{Binding WallOffsetMm, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,0,0,6" Padding="4,2"/>
-                        <TextBlock Text="Fixed Count" Margin="0,0,0,2" FontSize="11"/>
-                        <TextBox Text="{Binding FixedCount, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,0,0,6" Padding="4,2"/>
-                        <TextBlock Text="Step Count" Margin="0,0,0,2" FontSize="11"/>
-                        <TextBox Text="{Binding StepCount, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,0,0,6" Padding="4,2"/>
-                        <TextBlock Text="Max Count" Margin="0,0,0,2" FontSize="11"/>
-                        <TextBox Text="{Binding MaxCount, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,0,0,6" Padding="4,2"/>
-                        <TextBlock Text="Side Preference" Margin="0,0,0,2" FontSize="11"/>
-                        <ComboBox ItemsSource="{Binding PlacementSides}"
-                                  SelectedItem="{Binding SidePreference}"
-                                  Margin="0,0,0,6"/>
-                        <TextBlock Text="Coordinate System" Margin="0,0,0,2" FontSize="11"/>
-                        <ComboBox ItemsSource="{Binding CoordinateSystems}"
-                                  SelectedItem="{Binding CoordinateSystem}"
-                                  Margin="0,0,0,6"/>
-                    </StackPanel>
-
-                    <Label Style="{StaticResource SectionHeader}">Placement Info</Label>
-                    <TextBlock x:Name="InfoText"
-                               Text="{Binding StatusMessage}"
-                               TextWrapping="Wrap"
-                               Margin="4"
-                               Foreground="#333"/>
                 </StackPanel>
-            </ScrollViewer>
-        </Border>
 
-        <Grid Grid.Column="1">
-            <oxy:PlotView x:Name="MainPlot"
-                          Model="{Binding PlotModel}"
-                          Margin="8"/>
-        </Grid>
-    </Grid>
+                <!-- Таблица помещений -->
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding SnapshotRoomsView}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          AlternatingRowBackground="#FAFAFA"
+                          RowHeight="24">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="45"/>
+                        <DataGridTextColumn Header="Помещение" Binding="{Binding Name}" Width="150"/>
+                        <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="90"/>
+                        <DataGridTextColumn Header="S, м²" Binding="{Binding Area, StringFormat=F1}" Width="65"/>
+                        <DataGridCheckBoxColumn Header="Угл." Binding="{Binding IsCorner}" Width="45"/>
+                        <DataGridTextColumn Header="Назначение" Binding="{Binding Purpose}" Width="95"/>
+                        <DataGridTextColumn Header="Q отопл., Вт" Binding="{Binding HeatingW}" Width="90"/>
+                        <DataGridTextColumn Header="Приток, м³/ч" Binding="{Binding Supply}" Width="85"/>
+                        <DataGridTextColumn Header="Вытяжка, м³/ч" Binding="{Binding Exhaust}" Width="85"/>
+                        <DataGridTextColumn Header="Предупреждения" Binding="{Binding Warning}" Width="*"
+                                            IsReadOnly="True"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- Предпросмотр + результаты -->
+                <Grid Grid.Row="2" Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <DockPanel Grid.Column="0">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Text="План этажа:" VerticalAlignment="Center"/>
+                            <ComboBox ItemsSource="{Binding Levels}"
+                                      SelectedItem="{Binding SelectedLevel}"
+                                      Width="160" Margin="8,0,0,0"/>
+                        </StackPanel>
+                        <oxy:PlotView Model="{Binding SnapshotPlotModel}"/>
+                    </DockPanel>
+                    <DockPanel Grid.Column="1" Margin="8,0,0,0">
+                        <TextBlock DockPanel.Dock="Top" Text="Размещённые приборы:" Margin="0,0,0,4"/>
+                        <DataGrid ItemsSource="{Binding Placements}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  IsReadOnly="True"
+                                  AlternatingRowBackground="#FAFAFA">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="130"/>
+                                <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
+                                <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="110"/>
+                                <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
+                                <DataGridTextColumn Header="X" Binding="{Binding X}" Width="70"/>
+                                <DataGridTextColumn Header="Y" Binding="{Binding Y}" Width="70"/>
+                                <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="60"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Grid>
+            </Grid>
+        </TabItem>
+
+        <!-- ============ ВКЛАДКА 2: ДЕМО ============ -->
+        <TabItem Header="Демо (старый режим)">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Background="#F5F5F5" Padding="8" BorderBrush="#DDD" BorderThickness="0,0,1,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Label FontWeight="Bold">Projects &amp; Rooms</Label>
+                            <ListBox x:Name="RoomListBox"
+                                     ItemsSource="{Binding Rooms}"
+                                     SelectedItem="{Binding SelectedRoom}"
+                                     DisplayMemberPath="RoomName"
+                                     Height="200"/>
+
+                            <Label FontWeight="Bold">System Data</Label>
+                            <DataGrid x:Name="SystemGrid"
+                                      ItemsSource="{Binding SelectedRoomSystems}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      Height="120">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="System" Binding="{Binding Name}" Width="*"/>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="60"/>
+                                    <DataGridTextColumn Header="Flow" Binding="{Binding FlowRate}" Width="60"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <Label FontWeight="Bold">Device Catalog</Label>
+                            <DataGrid x:Name="CatalogGrid"
+                                      ItemsSource="{Binding DeviceCatalog}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      Height="120">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Device" Binding="{Binding FamilyName}" Width="*"/>
+                                    <DataGridTextColumn Header="Max Flow" Binding="{Binding MaxFlowRate}" Width="60"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <Label FontWeight="Bold">Actions</Label>
+                            <Button Style="{StaticResource ActionButton}"
+                                    Command="{Binding CalculatePlacementCommand}">
+                                Calculate Placement
+                            </Button>
+                            <Button Style="{StaticResource ActionButton}"
+                                    Command="{Binding ShowHtmlPreviewCommand}">
+                                Show HTML Preview
+                            </Button>
+                            <Button Style="{StaticResource ActionButton}"
+                                    Command="{Binding ShowAllRoomsCommand}">
+                                Show All Rooms
+                            </Button>
+                            <Button Style="{StaticResource ActionButton}"
+                                    Command="{Binding ExportToJsonCommand}">
+                                Export to JSON
+                            </Button>
+                            <Button Style="{StaticResource ActionButton}"
+                                    Command="{Binding ImportFromJsonCommand}">
+                                Import from JSON
+                            </Button>
+
+                            <Label FontWeight="Bold">Placement Options</Label>
+                            <StackPanel Margin="0,0,0,4">
+                                <TextBlock Text="Mode" Margin="0,0,0,2" FontSize="11"/>
+                                <ComboBox ItemsSource="{Binding PlacementModes}"
+                                          SelectedItem="{Binding CurrentMode}"
+                                          Margin="0,0,0,6"/>
+                                <TextBlock Text="Wall Offset (mm)" Margin="0,0,0,2" FontSize="11"/>
+                                <TextBox Text="{Binding WallOffsetMm, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,0,6" Padding="4,2"/>
+                                <TextBlock Text="Fixed Count" Margin="0,0,0,2" FontSize="11"/>
+                                <TextBox Text="{Binding FixedCount, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,0,6" Padding="4,2"/>
+                                <TextBlock Text="Step Count" Margin="0,0,0,2" FontSize="11"/>
+                                <TextBox Text="{Binding StepCount, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,0,6" Padding="4,2"/>
+                                <TextBlock Text="Max Count" Margin="0,0,0,2" FontSize="11"/>
+                                <TextBox Text="{Binding MaxCount, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,0,6" Padding="4,2"/>
+                            </StackPanel>
+
+                            <Label FontWeight="Bold">Placement Info</Label>
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       TextWrapping="Wrap" Margin="4" Foreground="#333"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <Grid Grid.Column="1">
+                    <oxy:PlotView x:Name="MainPlot"
+                                  Model="{Binding PlotModel}"
+                                  Margin="8"/>
+                </Grid>
+            </Grid>
+        </TabItem>
+    </TabControl>
+    </DockPanel>
 </Window>

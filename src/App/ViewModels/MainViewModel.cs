@@ -3,10 +3,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using HVACLoadTerminals.App.Commands;
+using HVACLoadTerminals.App.Services;
 using HVACLoadTerminals.Core.Interfaces;
 using HVACLoadTerminals.Core.Models;
+using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
 using HVACLoadTerminals.Infrastructure.Data;
 using HVACLoadTerminals.Infrastructure.Services;
@@ -120,6 +124,63 @@ namespace HVACLoadTerminals.App.ViewModels
         public ICommand ImportFromJsonCommand { get; }
         public ICommand ShowHtmlPreviewCommand { get; }
 
+        // ---- Snapshot workspace (Phase 2) ----
+
+        private readonly LoadsEstimatorService _estimator = new();
+        private readonly HeatingPlacementService _heatingService = new();
+        private readonly CeilingPlacementService _ceilingService = new();
+        private readonly PlacementProjectStore _projectStore = new();
+
+        private RoomSnapshot? _snapshot;
+        private string _snapshotPath = "";
+        private Dictionary<string, EstimatedRoomLoads> _loadsByRoom = new();
+
+        public ObservableCollection<RoomRowViewModel> SnapshotRooms { get; }
+            = new ObservableCollection<RoomRowViewModel>();
+
+        public ObservableCollection<PlacementRowViewModel> Placements { get; }
+            = new ObservableCollection<PlacementRowViewModel>();
+
+        private ICollectionView? _snapshotRoomsView;
+        public ICollectionView SnapshotRoomsView =>
+            _snapshotRoomsView ??= CollectionViewSource.GetDefaultView(SnapshotRooms);
+
+        public ObservableCollection<string> Levels { get; } = new();
+
+        private string _selectedLevel = "Все уровни";
+        public string SelectedLevel
+        {
+            get => _selectedLevel;
+            set
+            {
+                _selectedLevel = value;
+                OnPropertyChanged(nameof(SelectedLevel));
+                SnapshotRoomsView.Refresh();
+            }
+        }
+
+        /// <summary>Owner requirement: grille/radiator length coverage of openings.</summary>
+        private double _minLengthRatio = 0.6;
+        public double MinLengthRatio
+        {
+            get => _minLengthRatio;
+            set { _minLengthRatio = value; OnPropertyChanged(nameof(MinLengthRatio)); }
+        }
+
+        public ICommand OpenSnapshotCommand { get; }
+        public ICommand GenerateLoadsCommand { get; }
+        public ICommand ApplyPurposeCommand { get; }
+        public ICommand CalculateSnapshotPlacementsCommand { get; }
+        public ICommand SaveProjectCommand { get; }
+        public ICommand LoadProjectCommand { get; }
+
+        private PlotModel? _snapshotPlotModel;
+        public PlotModel? SnapshotPlotModel
+        {
+            get => _snapshotPlotModel;
+            set { _snapshotPlotModel = value; OnPropertyChanged(nameof(SnapshotPlotModel)); }
+        }
+
         public MainViewModel(
             ITerminalPlacementService placementService,
             IPolygonVisualizer visualizer,
@@ -138,6 +199,13 @@ namespace HVACLoadTerminals.App.ViewModels
             ExportToJsonCommand = new RelayCommand(_ => ExportToJson());
             ImportFromJsonCommand = new RelayCommand(_ => ImportFromJson());
             ShowHtmlPreviewCommand = new RelayCommand(_ => ShowHtmlPreview());
+
+            OpenSnapshotCommand = new RelayCommand(_ => OpenSnapshot());
+            GenerateLoadsCommand = new RelayCommand(_ => GenerateLoads());
+            ApplyPurposeCommand = new RelayCommand(p => ApplyPurpose(p as string ?? ""));
+            CalculateSnapshotPlacementsCommand = new RelayCommand(_ => CalculateSnapshotPlacements());
+            SaveProjectCommand = new RelayCommand(_ => SaveProject());
+            LoadProjectCommand = new RelayCommand(_ => LoadProject());
 
             LoadDemoCatalog();
         }
@@ -159,12 +227,14 @@ namespace HVACLoadTerminals.App.ViewModels
         private void LoadDemoCatalog()
         {
             DeviceCatalog.Clear();
-            DeviceCatalog.Add(new TerminalDevice("D001", "Diffuser-S", "Square 600x600", "BrandA", 340, "AirFlow", HVACSystemType.Supply));
-            DeviceCatalog.Add(new TerminalDevice("D002", "Diffuser-S", "Square 300x300", "BrandA", 170, "AirFlow", HVACSystemType.Supply));
-            DeviceCatalog.Add(new TerminalDevice("D003", "Grille-E", "Rect 800x200", "BrandB", 500, "AirFlow", HVACSystemType.Exhaust));
-            DeviceCatalog.Add(new TerminalDevice("D004", "Grille-E", "Rect 400x200", "BrandB", 250, "AirFlow", HVACSystemType.Exhaust));
-            DeviceCatalog.Add(new TerminalDevice("D005", "FCU", "Cassette 600x600", "BrandC", 800, "AirFlow", HVACSystemType.FanCoil));
-            DeviceCatalog.Add(new TerminalDevice("D006", "FCU", "Ducted 300L", "BrandC", 1200, "AirFlow", HVACSystemType.FanCoil));
+            DeviceCatalog.Add(new TerminalDevice("D001", "Диффузор", "600x600", "BrandA", 340, "AirFlow", HVACSystemType.Supply, serviceAreaM2: 20));
+            DeviceCatalog.Add(new TerminalDevice("D002", "Диффузор", "300x300", "BrandA", 170, "AirFlow", HVACSystemType.Supply, serviceAreaM2: 10));
+            DeviceCatalog.Add(new TerminalDevice("D003", "Решётка", "800x200", "BrandB", 500, "AirFlow", HVACSystemType.Exhaust));
+            DeviceCatalog.Add(new TerminalDevice("D004", "Решётка", "400x200", "BrandB", 250, "AirFlow", HVACSystemType.Exhaust));
+            DeviceCatalog.Add(new TerminalDevice("D005", "Фанкойл", "Кассета 600x600", "BrandC", 800, "AirFlow", HVACSystemType.FanCoil, serviceAreaM2: 15));
+            DeviceCatalog.Add(new TerminalDevice("D006", "Фанкойл", "Канальный 300L", "BrandC", 1200, "AirFlow", HVACSystemType.FanCoil));
+            DeviceCatalog.Add(new TerminalDevice("R001", "Радиатор", "РС-500 1000мм", "", 0, "", HVACSystemType.Heating, widthMm: 1000, heatingCapacityW: 1000));
+            DeviceCatalog.Add(new TerminalDevice("R002", "Радиатор", "РС-500 500мм", "", 0, "", HVACSystemType.Heating, widthMm: 500, heatingCapacityW: 500));
         }
 
         private void UpdateSystems()
@@ -343,6 +413,321 @@ namespace HVACLoadTerminals.App.ViewModels
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string name) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        // ------------------------------------------------------------------
+        // Snapshot workspace methods (Phase 2, cards C2.1 + C2.2)
+        // ------------------------------------------------------------------
+
+        private void OpenSnapshot()
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Открыть снимок помещений",
+                Filter = "Снимки HeatLossRevit2 (*.json)|*.json|Все файлы|*.*"
+            };
+            if (dlg.ShowDialog() != true)
+                return;
+
+            try
+            {
+                var loader = new RoomSnapshotLoader();
+                _snapshot = loader.LoadFromFile(dlg.FileName);
+                _snapshotPath = dlg.FileName;
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка чтения снимка: " + ex.Message;
+                return;
+            }
+
+            GenerateLoads();
+        }
+
+        private void GenerateLoads()
+        {
+            if (_snapshot == null)
+            {
+                StatusMessage = "Сначала откройте снимок";
+                return;
+            }
+
+            var loads = _estimator.EstimateAll(_snapshot);
+            _loadsByRoom = loads.ToDictionary(l => l.RoomId);
+
+            SnapshotRooms.Clear();
+            foreach (var room in _snapshot.Rooms)
+            {
+                var l = _loadsByRoom.TryGetValue(room.Id ?? "", out var found) ? found : null;
+                SnapshotRooms.Add(new RoomRowViewModel
+                {
+                    RoomId = room.Id,
+                    Number = room.Number,
+                    Name = room.Name,
+                    LevelName = room.LevelName,
+                    Area = room.Area,
+                    IsCorner = room.IsCorner,
+                    Purpose = l?.Purpose.ToString() ?? "",
+                    HeatingW = Math.Round(l?.HeatingLoadW ?? 0),
+                    Supply = Math.Round(l?.SupplyFlowM3h ?? 0),
+                    Exhaust = Math.Round(l?.ExhaustFlowM3h ?? 0)
+                });
+            }
+
+            Levels.Clear();
+            Levels.Add("Все уровни");
+            foreach (var level in SnapshotRooms.Select(r => r.LevelName).Distinct())
+                Levels.Add(level);
+            SelectedLevel = "Все уровни";
+
+            StatusMessage = $"Снимок: {SnapshotRooms.Count} помещений, ΣQ=" +
+                $"{loads.Sum(x => x.HeatingLoadW) / 1000:F0} кВт";
+        }
+
+        private void ApplyPurpose(string purpose)
+        {
+            int n = 0;
+            foreach (var row in SnapshotRoomsView.OfType<RoomRowViewModel>())
+            {
+                row.Purpose = purpose;
+                n++;
+            }
+            StatusMessage = $"Назначение «{purpose}» применено к {n} помещениям";
+        }
+
+        private void CalculateSnapshotPlacements()
+        {
+            if (_snapshot == null || SnapshotRooms.Count == 0)
+            {
+                StatusMessage = "Откройте снимок и сгенерируйте нагрузки";
+                return;
+            }
+
+            Placements.Clear();
+            var catalog = DeviceCatalog.ToList();
+            var roomsById = _snapshot.Rooms.ToDictionary(r => r.Id);
+            var openingsByRoom = _snapshot.Openings
+                .GroupBy(o => o.SpaceId)
+                .ToDictionary(g => g.Key, g => (IEnumerable<SnapshotOpening>)g.ToList());
+            var wallsByRoom = _snapshot.Walls
+                .GroupBy(w => w.SpaceId)
+                .ToDictionary(g => g.Key, g => (IEnumerable<SnapshotWall>)g.ToList());
+
+            int warnCount = 0;
+            foreach (var row in SnapshotRooms)
+            {
+                if (!roomsById.TryGetValue(row.RoomId, out var snapRoom))
+                    continue;
+                var polygon = snapRoom.ToPolygon();
+                if (polygon == null)
+                {
+                    row.Warning = "нет контура";
+                    warnCount++;
+                    continue;
+                }
+                openingsByRoom.TryGetValue(row.RoomId, out var openings);
+                wallsByRoom.TryGetValue(row.RoomId, out var walls);
+
+                var roomWarnings = new List<string>();
+
+                // 1. Heating under every window.
+                if (row.HeatingW > 0)
+                {
+                    var heatingOptions = new HeatingPlacementOptions
+                    {
+                        MinLengthToWindowRatio = MinLengthRatio
+                    };
+                    var res = _heatingService.PlaceForRoom(
+                        snapRoom, polygon, openings, walls,
+                        row.HeatingW, catalog, heatingOptions);
+                    AddPlacementRows(res.Placements, row, snapRoom);
+                    roomWarnings.AddRange(res.Warnings);
+                }
+
+                // 2. Ceiling supply diffusers by service area / flow.
+                if (row.Supply > 0)
+                {
+                    var res = _ceilingService.PlaceForRoom(
+                        row.RoomId, polygon, row.Supply, row.Area,
+                        HVACSystemType.Supply, catalog, "Приток");
+                    AddPlacementRows(res.Placements, row, snapRoom);
+                    roomWarnings.AddRange(res.Warnings);
+                }
+
+                // 3. Exhaust grilles positioned on the ceiling plane.
+                if (row.Exhaust > 0)
+                {
+                    var res = _ceilingService.PlaceForRoom(
+                        row.RoomId, polygon, row.Exhaust, row.Area,
+                        HVACSystemType.Exhaust, catalog, "Вытяжка");
+                    AddPlacementRows(res.Placements, row, snapRoom);
+                    roomWarnings.AddRange(res.Warnings);
+                }
+
+                row.Warning = roomWarnings.Count > 0
+                    ? string.Join("; ", roomWarnings.Distinct())
+                    : "";
+                warnCount += roomWarnings.Count;
+            }
+
+            StatusMessage = $"Размещение: {Placements.Count} приборов, предупреждений: {warnCount}";
+            PlotSnapshotLevel();
+        }
+
+        private void AddPlacementRows(
+            IReadOnlyList<DevicePlacement> placements,
+            RoomRowViewModel row,
+            SnapshotRoom snapRoom)
+        {
+            foreach (var p in placements)
+            {
+                Placements.Add(new PlacementRowViewModel
+                {
+                    RoomName = $"{row.Number}. {row.Name}",
+                    LevelName = row.LevelName,
+                    Family = p.Device.FamilyName,
+                    TypeName = p.Device.TypeName,
+                    SystemName = p.SystemName,
+                    X = Math.Round(p.Position.X, 3),
+                    Y = Math.Round(p.Position.Y, 3),
+                    RotationDeg = Math.Round(p.Rotation * 180.0 / Math.PI, 1)
+                });
+            }
+        }
+
+        private void PlotSnapshotLevel()
+        {
+            var model = new PlotModel
+            {
+                Title = $"Расстановка — {SelectedLevel}",
+                PlotType = PlotType.XY,
+                Background = OxyColors.White
+            };
+            model.Axes.Add(new OxyPlot.Axes.LinearAxis
+            {
+                Position = OxyPlot.Axes.AxisPosition.Bottom, Title = "X"
+            });
+            model.Axes.Add(new OxyPlot.Axes.LinearAxis
+            {
+                Position = OxyPlot.Axes.AxisPosition.Left, Title = "Y"
+            });
+
+            if (_snapshot == null)
+            {
+                SnapshotPlotModel = model;
+                return;
+            }
+
+            bool allLevels = SelectedLevel == "Все уровни";
+            var levelRooms = _snapshot.Rooms
+                .Where(r => allLevels || r.LevelName == SelectedLevel)
+                .ToList();
+
+            foreach (var room in levelRooms)
+            {
+                var polygon = room.ToPolygon();
+                if (polygon == null)
+                    continue;
+                var line = new LineSeries
+                {
+                    Color = OxyColors.LightSlateGray,
+                    StrokeThickness = 1,
+                    Title = $"{room.Number}. {room.Name}"
+                };
+                foreach (var v in polygon.Vertices)
+                    line.Points.Add(new DataPoint(v.X, v.Y));
+                line.Points.Add(line.Points[0]);
+                model.Series.Add(line);
+            }
+
+            var colorsBySystem = new Dictionary<string, OxyColor>
+            {
+                ["Отопление"] = OxyColors.Orange,
+                ["Приток"] = OxyColors.Red,
+                ["Вытяжка"] = OxyColors.Green
+            };
+
+            var rows = allLevels
+                ? Placements.ToList()
+                : Placements.Where(p => p.LevelName == SelectedLevel).ToList();
+
+            foreach (var group in rows.GroupBy(p => p.SystemName))
+            {
+                var scatter = new ScatterSeries
+                {
+                    MarkerType = MarkerType.Circle,
+                    MarkerSize = 6,
+                    MarkerFill = colorsBySystem.TryGetValue(group.Key, out var c)
+                        ? c : OxyColors.Blue,
+                    Title = group.Key
+                };
+                foreach (var p in group)
+                    scatter.Points.Add(new ScatterPoint(p.X, p.Y));
+                model.Series.Add(scatter);
+            }
+
+            SnapshotPlotModel = model;
+        }
+
+        private void SaveProject()
+        {
+            if (SnapshotRooms.Count == 0)
+            {
+                StatusMessage = "Нет проекта для сохранения";
+                return;
+            }
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Проект размещения (*.hvacproj.json)|*.hvacproj.json"
+            };
+            if (dlg.ShowDialog() != true)
+                return;
+
+            _projectStore.Save(dlg.FileName, _snapshotPath, SnapshotRooms.ToList(), Placements.ToList());
+            StatusMessage = $"Проект сохранён: {dlg.FileName}";
+        }
+
+        private void LoadProject()
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Проект размещения (*.hvacproj.json)|*.hvacproj.json|Все файлы|*.*"
+            };
+            if (dlg.ShowDialog() != true)
+                return;
+
+            try
+            {
+                var (snapshotPath, rooms, placements) = _projectStore.Load(dlg.FileName);
+                _snapshotPath = snapshotPath;
+
+                SnapshotRooms.Clear();
+                foreach (var r in rooms)
+                    SnapshotRooms.Add(r);
+
+                Levels.Clear();
+                Levels.Add("Все уровни");
+                foreach (var level in SnapshotRooms.Select(r => r.LevelName).Distinct())
+                    Levels.Add(level);
+
+                Placements.Clear();
+                foreach (var p in placements)
+                    Placements.Add(p);
+
+                // Restore geometry when the snapshot is reachable.
+                if (System.IO.File.Exists(_snapshotPath))
+                {
+                    _snapshot = new RoomSnapshotLoader().LoadFromFile(_snapshotPath);
+                    PlotSnapshotLevel();
+                }
+
+                StatusMessage = $"Проект загружен: {rooms.Count} помещений, " +
+                    $"{placements.Count} приборов";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка загрузки проекта: " + ex.Message;
+            }
+        }
 
         private class CatalogAdapter : ITerminalCatalogRepository
         {
