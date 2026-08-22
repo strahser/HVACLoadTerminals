@@ -145,26 +145,40 @@ namespace HVACLoadTerminals.LocalRunner
         private static string BuildSvg(
             RoomSnapshot snapshot, SnapshotBuildResult build, string level)
         {
-            bool allLevels = string.IsNullOrEmpty(level) && false;
             var rooms = snapshot.Rooms
                 .Where(r => (r.LevelName ?? "") == level)
                 .ToList();
 
+            // Bounds in feet over room polygons AND device points.
             double minX = double.MaxValue, minY = double.MaxValue;
             double maxX = double.MinValue, maxY = double.MinValue;
-            foreach (var room in rooms)
+            void Add(double x, double y)
             {
-                foreach (var pt in room.Polygon)
-                {
-                    minX = Math.Min(minX, pt[0]); maxX = Math.Max(maxX, pt[0]);
-                    minY = Math.Min(minY, pt[1]); maxY = Math.Max(maxY, pt[1]);
-                }
+                minX = Math.Min(minX, x); maxX = Math.Max(maxX, x);
+                minY = Math.Min(minY, y); maxY = Math.Max(maxY, y);
             }
+            foreach (var room in rooms)
+                foreach (var pt in room.Polygon)
+                    Add(pt[0], pt[1]);
+
             if (minX > maxX) return "<svg xmlns='http://www.w3.org/2000/svg'/>";
 
-            const double margin = 20;
-            double w = maxX - minX + 2 * margin;
-            double h = maxY - minY + 2 * margin;
+            var placementsHere = build.Placements
+                .Join(rooms, p => p.RoomId, r => r.Id, (p, r) => p);
+            foreach (var p in placementsHere)
+                Add(p.Position.X, p.Position.Y);
+
+            // Fit the level into ~1600 px on the larger side; Y flipped (north up).
+            const double marginPx = 50;
+            const double targetPx = 1600;
+            double wFt = maxX - minX;
+            double hFt = maxY - minY;
+            double scale = targetPx / Math.Max(wFt, hFt);
+            double widthPx = wFt * scale + 2 * marginPx;
+            double heightPx = hFt * scale + 2 * marginPx;
+
+            double Tx(double x) => (x - minX) * scale + marginPx;
+            double Ty(double y) => (maxY - y) * scale + marginPx;
 
             string ColorOf(string system) => system switch
             {
@@ -176,29 +190,34 @@ namespace HVACLoadTerminals.LocalRunner
 
             var sb = new StringBuilder();
             sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                "<svg xmlns='http://www.w3.org/2000/svg' width='{0:F0}' height='{1:F0}' viewBox='-{2:F0} -{2:F0} {0:F0} {1:F0}'>",
-                w, h, margin));
-            sb.AppendLine("<rect x='-20' y='-20' width='100%' height='100%' fill='white'/>");
+                "<svg xmlns='http://www.w3.org/2000/svg' width='{0:F0}' height='{1:F0}' viewBox='0 0 {0:F0} {1:F0}'>",
+                widthPx, heightPx));
+            sb.AppendLine(
+                $"<rect x='0' y='0' width='{widthPx:F0}' height='{heightPx:F0}' fill='white'/>");
 
             foreach (var room in rooms)
             {
                 var pts = string.Join(" ", room.Polygon.Select(p =>
-                    string.Format(CultureInfo.InvariantCulture, "{0:F2},{1:F2}", p[0], p[1])));
+                    string.Format(CultureInfo.InvariantCulture, "{0:F1},{1:F1}",
+                        Tx(p[0]), Ty(p[1]))));
                 sb.AppendLine(
-                    $"<polygon points='{pts}' fill='#f7f7f7' stroke='#95a5a6' stroke-width='0.05'>" +
+                    $"<polygon points='{pts}' fill='#f8f9fa' stroke='#636e72' stroke-width='1.2'>" +
                     $"<title>{Esc($"{room.Number}. {room.Name}")}</title></polygon>");
+
+                // Room label at the vertex centroid.
+                double cx = room.Polygon.Average(p => p[0]);
+                double cy = room.Polygon.Average(p => p[1]);
+                sb.AppendLine(FormattableString.Invariant(
+                    $"<text x='{Tx(cx):F0}' y='{Ty(cy):F0}' font-size='14' text-anchor='middle' fill='#2d3436'>{Esc(room.Number)}</text>"));
             }
 
-            var placementsHere = build.Placements
-                .Join(rooms, p => p.RoomId, r => r.Id, (p, r) => p);
             foreach (var grp in placementsHere.GroupBy(p => p.SystemName))
             {
                 foreach (var p in grp)
                 {
-                    sb.AppendLine(
-                        $"<circle cx='{p.Position.X:F2}' cy='{p.Position.Y:F2}' r='0.12' " +
-                        $"fill='{ColorOf(grp.Key)}' stroke='#333' stroke-width='0.02'>" +
-                        $"<title>{Esc(grp.Key)}: {Esc(p.Device.FamilyName)} {Esc(p.Device.TypeName)}</title></circle>");
+                    var title = $"{Esc(grp.Key)}: {Esc(p.Device.FamilyName)} {Esc(p.Device.TypeName)}";
+                    sb.AppendLine(FormattableString.Invariant(
+                        $"<circle cx='{Tx(p.Position.X):F1}' cy='{Ty(p.Position.Y):F1}' r='7' fill='{ColorOf(grp.Key)}' stroke='#2d3436' stroke-width='1'><title>{title}</title></circle>"));
                 }
             }
 
