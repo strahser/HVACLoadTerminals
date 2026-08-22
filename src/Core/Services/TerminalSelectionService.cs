@@ -133,5 +133,35 @@ namespace HVACLoadTerminals.Core.Services
                 .OrderByDescending(d => d.MaxFlowRate)
                 .FirstOrDefault();
         }
+
+        /// <summary>
+        /// Analog-style size selection (plan card C1.4, mirrors
+        /// <c>ChooseTerminalsInstanceFromDB</c>): fewest units first, then — within
+        /// that count — the SMALLEST capacity still covering load/n, i.e. minimal
+        /// reserve / highest loading factor k_ef. Returns device and count; null when
+        /// nothing fits.
+        /// </summary>
+        public (TerminalDevice? Device, int Count) SelectBestForLoad(
+            IReadOnlyList<TerminalDevice> compatible,
+            double requiredLoad)
+        {
+            var valid = (compatible ?? Array.Empty<TerminalDevice>())
+                .Where(d => d.MaxFlowRate > 0)
+                .ToList();
+
+            if (valid.Count == 0 || requiredLoad <= 0)
+                return (null, 0);
+
+            int minCount = valid.Min(d =>
+                (int)Math.Ceiling(requiredLoad / d.MaxFlowRate));
+
+            double flowPerDevice = requiredLoad / minCount;
+            var best = valid
+                .Where(d => (int)Math.Ceiling(requiredLoad / d.MaxFlowRate) == minCount)
+                .OrderBy(d => d.MaxFlowRate)                 // smallest capacity = min reserve
+                .First(d => d.MaxFlowRate >= flowPerDevice - 1e-9);
+
+            return (best, minCount);
+        }
     }
 }
