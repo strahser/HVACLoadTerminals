@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using HVACLoadTerminals.Core.Interfaces;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
@@ -47,6 +48,28 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// <summary>Current snapshot for hosts that need geometry (OxyPlot etc.).</summary>
         public RoomSnapshot? CurrentSnapshot => _snapshot;
         public string SnapshotPath => _snapshotPath;
+
+        // ---- U2.2: внешний каталог приборов ----
+
+        /// <summary>
+        /// Источник каталога для Calculate (JSON-файл и т.п.). Null → встроенный
+        /// демо-каталог; недоступный/битый внешний каталог → fallback на демо
+        /// с сообщением через ErrorSink.
+        /// </summary>
+        public ITerminalCatalogRepository? CatalogRepository { get; set; }
+
+        /// <summary>Путь файла каталога из репозитория (для сохранения в проект).</summary>
+        public string CatalogPath => (CatalogRepository as JsonCatalogRepository)?.FilePath ?? "";
+
+        /// <summary>Версия последнего прочитанного каталога (0 — неизвестна).</summary>
+        public int CatalogVersion => (CatalogRepository as JsonCatalogRepository)?.Version ?? 0;
+
+        /// <summary>Каталог последнего Calculate — доступен хостам после расчёта.</summary>
+        public IReadOnlyList<TerminalDevice>? LastUsedCatalog { get; private set; }
+
+        /// <summary>Подключить JSON-каталог по пути (без немедленного чтения).</summary>
+        public void UseJsonCatalog(string path) =>
+            CatalogRepository = new JsonCatalogRepository(path);
 
         // ---- Options (plain fields; hosts bind their own controls to these) ----
 
@@ -202,7 +225,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 return empty;
             }
 
-            var catalog = CatalogFactory.CreateDemo();
+            var catalog = ResolveCatalog();
             var roomsById = new Dictionary<string, SnapshotRoom>();
             foreach (var room in _snapshot.Rooms)
                 roomsById[room.Id] = room;
@@ -335,6 +358,46 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         }
 
         // ------------------------------------------------------------------
+        // U2.2: источник каталога
+        // ------------------------------------------------------------------
+
+        /// <summary>Внешний каталог; сбой чтения → демо-каталог + ErrorSink
+        /// (рабочий расчёт не блокируется, файл не трогается).</summary>
+        private IReadOnlyList<TerminalDevice> ResolveCatalog()
+        {
+            var repo = CatalogRepository;
+            if (repo == null)
+                return CatalogFactory.CreateDemo();
+            try
+            {
+                var devices = repo.GetAllDevices();
+                if (devices.Count > 0)
+                {
+                    LastUsedCatalog = devices;
+                    return devices;
+                }
+                return FallbackCatalog(
+                    $"Каталог приборов пуст ({Describe(repo)}).");
+            }
+            catch (Exception ex)
+            {
+                return FallbackCatalog(ex.Message);
+            }
+        }
+
+        private IReadOnlyList<TerminalDevice> FallbackCatalog(string? reason = null)
+        {
+            ErrorSink?.Invoke(reason != null
+                ? $"{reason}\nИспользуется встроенный каталог приборов."
+                : "Используется встроенный каталог приборов.");
+            LastUsedCatalog = CatalogFactory.CreateDemo();
+            return LastUsedCatalog;
+        }
+
+        private static string Describe(ITerminalCatalogRepository repo) =>
+            repo is JsonCatalogRepository json ? json.FilePath : repo.GetType().Name;
+
+        // ------------------------------------------------------------------
         // Project persistence (round-trip, card C2.2)
         // ------------------------------------------------------------------
 
@@ -350,7 +413,11 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 Placements = _lastPlacementRows,
                 SupplyPattern = SupplyPattern,
                 ExhaustPattern = ExhaustPattern,
-                SingleRule = SingleDeviceRule
+                SingleRule = SingleDeviceRule,
+
+                // U2.2: какой каталог использовал проект
+                CatalogPath = CatalogPath,
+                CatalogVersion = CatalogVersion
             };
             System.IO.File.WriteAllText(path,
                 Newtonsoft.Json.JsonConvert.SerializeObject(dto,
@@ -373,6 +440,28 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             ExhaustPattern = dto.ExhaustPattern ?? WallPattern.ShortSide;
             SingleDeviceRule = dto.SingleRule ?? SingleRule.Center;
 
+            // U2.2: проект хранит путь/версию каталога; файл проекта главнее
+            // текущего подключения, если существует.
+            string catalogNote = "";
+            if (!string.IsNullOrWhiteSpace(dto.CatalogPath) &&
+                !string.Equals(dto.CatalogPath, CatalogPath, StringComparison.OrdinalIgnoreCase))
+            {
+                if (System.IO.File.Exists(dto.CatalogPath))
+                {
+                    UseJsonCatalog(dto.CatalogPath!);
+                    catalogNote = $", каталог: {dto.CatalogPath}";
+                    if (dto.CatalogVersion is int v && v > 0 &&
+                        CatalogRepository is JsonCatalogRepository projectCatalog &&
+                        projectCatalog.Version != v)
+                        catalogNote +=
+                            $" (в файле версия {projectCatalog.Version}, проект писался с {v})";
+                }
+                else
+                {
+                    catalogNote = $", каталог не найден: {dto.CatalogPath}";
+                }
+            }
+
             Rooms.Clear();
             foreach (var row in dto.Rooms ?? new List<RoomRow>())
                 Rooms.Add(row);
@@ -384,7 +473,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 Placements = _lastPlacementRows = dto.Placements ?? new List<PlacementRow>(),
                 Levels = Rooms.Select(r => r.LevelName).Distinct().ToList(),
                 Status = $"Проект загружен: {Rooms.Count} помещений, " +
-                         $"{_lastPlacementRows.Count} приборов"
+                         $"{_lastPlacementRows.Count} приборов{catalogNote}"
             };
             SafeRaise(state, "Обновление");
         }
@@ -399,6 +488,10 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             public WallPattern? SupplyPattern { get; set; }
             public WallPattern? ExhaustPattern { get; set; }
             public SingleRule? SingleRule { get; set; }
+
+            // U2.2: путь/версия каталога приборов
+            public string? CatalogPath { get; set; }
+            public int? CatalogVersion { get; set; }
         }
 
         private static void AddPatternEdge(

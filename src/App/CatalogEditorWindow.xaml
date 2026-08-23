@@ -1,0 +1,192 @@
+<Window x:Class="HVACLoadTerminals.App.CatalogEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:HVACLoadTerminals.Core.Models;assembly=HVACLoadTerminals.Core"
+        Title="Каталог приборов (офлайн)"
+        Height="640" Width="1180"
+        WindowStartupLocation="CenterOwner"
+        Background="#F4F6F9">
+
+    <Window.Resources>
+        <x:Array x:Key="SystemTypes" Type="{x:Type models:HVACSystemType}">
+            <x:Static Member="models:HVACSystemType.Supply"/>
+            <x:Static Member="models:HVACSystemType.Exhaust"/>
+            <x:Static Member="models:HVACSystemType.Heating"/>
+            <x:Static Member="models:HVACSystemType.FanCoil"/>
+            <x:Static Member="models:HVACSystemType.Cooling"/>
+        </x:Array>
+
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#2D6CDF"/>
+        <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#1B4FA8"/>
+        <SolidColorBrush x:Key="PanelBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#D5DBE3"/>
+        <SolidColorBrush x:Key="TextDark" Color="#212B36"/>
+        <SolidColorBrush x:Key="TextMuted" Color="#637381"/>
+
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Background" Value="{StaticResource PanelBg}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#EDF2FC"/>
+                                <Setter TargetName="bd" Property="BorderBrush"
+                                        Value="{StaticResource PrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#DCE7FA"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Button" x:Key="PrimaryButton" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PrimaryDarkBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background"
+                                        Value="{StaticResource PrimaryDarkBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Background" Value="#B9C6DE"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="AlternatingRowBackground" Value="#F7F9FC"/>
+            <Setter Property="RowHeight" Value="26"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#EEF1F5"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{StaticResource PrimaryDarkBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="BorderThickness" Value="0,0,1,0"/>
+            <Setter Property="BorderBrush" Value="#163A78"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- Статус валидации -->
+        <Border DockPanel.Dock="Bottom" Background="#EAEFF6" Padding="10,5">
+            <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" FontSize="12">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="#1E7B34"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasErrors}" Value="True">
+                                <Setter Property="Foreground" Value="#C0392B"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Border>
+
+        <!-- Тулбар -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource PanelBg}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
+                Padding="8,6">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Command="{Binding ResetDemoCommand}"
+                            ToolTip="Заменить таблицу встроенным демо-каталогом (14 типоразмеров); сохраните, чтобы применить">
+                        ↻ Демо
+                    </Button>
+                    <Button Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButton}"
+                            Padding="14,6"
+                            ToolTip="Записать каталог в JSON-файл (атомарно)">
+                        💾 Сохранить
+                    </Button>
+                    <Button Click="Close_Click">Закрыть</Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Button Command="{Binding AddCommand}"
+                            ToolTip="Добавить типоразмер выбранного класса">
+                        ＋ Добавить
+                    </Button>
+                    <Button Command="{Binding DeleteCommand}"
+                            CommandParameter="{Binding SelectedItems, ElementName=CatalogGrid}"
+                            ToolTip="Удалить выбранные строки">
+                        ✕ Удалить
+                    </Button>
+                    <Rectangle Width="1" Height="24" Fill="{StaticResource BorderBrush}" Margin="8,0"/>
+                    <TextBlock Text="Класс:" VerticalAlignment="Center" Margin="4,0,4,0"
+                               Foreground="{StaticResource TextMuted}"/>
+                    <ComboBox ItemsSource="{Binding SystemFilters}"
+                              SelectedItem="{Binding SelectedSystemFilter}"
+                              Width="120" VerticalContentAlignment="Center"/>
+                    <Rectangle Width="1" Height="24" Fill="{StaticResource BorderBrush}" Margin="8,0"/>
+                    <TextBlock VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"
+                               FontSize="11">
+                        <Run Text="{Binding FilePath, Mode=OneWay}"/>
+                        <Run Text=" · версия " />
+                        <Run Text="{Binding Version, Mode=OneWay}"/>
+                    </TextBlock>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Таблица -->
+        <DataGrid x:Name="CatalogGrid" ItemsSource="{Binding FilteredRows}"
+                  Margin="8" BorderThickness="1">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Id" Binding="{Binding Id, UpdateSourceTrigger=PropertyChanged}" Width="95"/>
+                <DataGridTextColumn Header="Семейство" Binding="{Binding FamilyName, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
+                <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName, UpdateSourceTrigger=PropertyChanged}" Width="150"/>
+                <DataGridComboBoxColumn Header="Система" SelectedValueBinding="{Binding SystemType, UpdateSourceTrigger=PropertyChanged}"
+                                        ItemsSource="{StaticResource SystemTypes}" Width="90"/>
+                <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding MaxFlowRate, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                <DataGridTextColumn Header="Параметр расхода" Binding="{Binding FlowParameterName, UpdateSourceTrigger=PropertyChanged}" Width="100"/>
+                <DataGridTextColumn Header="Q хол., Вт" Binding="{Binding CoolingCapacityW, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
+                <DataGridTextColumn Header="Q отопл., Вт" Binding="{Binding HeatingCapacityW, UpdateSourceTrigger=PropertyChanged}" Width="75"/>
+                <DataGridTextColumn Header="S обслуж., м²" Binding="{Binding ServiceAreaM2, UpdateSourceTrigger=PropertyChanged}" Width="78"/>
+                <DataGridTextColumn Header="Длина, мм" Binding="{Binding WidthMm, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
+                <DataGridTextColumn Header="Высота, мм" Binding="{Binding HeightMm, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
+                <DataGridTextColumn Header="Производитель" Binding="{Binding Manufacturer, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

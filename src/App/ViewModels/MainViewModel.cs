@@ -9,6 +9,7 @@ using HVACLoadTerminals.App.Commands;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
+using HVACLoadTerminals.Infrastructure.Data;
 using HVACLoadTerminals.Infrastructure.Presentation;
 using HVACLoadTerminals.Infrastructure.Visualization;
 using OxyPlot;
@@ -193,6 +194,7 @@ namespace HVACLoadTerminals.App.ViewModels
         public ICommand SaveProjectCommand { get; }
         public ICommand LoadProjectCommand { get; }
         public ICommand ExportHtmlCommand { get; }
+        public ICommand EditCatalogCommand { get; }
 
         private PlotModel? _plotModel;
         public PlotModel? PlotModel
@@ -232,6 +234,7 @@ namespace HVACLoadTerminals.App.ViewModels
             SaveProjectCommand = new RelayCommand(_ => SaveProject());
             LoadProjectCommand = new RelayCommand(_ => LoadProject());
             ExportHtmlCommand = new RelayCommand(_ => ExportHtml());
+            EditCatalogCommand = new RelayCommand(_ => EditCatalog());
 
             Workspace.ErrorSink = msg =>
             {
@@ -239,6 +242,22 @@ namespace HVACLoadTerminals.App.ViewModels
                 AppLogger.Error(msg);
             };
             Workspace.StateChanged += OnStateChanged;
+
+            // U2.2: офлайн-каталог приборов (JSON рядом с приложением/в %AppData%),
+            // первый запуск — seed из CatalogFactory.CreateDemo().
+            try
+            {
+                var repo = new JsonCatalogRepository(JsonCatalogRepository.ResolveDefaultPath());
+                repo.EnsureSeeded();
+                Workspace.CatalogRepository = repo;
+                AppLogger.Info("Catalog: " + repo.FilePath);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Каталог не подключён — используется встроенный", ex);
+                StatusMessage = "Каталог не подключён: " + ex.Message +
+                                " — используется встроенный каталог приборов";
+            }
 
             AppLogger.Info("MainViewModel initialized");
         }
@@ -480,6 +499,39 @@ namespace HVACLoadTerminals.App.ViewModels
             catch (Exception ex)
             {
                 StatusMessage = "Ошибка загрузки проекта: " + ex.Message;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // U2.2: редактор каталога приборов
+        // ------------------------------------------------------------------
+
+        private void EditCatalog()
+        {
+            if (Workspace.CatalogRepository is not JsonCatalogRepository repo)
+            {
+                StatusMessage = "Каталог не подключён — используется встроенный";
+                return;
+            }
+
+            try
+            {
+                var vm = new CatalogEditorViewModel(repo);
+                vm.Saved += msg =>
+                {
+                    StatusMessage = msg;
+                    RecalcIfLive(); // новый типоразмер/расход сразу влияет на расстановку
+                };
+                var window = new CatalogEditorWindow(vm)
+                {
+                    Owner = System.Windows.Application.Current?.MainWindow
+                };
+                window.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка открытия каталога: " + ex.Message;
+                AppLogger.Error("EditCatalog failed: " + repo.FilePath, ex);
             }
         }
 
