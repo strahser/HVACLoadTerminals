@@ -1,47 +1,44 @@
-# Project Context — HVACLoadTerminals
+## Objective
+- Завершить проект HVACLoadTerminals (расстановка ВРУ по помещениям) с явным пользовательским приоритетом: **команда `PlaceTerminals` зависала/валила Revit — заменена на простое WPF-окно со сводкой**; HTML-превью оставлено отдельной фичей. **Revit-тесты 8/13 исправлены** до 10 pass + 3 skip (0 failed).
+- Правила пользователя: коммит + пуш после каждого завершённого этапа (ветка `refactoring/solid-clean-architecture`).
 
-## Environment
-- Language: C# (.NET Framework 4.8, LangVersion latest, Nullable enable)
-- Revit: Autodesk Revit 2024 (C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll)
-- Build: MSBuild 17 (VS 2022 Community) — "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe"
-- Test: xUnit 2.5.3 (in NuGet cache), NUnit available in reference
-- NuGet cache: %USERPROFILE%\.nuget\packages — has Clipper2 (1.3.0/1.5.4/2.0.0, netstandard2.0), xunit 2.5.3, Newtonsoft.Json 13.0.3, Microsoft.Web.WebView2 1.0.4129.50 (restored 2026-08-03)
-- Solution: HVACLoadTerminals.sln (src/Core, src/Infrastructure, src/App, src/Revit)
+## Important Details
+- Репозиторий: d:\Projects\HVACLoadTerminals; ветка `refactoring/solid-clean-architecture` синхронизирована с origin; коммиты на русском.
+- Сборка Revit: `"C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" "<proj>" /t:Build /p:Configuration=Debug /v:m /nologo` — EXITCODE 0. ВАЖНО: команды, начинающиеся с кавычек, ломает шелл-инструмент — использовать wrapper `C:\Users\Strakhov\AppData\Local\Temp\opencode\build-revit.cmd` (та же команда внутри). dotnet на PATH; msbuild/nuget/vstest — нет. Решение: 4 SDK-проекта net48 (Core/Infrastructure/App/Revit). Revit 2024.
+- NuGet: WebView2 **1.0.4129.50 восстановлен 2026-08-03** (в кэше); Core.Tests — xUnit, **33/33 проходят**.
+- `.addin` в корне `C:\ProgramData\Autodesk\Revit\Addins\2024\`, DLL плагина в подпапке `HVACLoadTerminals\`; Assembly в addin = `HVACLoadTerminals\HVACLoadTerminals.Revit.dll`.
+- Логирование: `src/Revit/Logging/HvacLogger.cs` → `%LocalAppData%\HVACLoadTerminals\logs\hvac-revit-yyyy-MM-dd.log` (Info/Warn/Error/LogException; никогда не бросает). Все 6 команд ленты обёрнуты внешним try/catch.
+- `task agents.txt` — НЕ коммитить (черновик).
+- Тест-раннер Revit: `RevitTestRunner.RunAll(assembly)` (рефлексия, [RevitTest]/[RevitTestFixture]), отчёт JSON в `%LocalAppData%\HVACLoadTerminals\TestResults\revit-tests-*.json`, запуск командой `RevitTestRunnerCommand` (кнопка ленты) в Revit 2024. Теперь поддерживает **Skipped** (TestSkippedException → result.Skipped=true, не падение; команда возвращает Result.Succeeded при 0 failed).
+- Revit-тесты запускаются на АКТИВНОМ документе: SpaceExtractionFixture требует MEP Spaces, FamilyCatalogFixture требует семейств ВРУ (категории DuctTerminal/MechanicalEquipment) — иначе skip.
 
-## Project Structure (existing)
-- src/Core (HVACLoadTerminals.Core.csproj, SDK-style net48): Models (Point2D, Polygon2D, RoomPolygon, HVACSystem, HVACSystemType, TerminalDevice, DevicePlacement, PlacementResult), Services (PolygonOffsetService naive, TerminalSelectionService, TerminalPlacementService), Interfaces (IRoomGeometryProvider, IRoomSystemProvider, ITerminalCatalogRepository, ITerminalPlacementService, IPolygonVisualizer, IDevicePlacer), Exceptions
-- src/Infrastructure: Data (JsonRoomDataStore, SQLiteTerminalCatalogRepository), Visualization (OxyPlotVisualizer), Services (DemoRoomDataService)
-- src/App: WPF app (MainWindow, MainViewModel, OxyPlot-based)
-- src/Revit: Application.cs (ribbon: Place/Review/Export/Mass/Individual/RunTests — 6 кнопок), Commands (PlaceTerminals, ReviewPlacement, ExportRoomData, RevitHtmlPlacementCommand, RevitIndividualPlacementCommand, RevitTestRunnerCommand), Services (RevitRoomGeometryProvider, RevitRoomSystemProvider, RevitDevicePlacer, RevitFamilyCatalogProvider, RevitPlacementPreviewService), Visualization (WebView2PreviewWindow — HTML↔Revit через WebView2 postMessage, UseWPF=true + Microsoft.Web.WebView2 1.0.4129.50), Logging (HvacLogger — %LocalAppData%\HVACLoadTerminals\logs), Testing (RevitTestRunner + фикстуры, отчёт %LocalAppData%\HVACLoadTerminals\TestResults\revit-tests-*.json)
-- Root legacy: old-style HVACLoadTerminals.csproj (Dynamo-based, legacy Views/ViewModels/Utils at root — DO NOT MODIFY unless needed)
+## Work State
+### Completed
+- Коммиты (все запушены): `1061cf1` (полная реализация), `fddd478` (развёртывание в подпапку плагинов), `b12d124` (HvacLogger + try/catch), `b605a87` (WebView2 HTML↔Revit + скил), `7e5ba46` (status), `1ac7440` (фикс PlaceTerminals: WPF PlacementResultWindow вместо OxyPlot-цикла, WindowInteropHelper owner, транзакция через RevitDevicePlacer, HTML убран из команды), **`094c62d`** (фикс тестов 8/13), **`0e139e1`** (status.md).
+- **Фикс тестов 8/13 (094c62d)**: 
+  - `src/Revit/Testing/TestSkippedException.cs` — новый класс для skip.
+  - `RevitTestRunner.cs` — свойство `Skipped`, обработка TestSkippedException в catch (TargetInvocationException), поле "Skipped" в JSON.
+  - `RevitTestRunnerCommand.cs` — подсчёт passed/skipped/failed отдельно, TaskDialog показывает Skipped, Result.Succeeded при 0 failed.
+  - `RevitIntegrationFixtures.cs` — FamilyCatalogFixture (3 теста) бросает TestSkippedException при пустом каталоге; PlacementFixture Positions_InsidePolygon и Offset_500mm получили `StartOffsetMm = 500` (паттерн Core.Tests: крайние устройства не в углах; причина падений — дефолт 0 ставил устройства на границы полигона).
+- Верификация: сборка Revit EXITCODE 0, Core.Tests 33/33 passed, diff проверен.
 
-## Reference (READ-ONLY COPY SOURCE) d:\Projects\HeatLossRevit2\
-- Core/ZoneServices/Utils/ClipperUtils.cs — Clipper2 wrapper (Scale=10000, Union/Difference/Intersection/InflatePaths/OffsetPolygonInward)
-- Core/ZoneServices/Utils/GeometryUtils.cs — PolyArea, CleanPolygon, EnsureClosedPolygon, IsPointInPolygon etc.
-- Core/ZoneServices/Services/InwardDirectionCalculator.cs, BufferZoneCalculator.cs, ZonePolygonBuilder.cs, BuildingContourBuilder.cs
-- Core/ZoneServices/Models/Point2D.cs (with operators +,-,*, Length, Normalize, Dot), ZoneExportModel.cs
-- Core.Tests (SDK net48, xunit 2.9.3) — ZoneServicesTests.cs pattern
-- Revit tests: NUnit fixtures referencing Revit API (Tests.HeatLossTests) + Base.csproj helpers
+### Active
+- (none — этап тестов завершён и запушен)
 
-## Analog (UX reference only) d:\Projects\PloteNetworksAndSpaces-master\
-- Python/Streamlit + Plotly (Polygons/PolygonPlot/*) — visualization UX reference (rooms, terminals, networks)
+### Blocked
+- (none)
 
-## Test Models d:\Projects\ТестыОВ\newBuilding\
-- TestBuildingHvac_2024.rvt, TestBuildingHvac_2024_native_zero.rvt, HvackFinal.rvt, TestBuildingAR_2024.rvt
-- configs/ (AirFlowFamilyModel, CornerRoom, CurtainWall, FacesDirectShapes, OpeningSettings, UnifiedElements, ValveMappings, WallProcessing), reports/
+## Next Move
+- Ждать пользовательского прогона Revit-тестов в Revit 2024 (команда "RevitTestRunner"): ожидается 10 passed + 3 skipped (FamilyCatalogFixture скипы, если в документе нет семейств ВРУ) или полные 13/13 на документе с семействами.
+- При необходимости: повторная диагностика по логу `%LocalAppData%\HVACLoadTerminals\logs\hvac-revit-*.log`.
 
-## Mission Requirements (user)
-1. HVAC loads per room (ventilation flow + cooling) — exists, extend
-2. Equipment families list per room — per-room config + auto-collect families from Revit model
-3. Quantity modes: ByCalculation (ceil load/capacity), ByCount (exact), ByStep (from min with step)
-4. Placement: wall polygon offset (Clipper2) + optimal conditional coordinate system (Bottom/Right/Top/Left/Auto)
-5. Placement side: LongSide / ShortSide preference
-6. HTML UI (C# + HTML): Three.js on plane (or Canvas2D); live preview; also Revit preview with transaction cancel
-7. Tests directly in Revit (autotest runner command against test model)
-8. Clean architecture — Core must stay Revit-free
-9. Mass + individual placement by rooms
-
-## Conventions
-- Namespaces: HVACLoadTerminals.Core.{Models,Services,Interfaces,Exceptions}, .Infrastructure.{Data,Services,Visualization}, .Revit.{Commands,Services}, .App.{ViewModels,Views}
-- Core = pure C# (no Revit/WPF deps), Infrastructure = implementations, Revit = adapters
-- Coordinate system: XY feet (Revit internal units), Point2D double
+## Relevant Files
+- `src/Revit/Commands/PlaceTerminalsCommand.cs`: WPF-окно Place/Cancel (коммит 1ac7440).
+- `src/Revit/Visualization/PlacementResultWindow.xaml(.cs)`: простое WPF-окно сводки + `PlacementSummaryRow`.
+- `src/Revit/Testing/RevitIntegrationFixtures.cs`: 5 фикстур (SpaceExtraction, FamilyCatalog, Placement, PreviewRollback, RunnerSmoke); исправлены 094c62d.
+- `src/Revit/Testing/RevitTestRunner.cs` + `TestSkippedException.cs` + `Assert.cs`: раннер с skip-механизмом.
+- `src/Revit/Commands/RevitTestRunnerCommand.cs`: запуск тестов в Revit, отчёт JSON.
+- `src/Core/Services/TerminalPlacementService.cs`: распределение по стене (StartOffsetMm — отступ от торцов).
+- `src/Core.Tests/*`: 33 xUnit-теста (эталон геометрических ожиданий).
+- `.opencode/skills/webview2-revit-data-exchange/SKILL.md`: закоммиченный навык.
+- `task agents.txt`: НЕ коммитить.

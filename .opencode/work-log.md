@@ -2,6 +2,7 @@
 
 ## Active Sessions
 - [x] ses_wv2 (Worker): WebView2 preview window + HTML bridge + Revit command wiring - done (Revit build EXITCODE=0, errors=0)
+- [x] ses_wv2_rev (Reviewer): UNIT REVIEW task_aff63a18 (WebView2PreviewWindow) - PASS (solution EXITCODE=0, 33/33 tests, deployment verified, UT-14 record)
 - [x] ses_wv2b (Commander): WebView2Loader.dll x64 copy to addins folder - done (plugins dir verified)
 - [x] ses_wv2c (Commander): skill .opencode/skills/webview2-revit-data-exchange/SKILL.md - done
 - baseline-build (Commander): MSBuild solution Debug build - done
@@ -76,6 +77,11 @@
 | src/Infrastructure/Visualization/HtmlSceneExporter.cs | MODIFY | done | ses_wv2 | Revit build EXITCODE=0 (bridge JS in TailTemplate) | 2026-08-03T19:49Z | - |
 | src/Revit/Commands/RevitHtmlPlacementCommand.cs | MODIFY | done | ses_wv2 | Revit build EXITCODE=0 (WebView2 + browser fallback) | 2026-08-03T19:49Z | - |
 | src/Revit/HVACLoadTerminals.Revit.csproj | MODIFY | done | ses_wv2 | Revit build EXITCODE=0 (WebView2Loader.dll copied to addins) | 2026-08-03T19:49Z | - |
+| src/Revit/Visualization/WebView2PreviewWindow.xaml | CREATE | verified | ses_wv2_rev | UT-14 PASS (solution EXITCODE=0, 33/33 tests, protocol+deployment verified) | 2026-08-03T19:53Z | - |
+| src/Revit/Visualization/WebView2PreviewWindow.xaml.cs | CREATE | verified | ses_wv2_rev | UT-14 PASS (solution EXITCODE=0, 33/33 tests, protocol+deployment verified) | 2026-08-03T19:53Z | - |
+| src/Infrastructure/Visualization/HtmlSceneExporter.cs | MODIFY | verified | ses_wv2_rev | UT-14 PASS (bridge JS protocol C#<->JS match) | 2026-08-03T19:53Z | - |
+| src/Revit/Commands/RevitHtmlPlacementCommand.cs | MODIFY | verified | ses_wv2_rev | UT-14 PASS (WebView2 + browser fallback, IsApplied wiring) | 2026-08-03T19:53Z | - |
+| src/Revit/HVACLoadTerminals.Revit.csproj | MODIFY | verified | ses_wv2_rev | UT-14 PASS (WebView2Loader.dll + WebView2 dlls in addins dir) | 2026-08-03T19:53Z | - |
 
 ## Pending Integration
 - ✅ INTEGRATED + VERIFIED 2026-08-02 (full solution build EXITCODE=0, 33/33 tests): src/Core/Services/* (T1.1-T1.5), src/Core/Models/* (T1.4), src/Core.Tests (T1.6), src/Infrastructure/Visualization/PlacementSceneSerializer.cs + HtmlSceneExporter.cs (T2.1), src/Revit/Services/RevitPlacementPreviewService.cs (T3.3.1), src/Revit/Services/RevitFamilyCatalogProvider.cs (T3.1)
@@ -89,6 +95,7 @@
 - ✅ INTEGRATED + VERIFIED 2026-08-02 (App build EXITCODE=0, solution EXITCODE=0, 33/33 tests): src/App/Views/HtmlPreviewWindow.xaml + HtmlPreviewWindow.xaml.cs + src/App/Commands/OpenHtmlPreviewCommand.cs (T2.3 WPF HTML preview window)
 - ✅ INTEGRATED + VERIFIED 2026-08-02 (Revit build EXITCODE=0, full solution EXITCODE=0): src/Revit/Testing/TestDocumentContext.cs + RevitIntegrationFixtures.cs + RevitTestRunnerCommand.cs modification (T4.2 integration test fixtures)
 - ✅ INTEGRATED + VERIFIED 2026-08-02 (App build EXITCODE=0, full solution EXITCODE=0, 33/33 tests): src/App/ViewModels/MainViewModel.cs + src/App/MainWindow.xaml (T5.1 Desktop App — placement options UI, HTML preview, per-room config)
+- ✅ INTEGRATED + VERIFIED 2026-08-03 (Reviewer, UT-14): WebView2 HTML<->Revit exchange — WebView2PreviewWindow.xaml(.cs) + HtmlSceneExporter bridge JS + RevitHtmlPlacementCommand WebView2/fallback + csproj (UseWPF, WebView2 pkg, WebView2Loader.dll). Full solution EXITCODE=0, Core.Tests 33/33, WebView2Loader.dll + Microsoft.Web.WebView2.*.dll deployed to addins.
 
 ## FINAL VERIFICATION (T5.3)
 - [x] ses_final (Reviewer): Full system verification — ALL PASSED
