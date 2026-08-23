@@ -46,6 +46,9 @@
                       AutoGenerateColumns="False" CanUserAddRows="False"
                       AlternatingRowBackground="#FAFAFA">
                 <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Header="☑"
+                        Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}"
+                        Width="34"/>
                     <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="45"/>
                     <DataGridTextColumn Header="Помещение" Binding="{Binding Name}" Width="140"/>
                     <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="90"/>

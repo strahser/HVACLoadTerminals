@@ -178,6 +178,14 @@
                         CommandParameter="{Binding Text, ElementName=PurposeBox}">
                     Применить к уровню
                 </Button>
+                <Button Command="{Binding IncludeLevelCommand}"
+                        ToolTip="Отметить «Включено» у всех помещений выбранного уровня">
+                    ☑ Включить уровень
+                </Button>
+                <Button Command="{Binding IncludeOnlyVisibleCommand}"
+                        ToolTip="Оставить включёнными только помещения, видимые в таблице">
+                    ☐ Только видимые
+                </Button>
 
                 <Rectangle Width="1" Height="24" Fill="{StaticResource BorderBrush}" Margin="8,0"/>
 
@@ -239,6 +247,9 @@
                     <DataGrid Grid.Row="1" ItemsSource="{Binding RoomsView}"
                               Margin="6,0,6,6" BorderThickness="1">
                         <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="☑"
+                                Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}"
+                                Width="34"/>
                             <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="45"/>
                             <DataGridTextColumn Header="Помещение" Binding="{Binding Name}" Width="140"/>
                             <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>

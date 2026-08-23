@@ -147,6 +147,31 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             RaiseStatusOnly($"Назначение «{purpose}» применено к {n} помещениям");
         }
 
+        // ---- U1.2: выбор комнат (чекбокс «Включено») ----
+
+        /// <summary>Rooms currently checked for placement.</summary>
+        public int CountIncluded() => Rooms.Count(r => r.IsIncluded);
+
+        /// <summary>Bulk include/exclude over a row filter.</summary>
+        public void SetIncluded(Func<RoomRow, bool> rowFilter, bool included)
+        {
+            foreach (var row in Rooms.Where(rowFilter))
+                row.IsIncluded = included;
+            RaiseStatusOnly($"Включено помещений: {CountIncluded()} из {Rooms.Count}");
+        }
+
+        /// <summary>«Включить уровень»: mark the whole level included.</summary>
+        public void IncludeLevel(string levelName) =>
+            SetIncluded(r => r.LevelName == levelName, true);
+
+        /// <summary>«Только видимые»: selection becomes exactly the visible rows.</summary>
+        public void IncludeOnlyVisible(Func<RoomRow, bool> visibleFilter)
+        {
+            foreach (var row in Rooms)
+                row.IsIncluded = visibleFilter(row);
+            RaiseStatusOnly($"Включено помещений: {CountIncluded()} из {Rooms.Count}");
+        }
+
         /// <summary>Full recalculation of all three classes. Raises StateChanged.</summary>
         public WorkspaceState Calculate()
         {
@@ -176,8 +201,27 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             var kefByKey = new Dictionary<string, double>();
             var sw = System.Diagnostics.Stopwatch.StartNew();
 
+            var includedRows = Rooms.Where(r => r.IsIncluded).ToList();
+            if (includedRows.Count == 0)
+            {
+                sw.Stop();
+                LastRawPlacements = Array.Empty<DevicePlacement>();
+                var none = new WorkspaceState
+                {
+                    Rooms = Rooms.ToList(),
+                    Placements = new List<PlacementRow>(),
+                    Levels = Rooms.Select(r => r.LevelName).Distinct().ToList(),
+                    Status = "Не выбрано ни одного помещения",
+                    IsCalculation = true
+                };
+                SafeRaise(none, "Обновление");
+                return none;
+            }
+
             foreach (var row in Rooms)
             {
+                if (!row.IsIncluded)
+                    continue;
                 if (!roomsById.TryGetValue(row.RoomId, out var snapRoom))
                     continue;
                 var polygon = snapRoom.ToPolygon();
@@ -338,7 +382,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 Rooms = Rooms.ToList(),
                 Placements = rows,
                 Levels = Rooms.Select(r => r.LevelName).Distinct().ToList(),
-                Status = $"Размещение: {placements.Count} приборов за {elapsedMs:F0} мс, " +
+                Status = $"Выбрано {CountIncluded()} из {Rooms.Count} · " +
+                         $"Размещение: {placements.Count} приборов за {elapsedMs:F0} мс, " +
                          $"предупреждений: {warnings.Count}",
                 TotalDevices = placements.Count,
                 HeatingCount = placements.Count(p => p.SystemName == "Отопление"),

@@ -14,5 +14,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\HVACLoadTerminals.Core.csproj" />
+    <ProjectReference Include="..\Infrastructure\HVACLoadTerminals.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

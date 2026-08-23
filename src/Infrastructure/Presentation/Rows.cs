@@ -13,6 +13,14 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public double Area { get; set; }
         public bool IsCorner { get; set; }
 
+        /// <summary>U1.2: комната участвует в расчёте/расстановке.</summary>
+        private bool _isIncluded = true;
+        public bool IsIncluded
+        {
+            get => _isIncluded;
+            set { _isIncluded = value; OnPropertyChanged(nameof(IsIncluded)); }
+        }
+
         private string _purpose = "";
         public string Purpose
         {

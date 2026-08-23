@@ -146,6 +146,8 @@ namespace HVACLoadTerminals.App.ViewModels
         public ICommand OpenSnapshotCommand { get; }
         public ICommand RecalcLoadsCommand { get; }
         public ICommand ApplyPurposeCommand { get; }
+        public ICommand IncludeLevelCommand { get; }
+        public ICommand IncludeOnlyVisibleCommand { get; }
         public ICommand CalculateCommand { get; }
         public ICommand SaveProjectCommand { get; }
         public ICommand LoadProjectCommand { get; }
@@ -176,6 +178,15 @@ namespace HVACLoadTerminals.App.ViewModels
             });
             ApplyPurposeCommand = new RelayCommand(p =>
                 Workspace.ApplyPurpose(FilterVisible, p as string ?? ""));
+            IncludeLevelCommand = new RelayCommand(_ =>
+            {
+                if (SelectedLevel == "Все уровни")
+                    Workspace.SetIncluded(_ => true, true);
+                else
+                    Workspace.IncludeLevel(SelectedLevel);
+            });
+            IncludeOnlyVisibleCommand = new RelayCommand(_ =>
+                Workspace.IncludeOnlyVisible(FilterVisible));
             CalculateCommand = new RelayCommand(_ => CalculateSafe());
             SaveProjectCommand = new RelayCommand(_ => SaveProject());
             LoadProjectCommand = new RelayCommand(_ => LoadProject());
