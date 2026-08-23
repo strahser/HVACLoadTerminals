@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using HVACLoadTerminals.Core.Models.Snapshot;
+using HVACLoadTerminals.Core.Services;
 using HVACLoadTerminals.Infrastructure.Presentation;
 using Xunit;
 
@@ -120,6 +121,76 @@ namespace HVACLoadTerminals.Core.Tests
             presenter.IncludeOnlyVisible(r => r.RoomId == "a");
             Assert.Equal(1, presenter.CountIncluded());
             Assert.False(presenter.Rooms.First(r => r.RoomId == "b").IsIncluded);
+        }
+
+        // ------------------------------------------------------------------
+        // U2.1: паттерны массовой расстановки
+        // ------------------------------------------------------------------
+
+        [Fact]
+        public void Pattern_Owner_Defaults_Are_LongSide_ShortSide_Center()
+        {
+            var presenter = new SnapshotWorkspacePresenter();
+
+            Assert.Equal(WallPattern.LongSide, presenter.SupplyPattern);
+            Assert.Equal(WallPattern.ShortSide, presenter.ExhaustPattern);
+            Assert.Equal(SingleRule.Center, presenter.SingleDeviceRule);
+        }
+
+        [Fact]
+        public void Project_RoundTrip_Preserves_Placement_Patterns()
+        {
+            var presenter = new SnapshotWorkspacePresenter();
+            presenter.SupplyPattern = WallPattern.Explicit;
+            presenter.ExhaustPattern = WallPattern.CeilingGrid;
+            presenter.SingleDeviceRule = SingleRule.Corner;
+
+            presenter.SaveProject(_projectPath);
+
+            // В файле — читаемые имена значений, а не числа.
+            string json = File.ReadAllText(_projectPath);
+            Assert.Contains("\"SupplyPattern\": \"Explicit\"", json);
+
+            var reloaded = new SnapshotWorkspacePresenter();
+            reloaded.LoadProject(_projectPath);
+
+            Assert.Equal(WallPattern.Explicit, reloaded.SupplyPattern);
+            Assert.Equal(WallPattern.CeilingGrid, reloaded.ExhaustPattern);
+            Assert.Equal(SingleRule.Corner, reloaded.SingleDeviceRule);
+        }
+
+        [Fact]
+        public void Project_Legacy_File_Without_Patterns_Keeps_Owner_Defaults()
+        {
+            File.WriteAllText(_projectPath,
+                "{\"SnapshotPath\":\"\",\"Rooms\":[],\"Placements\":[]}");
+
+            var reloaded = new SnapshotWorkspacePresenter();
+            reloaded.LoadProject(_projectPath);
+
+            Assert.Equal(WallPattern.LongSide, reloaded.SupplyPattern);
+            Assert.Equal(WallPattern.ShortSide, reloaded.ExhaustPattern);
+            Assert.Equal(SingleRule.Center, reloaded.SingleDeviceRule);
+        }
+
+        [Fact]
+        public void Calculate_Produces_Pattern_Edges_For_Highlighting()
+        {
+            var presenter = CreateLoadedPresenter();
+            // Расходы выше максимального прибора каталога → count ≥ 2 →
+            // настенные паттерны дают выбранное ребро (одиночный пошёл бы в SingleRule).
+            presenter.Rooms.First(r => r.RoomId == "a").Supply = 2000;
+            presenter.Rooms.First(r => r.RoomId == "a").Exhaust = 1000;
+
+            presenter.Calculate();
+
+            Assert.Contains(presenter.LastPatternEdges, e => e.SystemName == "Приток");
+            Assert.Contains(presenter.LastPatternEdges, e => e.SystemName == "Вытяжка");
+            Assert.All(presenter.LastPatternEdges, e =>
+            {
+                Assert.Equal("Уровень 1", e.LevelName);
+                Assert.NotEqual(e.Start, e.End);
+            });
         }
     }
 }

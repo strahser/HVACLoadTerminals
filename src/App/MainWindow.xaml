@@ -195,12 +195,22 @@
                 <TextBlock Style="{StaticResource StepLabel}">Приток:</TextBlock>
                 <ComboBox ItemsSource="{Binding CountRules}" SelectedItem="{Binding SupplyRule}"
                           Width="105" Margin="2,0"/>
+                <ComboBox ItemsSource="{Binding WallPatterns}" SelectedItem="{Binding SupplyPattern}"
+                          Width="92" Margin="2,0"
+                          ToolTip="Паттерн массовой расстановки притока: сетка по потолку / вдоль длинной стороны / вдоль короткой / явная сторона"/>
                 <TextBlock Style="{StaticResource StepLabel}" Text="N="/>
                 <TextBox Text="{Binding FixedSupplyCount, UpdateSourceTrigger=PropertyChanged}"
                          Style="{StaticResource InputBox}" Width="36"/>
                 <TextBlock Style="{StaticResource StepLabel}">Вытяжка:</TextBlock>
                 <ComboBox ItemsSource="{Binding CountRules}" SelectedItem="{Binding ExhaustRule}"
                           Width="105" Margin="2,0"/>
+                <ComboBox ItemsSource="{Binding WallPatterns}" SelectedItem="{Binding ExhaustPattern}"
+                          Width="92" Margin="2,0"
+                          ToolTip="Паттерн массовой расстановки вытяжки: сетка по потолку / вдоль длинной стороны / вдоль короткой / явная сторона"/>
+                <TextBlock Style="{StaticResource StepLabel}">1 прибор:</TextBlock>
+                <ComboBox ItemsSource="{Binding SingleRules}" SelectedItem="{Binding SingleDeviceRule}"
+                          Width="80" Margin="2,0"
+                          ToolTip="Где ставится одиночный прибор: в центре контура или в углу"/>
                 <TextBlock Style="{StaticResource StepLabel}">v решётки:</TextBlock>
                 <TextBox Text="{Binding GrilleVelocityMs, UpdateSourceTrigger=PropertyChanged}"
                          Style="{StaticResource InputBox}" Width="40"/>

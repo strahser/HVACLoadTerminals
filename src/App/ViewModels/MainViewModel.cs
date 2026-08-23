@@ -105,6 +105,47 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
+        // ---- U2.1: mass placement patterns ----
+
+        public WallPattern SupplyPattern
+        {
+            get => Workspace.SupplyPattern;
+            set
+            {
+                Workspace.SupplyPattern = value;
+                OnPropertyChanged(nameof(SupplyPattern));
+                RecalcIfLive();
+            }
+        }
+
+        public WallPattern ExhaustPattern
+        {
+            get => Workspace.ExhaustPattern;
+            set
+            {
+                Workspace.ExhaustPattern = value;
+                OnPropertyChanged(nameof(ExhaustPattern));
+                RecalcIfLive();
+            }
+        }
+
+        public SingleRule SingleDeviceRule
+        {
+            get => Workspace.SingleDeviceRule;
+            set
+            {
+                Workspace.SingleDeviceRule = value;
+                OnPropertyChanged(nameof(SingleDeviceRule));
+                RecalcIfLive();
+            }
+        }
+
+        /// <summary>For the toolbar ComboBox of wall patterns.</summary>
+        public WallPattern[] WallPatterns => Workspace.WallPatterns;
+
+        /// <summary>For the toolbar ComboBox of single-device rules.</summary>
+        public SingleRule[] SingleRules => Workspace.SingleRules;
+
         public double GrilleVelocityMs
         {
             get => Workspace.GrilleVelocityMs;
@@ -352,6 +393,25 @@ namespace HVACLoadTerminals.App.ViewModels
                 ["Приток"] = OxyColors.Red,
                 ["Вытяжка"] = OxyColors.Green
             };
+
+            // U2.1: подсветка сторон, выбранных паттернами массовой расстановки
+            // (цвет = цвет системы; толще контура комнаты).
+            foreach (var edge in Workspace.LastPatternEdges)
+            {
+                if (!allLevels && edge.LevelName != SelectedLevel)
+                    continue;
+                var sideLine = new LineSeries
+                {
+                    Color = colorsBySystem.TryGetValue(edge.SystemName, out var sc)
+                        ? sc : OxyColors.Purple,
+                    StrokeThickness = 5,
+                    LineStyle = LineStyle.Solid,
+                    Title = $"Сторона: {edge.SystemName}"
+                };
+                sideLine.Points.Add(new DataPoint(edge.Start.X, edge.Start.Y));
+                sideLine.Points.Add(new DataPoint(edge.End.X, edge.End.Y));
+                model.Series.Add(sideLine);
+            }
 
             var rows = allLevels
                 ? Placements.ToList()

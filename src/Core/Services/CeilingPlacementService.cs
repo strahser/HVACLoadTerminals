@@ -18,6 +18,30 @@ namespace HVACLoadTerminals.Core.Services
         Fixed
     }
 
+    /// <summary>Mass placement pattern for ceiling devices — plan card U2.1
+    /// (owner rule: supply along the long boundary, exhaust along the short).</summary>
+    public enum WallPattern
+    {
+        /// <summary>Legacy: even grid inside the inward-offset contour.</summary>
+        CeilingGrid,
+        /// <summary>Row of devices along the longest side of the offset contour.</summary>
+        LongSide,
+        /// <summary>Row of devices along the shortest side of the offset contour.</summary>
+        ShortSide,
+        /// <summary>Explicit side from <see cref="CeilingPlacementOptions.ExplicitSide"/>.</summary>
+        Explicit
+    }
+
+    /// <summary>Rule for a single device (analog single_device_orientation):
+    /// where the one device goes when count == 1.</summary>
+    public enum SingleRule
+    {
+        /// <summary>Centre of the inward-offset contour (legacy behaviour).</summary>
+        Center,
+        /// <summary>Corner of the offset contour nearest the room's min-X/min-Y corner.</summary>
+        Corner
+    }
+
     /// <summary>Placement policy for ceiling devices (diffusers, cassette fan coils) —
     /// plan card C1.2; grid over the service area, algorithms adapted from the
     /// InsertTerminalsPandas analog.</summary>
@@ -33,6 +57,25 @@ namespace HVACLoadTerminals.Core.Services
 
         /// <summary>Count for <see cref="CeilingCountRule.Fixed"/>.</summary>
         public int FixedCount { get; set; } = 2;
+
+        // ---- U2.1: mass placement patterns ----
+
+        /// <summary>Mass placement pattern (grid by default, wall rows opt-in).</summary>
+        public WallPattern Pattern { get; set; } = WallPattern.CeilingGrid;
+
+        /// <summary>Where a single device goes when count == 1.</summary>
+        public SingleRule SingleRule { get; set; } = SingleRule.Center;
+
+        /// <summary>Side for <see cref="WallPattern.Explicit"/> (Bottom = max Y, Top = min Y,
+        /// Right = max X, Left = min X — same semantics as RoomGeometryAnalyzer).</summary>
+        public CoordinateSystem ExplicitSide { get; set; } = CoordinateSystem.Bottom;
+
+        /// <summary>Pitch between devices in a wall row, mm; 0 = even distribution
+        /// over the usable edge length (analog SpacingMm).</summary>
+        public double SpacingMm { get; set; } = 0;
+
+        /// <summary>Margin from the row ends, mm (analog StartOffsetMm).</summary>
+        public double StartOffsetMm { get; set; } = 0;
     }
 
     /// <summary>Placements plus human-readable warnings for one room.</summary>
@@ -41,6 +84,10 @@ namespace HVACLoadTerminals.Core.Services
         public IReadOnlyList<DevicePlacement> Placements { get; set; }
             = Array.Empty<DevicePlacement>();
         public IReadOnlyList<string> Warnings { get; set; } = Array.Empty<string>();
+
+        /// <summary>U2.1: wall edge chosen by the mass pattern (null for grid/center) —
+        /// used by hosts to highlight the side on the plan.</summary>
+        public EdgeInfo? SelectedEdge { get; set; }
     }
 
     /// <summary>
@@ -122,17 +169,61 @@ namespace HVACLoadTerminals.Core.Services
             }
 
             var offsetPolygon = new Polygon2D(offset);
-            IReadOnlyList<Point2D> points = count == 1
-                ? new[] { offsetPolygon.Center }
-                : GridPoints(offsetPolygon, count, options);
+
+            // --- U2.1: mass placement pattern ---
+            List<Point2D> points;
+            EdgeInfo? selectedEdge = null;
+            double rowRotation = 0;
+
+            if (count == 1)
+            {
+                points = new List<Point2D> { SingleDevicePoint(offsetPolygon, options.SingleRule) };
+            }
+            else if (options.Pattern != WallPattern.CeilingGrid)
+            {
+                selectedEdge = SelectWallEdge(offsetPolygon, options.Pattern, options.ExplicitSide);
+                if (selectedEdge == null || selectedEdge.Length <= 1e-9)
+                {
+                    points = GridPoints(offsetPolygon, count, options);
+                    warnings.Add("Настенный паттерн неприменим — использована потолочная сетка");
+                }
+                else
+                {
+                    rowRotation = Math.Atan2(
+                        selectedEdge.InwardNormal.Y, selectedEdge.InwardNormal.X);
+                    points = DistributeAlongEdge(selectedEdge, count, options, warnings);
+                }
+            }
+            else
+            {
+                points = GridPoints(offsetPolygon, count, options);
+            }
 
             var placements = new List<DevicePlacement>(points.Count);
             foreach (var p in points)
             {
-                if (!offsetPolygon.ContainsPoint(p))
-                    continue;
+                Point2D valid;
+                if (offsetPolygon.ContainsPoint(p))
+                {
+                    valid = p;
+                }
+                else
+                {
+                    // Row points sit exactly ON the offset contour edge — ray casting
+                    // is ambiguous there; nudge 1 mm toward the centroid once.
+                    var c = offsetPolygon.Center;
+                    double dx = c.X - p.X, dy = c.Y - p.Y;
+                    double len = Math.Sqrt(dx * dx + dy * dy);
+                    if (len < 1e-9) continue;
+                    double nudge = LengthUnitConverter.MmToUnits(1) / len;
+                    valid = new Point2D(p.X + dx * nudge, p.Y + dy * nudge);
+                    if (!offsetPolygon.ContainsPoint(valid))
+                        continue;
+                }
+
+                bool rotated = selectedEdge != null && count > 1;
                 placements.Add(new DevicePlacement(
-                    device, p, 0, roomId, systemName));
+                    device, valid, rotated ? rowRotation : 0, roomId, systemName));
             }
 
             if (placements.Count < count)
@@ -151,7 +242,8 @@ namespace HVACLoadTerminals.Core.Services
             return new CeilingPlacementResult
             {
                 Placements = placements,
-                Warnings = warnings
+                Warnings = warnings,
+                SelectedEdge = selectedEdge
             };
         }
 
@@ -165,6 +257,96 @@ namespace HVACLoadTerminals.Core.Services
                 Placements = Array.Empty<DevicePlacement>(),
                 Warnings = new[] { message }
             };
+
+        /// <summary>
+        /// U2.1: point for a single device per <see cref="SingleRule"/> —
+        /// centre of the offset contour (legacy) or the contour vertex nearest
+        /// the room's min-X/min-Y bounding-box corner (deterministic "corner").
+        /// </summary>
+        private static Point2D SingleDevicePoint(Polygon2D offsetPolygon, SingleRule rule)
+        {
+            if (rule == SingleRule.Corner)
+            {
+                double minX = offsetPolygon.Vertices.Min(v => v.X);
+                double minY = offsetPolygon.Vertices.Min(v => v.Y);
+                var target = new Point2D(minX, minY);
+                return offsetPolygon.Vertices
+                    .OrderBy(v => DistSq(v, target))
+                    .First();
+            }
+            return offsetPolygon.Center;
+        }
+
+        /// <summary>
+        /// U2.1: wall edge of the offset contour selected by the mass pattern:
+        /// longest / shortest side (ties → first) or the explicit bounding-box side.
+        /// </summary>
+        private static EdgeInfo? SelectWallEdge(
+            Polygon2D polygon, WallPattern pattern, CoordinateSystem explicitSide)
+        {
+            var edges = RoomGeometryAnalyzer.GetEdges(polygon);
+            if (edges.Count == 0)
+                return null;
+            return pattern switch
+            {
+                WallPattern.ShortSide => RoomGeometryAnalyzer.SelectPrimaryEdge(
+                    edges, PlacementSide.ShortSide, CoordinateSystem.Auto),
+                WallPattern.Explicit => RoomGeometryAnalyzer.SelectPrimaryEdge(
+                    edges, PlacementSide.Any,
+                    explicitSide == CoordinateSystem.Auto ? CoordinateSystem.Bottom : explicitSide),
+                _ => RoomGeometryAnalyzer.SelectPrimaryEdge(
+                    edges, PlacementSide.LongSide, CoordinateSystem.Auto)
+            };
+        }
+
+        /// <summary>
+        /// U2.1: even or fixed-pitch distribution of `count` points along a wall edge.
+        /// SpacingMm &gt; 0 requests a fixed pitch (centered on the edge); when it does
+        /// not fit, falls back to even distribution with a warning. StartOffsetMm trims
+        /// both ends (analog StartOffsetMm in PlacementOptions).
+        /// </summary>
+        private List<Point2D> DistributeAlongEdge(
+            EdgeInfo edge, int count, CeilingPlacementOptions options,
+            ICollection<string> warnings)
+        {
+            var pts = new List<Point2D>(count);
+            double len = edge.Length;
+            double startOff = Math.Min(LengthUnitConverter.MmToUnits(options.StartOffsetMm), len / 2);
+            double usable = Math.Max(0, len - 2 * startOff);
+
+            if (usable <= 1e-9 || count < 1)
+            {
+                warnings.Add("Приборы не помещаются вдоль стороны — точка в середине ребра");
+                pts.Add(edge.MidPoint);
+                return pts;
+            }
+
+            bool even = options.SpacingMm <= 0;
+            double pitch = even
+                ? usable / (count - 1)
+                : LengthUnitConverter.MmToUnits(options.SpacingMm);
+            double span = pitch * (count - 1);
+            if (!even && span > usable + 1e-9)
+            {
+                warnings.Add(
+                    $"Шаг {options.SpacingMm:F0} мм не вмещается на стороне " +
+                    $"{LengthUnitConverter.UnitsToMm(len):F0} мм — равномерное распределение");
+                pitch = usable / (count - 1);
+                span = pitch * (count - 1);
+            }
+
+            // Fixed pitch is centered on the edge; even distribution spans startOff..len-startOff.
+            double d0 = even ? startOff : (len - span) / 2;
+
+            for (int i = 0; i < count; i++)
+            {
+                double distAlong = d0 + i * pitch;
+                pts.Add(new Point2D(
+                    edge.Start.X + edge.Direction.X * distAlong,
+                    edge.Start.Y + edge.Direction.Y * distAlong));
+            }
+            return pts;
+        }
 
         /// <summary>
         /// Even grid of CELL-CENTRE candidate points over the polygon bounding box,

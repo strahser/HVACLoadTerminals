@@ -57,6 +57,26 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public CeilingCountRule ExhaustRule { get; set; } = CeilingCountRule.ByFlow;
         public int FixedSupplyCount { get; set; } = 2;
 
+        // ---- U2.1: mass placement patterns (owner defaults: supply = long side,
+        // exhaust = short side, single device in the centre) ----
+
+        public WallPattern SupplyPattern { get; set; } = WallPattern.LongSide;
+        public WallPattern ExhaustPattern { get; set; } = WallPattern.ShortSide;
+        public SingleRule SingleDeviceRule { get; set; } = SingleRule.Center;
+
+        /// <summary>For hosts binding a ComboBox of wall patterns.</summary>
+        public WallPattern[] WallPatterns { get; } =
+            Enum.GetValues(typeof(WallPattern)).Cast<WallPattern>().ToArray();
+
+        /// <summary>For hosts binding a ComboBox of single-device rules.</summary>
+        public SingleRule[] SingleRules { get; } =
+            Enum.GetValues(typeof(SingleRule)).Cast<SingleRule>().ToArray();
+
+        /// <summary>Wall edges chosen by the patterns of the last Calculate —
+        /// hosts highlight them on the plan.</summary>
+        public IReadOnlyList<PatternEdge> LastPatternEdges { get; private set; }
+            = Array.Empty<PatternEdge>();
+
         /// <summary>Grille sizing velocity, m/s.</summary>
         public double GrilleVelocityMs { get; set; } = 2.0;
 
@@ -199,6 +219,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             var placements = new List<DevicePlacement>();
             var warnings = new List<string>();
             var kefByKey = new Dictionary<string, double>();
+            var patternEdges = new List<PatternEdge>();
             var sw = System.Diagnostics.Stopwatch.StartNew();
 
             var includedRows = Rooms.Where(r => r.IsIncluded).ToList();
@@ -257,10 +278,13 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         new CeilingPlacementOptions
                         {
                             CountRule = SupplyRule,
-                            FixedCount = FixedSupplyCount
+                            FixedCount = FixedSupplyCount,
+                            Pattern = SupplyPattern,
+                            SingleRule = SingleDeviceRule
                         });
                     placements.AddRange(res.Placements);
                     StoreKef(kefByKey, res, row.Supply);
+                    AddPatternEdge(patternEdges, res, snapRoom, "Приток");
                     roomWarnings.AddRange(res.Warnings);
                 }
 
@@ -269,9 +293,15 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     var res = _ceilingService.PlaceForRoom(
                         row.RoomId, polygon, row.Exhaust, roomAreaM2,
                         HVACSystemType.Exhaust, catalog, "Вытяжка",
-                        new CeilingPlacementOptions { CountRule = ExhaustRule });
+                        new CeilingPlacementOptions
+                        {
+                            CountRule = ExhaustRule,
+                            Pattern = ExhaustPattern,
+                            SingleRule = SingleDeviceRule
+                        });
                     placements.AddRange(res.Placements);
                     StoreKef(kefByKey, res, row.Exhaust);
+                    AddPatternEdge(patternEdges, res, snapRoom, "Вытяжка");
                     roomWarnings.AddRange(res.Warnings);
 
                     // Grille dimensions from the equivalent diameter (C1.5).
@@ -298,6 +328,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             sw.Stop();
 
             LastRawPlacements = placements;
+            LastPatternEdges = patternEdges;
             var state = BuildState(placements, warnings, kefByKey, sw.Elapsed.TotalMilliseconds);
             SafeRaise(state, "Обновление");
             return state;
@@ -316,11 +347,15 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             {
                 SnapshotPath = _snapshotPath,
                 Rooms = Rooms.ToList(),
-                Placements = _lastPlacementRows
+                Placements = _lastPlacementRows,
+                SupplyPattern = SupplyPattern,
+                ExhaustPattern = ExhaustPattern,
+                SingleRule = SingleDeviceRule
             };
             System.IO.File.WriteAllText(path,
                 Newtonsoft.Json.JsonConvert.SerializeObject(dto,
-                    Newtonsoft.Json.Formatting.Indented));
+                    Newtonsoft.Json.Formatting.Indented,
+                    new Newtonsoft.Json.Converters.StringEnumConverter()));
         }
 
         public void LoadProject(string path)
@@ -332,6 +367,11 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             _snapshotPath = dto.SnapshotPath ?? "";
             if (System.IO.File.Exists(_snapshotPath))
                 _snapshot = _loader.LoadFromFile(_snapshotPath);
+
+            // U2.1: patterns round-trip; legacy files keep the owner defaults.
+            SupplyPattern = dto.SupplyPattern ?? WallPattern.LongSide;
+            ExhaustPattern = dto.ExhaustPattern ?? WallPattern.ShortSide;
+            SingleDeviceRule = dto.SingleRule ?? SingleRule.Center;
 
             Rooms.Clear();
             foreach (var row in dto.Rooms ?? new List<RoomRow>())
@@ -354,6 +394,28 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             public string? SnapshotPath { get; set; }
             public List<RoomRow>? Rooms { get; set; }
             public List<PlacementRow>? Placements { get; set; }
+
+            // U2.1: mass placement patterns (nullable → legacy files keep defaults)
+            public WallPattern? SupplyPattern { get; set; }
+            public WallPattern? ExhaustPattern { get; set; }
+            public SingleRule? SingleRule { get; set; }
+        }
+
+        private static void AddPatternEdge(
+            ICollection<PatternEdge> sink,
+            CeilingPlacementResult res,
+            SnapshotRoom room,
+            string systemName)
+        {
+            if (res.SelectedEdge == null)
+                return;
+            sink.Add(new PatternEdge
+            {
+                LevelName = room.LevelName ?? "",
+                SystemName = systemName,
+                Start = res.SelectedEdge.Start,
+                End = res.SelectedEdge.End
+            });
         }
 
         private static void StoreKef(
