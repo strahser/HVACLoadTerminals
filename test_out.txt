@@ -1,4 +1,0 @@
-Тестовый запуск для D:\Projects\HVACLoadTerminals\src\Core.Tests\bin\Debug\net48\HVACLoadTerminals.Core.Tests.dll (.NETFramework,Version=v4.8)
-Общее количество тестовых файлов (1), соответствующих указанному шаблону.
-
-Пройден!   : не пройдено     0, пройдено   108, пропущено     0, всего   108, длительность 1 s. - HVACLoadTerminals.Core.Tests.dll (net48)
