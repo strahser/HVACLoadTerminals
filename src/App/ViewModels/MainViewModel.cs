@@ -30,8 +30,18 @@ namespace HVACLoadTerminals.App.ViewModels
 
         private ICollectionView? _roomsView;
 
-        public ICollectionView RoomsView =>
-            _roomsView ??= CollectionViewSource.GetDefaultView(Workspace.Rooms);
+        public ICollectionView RoomsView
+        {
+            get
+            {
+                if (_roomsView != null)
+                    return _roomsView;
+                _roomsView = CollectionViewSource.GetDefaultView(Workspace.Rooms);
+                // U1.1: выбор уровня в ComboBox фильтрует таблицу помещений.
+                _roomsView.Filter = o => o is RoomRow row && FilterVisible(row);
+                return _roomsView;
+            }
+        }
 
         public ObservableCollection<string> Levels { get; } =
             new ObservableCollection<string> { "Все уровни" };
