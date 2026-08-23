@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "edit": "allow",
+    "bash": {
+      "*": "allow",
+      "rm -rf *": "deny"
+    },
+    "webfetch": "allow"
+  }
+}
