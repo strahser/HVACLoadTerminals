@@ -1,0 +1,35 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["Tasks/00_Протокол_агентов.md"],
+  "skills": {
+    "paths": [
+      "D:\\Projects\\dev-pipeline\\skills",
+      "D:\\Projects\\revit-skills\\.opencode\\skills"
+    ]
+  },
+  "permission": {
+    "question": "allow",
+    "webfetch": "allow",
+    "todowrite": "allow",
+    "read": "allow",
+    "edit": "allow",
+    "write": "allow",
+    "bash": "allow",
+    "grep": "allow",
+    "glob": "allow",
+    "task": "allow",
+    "skill": "allow",
+    "external_directory": {
+      "D:\\Projects\\dev-pipeline\\**": "allow",
+      "D:\\Projects\\revit-skills\\**": "allow",
+      "D:\\Projects\\ProjectsPalns\\**": "allow",
+      "C:\\Users\\Strakhov\\AppData\\Local\\Temp\\**": "allow",
+      "C:\\Users\\Strakhov\\AppData\\Roaming\\HeatLossRevit2\\**": "allow",
+      "C:\\Users\\Strakhov\\.nuget\\**": "allow",
+      "C:\\Windows\\Microsoft.NET\\**": "allow",
+      "C:\\Program Files (x86)\\Reference Assemblies\\**": "allow",
+      "C:\\Program Files\\dotnet\\**": "allow",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\**": "allow"
+    }
+  }
+}

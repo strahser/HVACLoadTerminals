@@ -105,6 +105,10 @@ namespace HVACLoadTerminals.Revit.Commands
                 bool applied = false;
                 try
                 {
+                    // Общий WebView2-хост из Infrastructure (карточка U1.3);
+                    // логи хоста идут в журнал аддина.
+                    WebView2PreviewWindow.LogSink = msg => HvacLogger.Warn("[WebView2Preview] " + msg);
+
                     var wv2 = new WebView2PreviewWindow(
                         DialogTitle,
                         sceneJson,

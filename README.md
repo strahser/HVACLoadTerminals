@@ -291,11 +291,8 @@ HVACLoadTerminals/
 │   │   ├── ViewModels/
 │   │   │   ├── MainViewModel.cs              # ViewModel (комнаты, расстановка)
 │   │   │   └── RelayCommand.cs               # Команда WPF
-│   │   ├── Views/
-│   │   │   ├── HtmlPreviewWindow.xaml         # WPF окно HTML-превью
-│   │   │   └── HtmlPreviewWindow.xaml.cs
 │   │   └── Commands/
-│   │       └── OpenHtmlPreviewCommand.cs      # Команда открытия HTML-превью
+│   │       └── OpenHtmlPreviewCommand.cs      # Команда открытия HTML-превью (общий WebView2-хост)
 │   └── Revit/
 │       ├── Application.cs                    # IExternalApplication (лента, кнопки)
 │       ├── HVACLoadTerminals.addin            # Revit addin-манифест

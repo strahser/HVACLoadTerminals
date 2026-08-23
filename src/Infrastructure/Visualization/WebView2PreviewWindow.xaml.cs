@@ -1,26 +1,32 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
-using Autodesk.Revit.UI;
 using HVACLoadTerminals.Infrastructure.Visualization;
-using HVACLoadTerminals.Revit.Logging;
 using Microsoft.Web.WebView2.Core;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace HVACLoadTerminals.Revit.Visualization
+namespace HVACLoadTerminals.Infrastructure.Visualization
 {
     /// <summary>
-    /// In-process WebView2 preview window used by the Revit add-in. Loads the
-    /// HTML scene produced by <see cref="HtmlSceneExporter"/> and bridges it to
-    /// Revit over the WebView2 postMessage protocol:
+    /// Common in-process WebView2 preview window (generalized from the Revit
+    /// add-in host; used by the standalone App and the Revit stand). Loads the
+    /// HTML scene produced by <see cref="HtmlSceneExporter"/> (file://, fully
+    /// offline) and bridges it over the WebView2 postMessage protocol:
     ///   Host -> Page : { type: "scene", payload: &lt;scene json&gt; }
     ///   Page -> Host : { type: "apply" | "cancel" | "recompute", options? }
+    /// All errors are surfaced as text in the status bar — the window never
+    /// crashes the host application.
     /// </summary>
     public partial class WebView2PreviewWindow : Window
     {
+        /// <summary>Optional host log sink (App/Revit wire their loggers here).</summary>
+        public static Action<string>? LogSink;
+
         private readonly string _title;
+        private readonly bool _isModal;
         private string _sceneJson;
         private readonly Func<string> _recomputeSceneJson;
         private bool _applied;
@@ -35,25 +41,60 @@ namespace HVACLoadTerminals.Revit.Visualization
             public JObject? Options { get; set; }
         }
 
-        public WebView2PreviewWindow(string title, string sceneJson, Func<string> recomputeSceneJson)
+        public WebView2PreviewWindow(string title, string sceneJson, Func<string> recomputeSceneJson,
+            bool modal = true)
         {
             _title = title ?? throw new ArgumentNullException(nameof(title));
             _sceneJson = sceneJson ?? throw new ArgumentNullException(nameof(sceneJson));
             _recomputeSceneJson = recomputeSceneJson ?? throw new ArgumentNullException(nameof(recomputeSceneJson));
+            _isModal = modal;
 
             InitializeComponent();
 
-            Title = _title;
-            StatusText.Text = "WebView2: initializing...";
+            Title = string.IsNullOrWhiteSpace(_title) ? "HTML Preview" : _title;
+            StatusText.Text = "WebView2: инициализация...";
 
             Closed += OnWindowClosed;
             _ = InitializeWebViewAsync();
+        }
+
+        private static class NativeLoader
+        {
+            [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
+            public static extern IntPtr LoadLibrary(string fileName);
+        }
+
+        /// <summary>
+        /// NuGet кладёт в корень вывода win-x86 WebView2Loader.dll, поэтому в
+        /// 64-битном процессе инициализация падала с HRESULT 0x8007000B.
+        /// Предзагружаем загрузчик нужной разрядности из runtimes\ — тогда
+        /// последующий P/Invoke "WebView2Loader.dll" подхватит уже загруженный
+        /// модуль независимо от того, что лежит рядом с exe.
+        /// </summary>
+        private static void TryPreloadNativeLoader()
+        {
+            try
+            {
+                var baseDir = Path.GetDirectoryName(typeof(WebView2PreviewWindow).Assembly.Location);
+                if (string.IsNullOrEmpty(baseDir)) return;
+
+                var arch = Environment.Is64BitProcess ? "win-x64" : "win-x86";
+                var candidate = Path.Combine(baseDir, "runtimes", arch, "native", "WebView2Loader.dll");
+                if (File.Exists(candidate))
+                    NativeLoader.LoadLibrary(candidate);
+            }
+            catch (Exception ex)
+            {
+                LogSink?.Invoke("WebView2 loader preload: " + ex.Message);
+            }
         }
 
         private async Task InitializeWebViewAsync()
         {
             try
             {
+                TryPreloadNativeLoader();
+
                 var userDataFolder = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "HVACLoadTerminals", "WebView2");
@@ -69,12 +110,12 @@ namespace HVACLoadTerminals.Revit.Visualization
                 var htmlPath = HtmlSceneExporter.SaveToFile(htmlDir, _title, _sceneJson);
                 WebView.Source = new Uri(htmlPath);
 
-                StatusText.Text = "WebView2: ready — scene loaded, messages active";
+                StatusText.Text = "WebView2: готово — сцена загружена, мост сообщений активен";
             }
             catch (Exception ex)
             {
-                StatusText.Text = "WebView2 error: " + ex.Message;
-                HvacLogger.LogException("WebView2 init", ex);
+                StatusText.Text = "Ошибка WebView2: " + ex.Message;
+                LogSink?.Invoke("WebView2 init: " + ex.Message);
             }
         }
 
@@ -87,8 +128,20 @@ namespace HVACLoadTerminals.Revit.Visualization
             }
             catch (Exception ex)
             {
-                HvacLogger.LogException("WebView2 navigation completed", ex);
+                LogSink?.Invoke("WebView2 navigation completed: " + ex.Message);
             }
+        }
+
+        /// <summary>Closes the window, setting DialogResult only for modal show.</summary>
+        private void CloseWithResult(bool result)
+        {
+            _applied = result;
+            if (_isModal)
+            {
+                try { DialogResult = result; }
+                catch (Exception ex) { LogSink?.Invoke("WebView2 DialogResult: " + ex.Message); }
+            }
+            Close();
         }
 
         private void OnWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -100,7 +153,7 @@ namespace HVACLoadTerminals.Revit.Visualization
             }
             catch (Exception ex)
             {
-                HvacLogger.LogException("WebView2 message read", ex);
+                LogSink?.Invoke("WebView2 message read: " + ex.Message);
                 return;
             }
 
@@ -112,20 +165,11 @@ namespace HVACLoadTerminals.Revit.Visualization
                 switch (msg.Type)
                 {
                     case "apply":
-                        Dispatcher.Invoke(() =>
-                        {
-                            _applied = true;
-                            DialogResult = true;
-                            Close();
-                        });
+                        Dispatcher.Invoke(() => CloseWithResult(true));
                         break;
 
                     case "cancel":
-                        Dispatcher.Invoke(() =>
-                        {
-                            DialogResult = false;
-                            Close();
-                        });
+                        Dispatcher.Invoke(() => CloseWithResult(false));
                         break;
 
                     case "recompute":
@@ -135,7 +179,7 @@ namespace HVACLoadTerminals.Revit.Visualization
             }
             catch (Exception ex)
             {
-                HvacLogger.LogException("WebView2 message", ex);
+                LogSink?.Invoke("WebView2 message: " + ex.Message);
             }
         }
 
@@ -146,18 +190,18 @@ namespace HVACLoadTerminals.Revit.Visualization
                 var newJson = _recomputeSceneJson();
                 if (string.IsNullOrWhiteSpace(newJson))
                 {
-                    StatusText.Text = "Recompute returned no scene";
+                    StatusText.Text = "Пересчёт не вернул сцену";
                     return;
                 }
 
                 _sceneJson = newJson;
                 SendScene();
-                StatusText.Text = "Recomputed";
+                StatusText.Text = "Пересчитано";
             }
             catch (Exception ex)
             {
-                HvacLogger.LogException("Recompute error", ex);
-                TaskDialog.Show("Recompute error", ex.Message);
+                StatusText.Text = "Ошибка пересчёта: " + ex.Message;
+                LogSink?.Invoke("Recompute error: " + ex.Message);
             }
         }
 
@@ -181,13 +225,11 @@ namespace HVACLoadTerminals.Revit.Visualization
             }
             catch (Exception ex)
             {
-                HvacLogger.LogException("WebView2 apply post", ex);
+                LogSink?.Invoke("WebView2 apply post: " + ex.Message);
             }
 
             // Fallback when WebView2 is not available.
-            _applied = true;
-            DialogResult = true;
-            Close();
+            CloseWithResult(true);
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
@@ -201,13 +243,12 @@ namespace HVACLoadTerminals.Revit.Visualization
                     return;
                 }
             }
-            catch (Exception ex)
-            {
-                HvacLogger.LogException("WebView2 cancel post", ex);
-            }
+                catch (Exception ex)
+                {
+                    LogSink?.Invoke("WebView2 cancel post: " + ex.Message);
+                }
 
-            DialogResult = false;
-            Close();
+            CloseWithResult(false);
         }
 
         private void OnWindowClosed(object sender, EventArgs e)
@@ -223,7 +264,7 @@ namespace HVACLoadTerminals.Revit.Visualization
             }
             catch (Exception ex)
             {
-                HvacLogger.LogException("WebView2 dispose", ex);
+                LogSink?.Invoke("WebView2 dispose: " + ex.Message);
             }
         }
     }

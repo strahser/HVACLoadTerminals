@@ -163,19 +163,19 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
     btnApply = document.createElement('button');
     btnApply.type = 'button';
     btnApply.id = 'btnApply';
-    btnApply.textContent = 'Apply';
+    btnApply.textContent = 'Применить';
     btnApply.style.background = '#238636';
     btnApply.style.color = '#ffffff';
     btnApply.onclick = function () { postToHost({ type: 'apply' }); };
     btnCancel = document.createElement('button');
     btnCancel.type = 'button';
     btnCancel.id = 'btnCancel';
-    btnCancel.textContent = 'Cancel';
+    btnCancel.textContent = 'Отмена';
     btnCancel.onclick = function () { postToHost({ type: 'cancel' }); };
     btnRecompute = document.createElement('button');
     btnRecompute.type = 'button';
     btnRecompute.id = 'btnRecompute';
-    btnRecompute.textContent = 'Recompute';
+    btnRecompute.textContent = 'Пересчитать';
     btnRecompute.onclick = function () { postToHost({ type: 'recompute' }); };
     if (hint) {
       toolbar.insertBefore(btnRecompute, hint);
@@ -489,7 +489,7 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
   }
 
   btn3d.addEventListener('click', function () {
-    if (threeFailed) { alert('3D unavailable (no network)'); return; }
+    if (threeFailed) { alert('3D недоступно: нет подключения к сети (офлайн). 2D-план работает полностью локально.'); return; }
     if (threeLoaded) { start3D(); return; }
     btn3d.disabled = true;
     btn3d.textContent = 'Loading 3D...';
@@ -502,7 +502,7 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
         threeFailed = true;
         btn3d.disabled = false;
         btn3d.textContent = '3D (Three.js)';
-        alert('3D unavailable (no network)');
+        alert('3D недоступно: нет подключения к сети (офлайн). 2D-план работает полностью локально.');
       }
     });
   });

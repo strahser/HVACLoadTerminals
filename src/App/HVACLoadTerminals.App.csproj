@@ -10,11 +10,23 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="OxyPlot.Wpf" Version="2.1.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
+    <PackageReference Include="OxyPlot.Wpf" Version="2.1.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\HVACLoadTerminals.Core.csproj" />
     <ProjectReference Include="..\Infrastructure\HVACLoadTerminals.Infrastructure.csproj" />
   </ItemGroup>
+
+  <!-- U1.3: AnyCPU-процесс на x64 грузит WebView2Loader.dll из корня вывода;
+       NuGet кладёт туда win-x86, поэтому перезаписываем win-x64
+       (тот же приём, что в HVACLoadTerminals.Revit.csproj). -->
+  <ItemGroup>
+    <AppWebView2Loader Include="$(TargetDir)runtimes\win-x64\native\WebView2Loader.dll"
+                       Condition="Exists('$(TargetDir)runtimes\win-x64\native\WebView2Loader.dll')" />
+  </ItemGroup>
+  <Target Name="CopyWebView2Loader" AfterTargets="Build">
+    <Copy SourceFiles="@(AppWebView2Loader)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

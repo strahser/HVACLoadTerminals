@@ -1,4 +1,4 @@
-<Window x:Class="HVACLoadTerminals.Revit.Visualization.WebView2PreviewWindow"
+<Window x:Class="HVACLoadTerminals.Infrastructure.Visualization.WebView2PreviewWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
@@ -18,13 +18,13 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
                     <Button x:Name="ApplyButton"
-                            Content="Apply"
+                            Content="Применить"
                             Padding="16,6" Margin="4"
                             Background="#238636" Foreground="White"
                             BorderThickness="0" Cursor="Hand"
                             Click="Apply_Click" />
                     <Button x:Name="CancelButton"
-                            Content="Cancel"
+                            Content="Отмена"
                             Padding="16,6" Margin="4"
                             Background="#30363d" Foreground="#e6edf3"
                             BorderThickness="0" Cursor="Hand"
@@ -35,7 +35,7 @@
                            VerticalAlignment="Center"
                            Margin="8,0"
                            Foreground="#888888"
-                           Text="WebView2: initializing..." />
+                           Text="WebView2: инициализация..." />
             </DockPanel>
         </Border>
 
@@ -45,7 +45,8 @@
         <!-- Hint -->
         <Border Grid.Row="2" Background="#161b22" Padding="8,6">
             <TextBlock Foreground="#8b949e"
-                       Text="This preview communicates with Revit through WebView2 postMessage: click Apply to place the terminals or Cancel to go back." />
+                       x:Name="HintText"
+                       Text="Пан/зум мышью, двойной клик — вписать план. Кнопки страницы работают через postMessage-мост." />
         </Border>
     </Grid>
 </Window>

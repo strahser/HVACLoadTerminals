@@ -423,12 +423,37 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
+        /// <summary>PlacementResult per room from the last Calculate (for the HTML scene).</summary>
+        private List<PlacementResult> BuildPlacementResults(RoomSnapshot snapshot)
+        {
+            var raw = Workspace.LastRawPlacements;
+
+            var roomsById = new Dictionary<string, SnapshotRoom>();
+            foreach (var room in snapshot.Rooms)
+                roomsById[room.Id] = room;
+
+            return raw.GroupBy(p => p.RoomId)
+                .Select(g =>
+                {
+                    if (!roomsById.TryGetValue(g.Key, out var room))
+                        return null;
+                    var polygon = room.ToPolygon();
+                    if (polygon == null)
+                        return null;
+                    var rp = new RoomPolygon(
+                        room.Id, $"{room.Number}. {room.Name}", polygon,
+                        room.LevelElevation, Array.Empty<HVACSystem>());
+                    return new PlacementResult(rp, g.ToList(), true, null);
+                })
+                .Where(r => r != null)
+                .Cast<PlacementResult>()
+                .ToList();
+        }
+
         /// <summary>Self-contained HTML scene of the current placements.</summary>
         private void ExportHtml()
         {
-            var raw = Workspace.LastRawPlacements;
-            var snapshot = Workspace.CurrentSnapshot;
-            if (raw.Count == 0 || snapshot == null)
+            if (Workspace.LastRawPlacements.Count == 0 || Workspace.CurrentSnapshot == null)
             {
                 StatusMessage = "Рассчитайте размещение перед экспортом HTML";
                 return;
@@ -436,30 +461,23 @@ namespace HVACLoadTerminals.App.ViewModels
 
             try
             {
-                var roomsById = new Dictionary<string, SnapshotRoom>();
-                foreach (var room in snapshot.Rooms)
-                    roomsById[room.Id] = room;
+                var snapshot = Workspace.CurrentSnapshot!;
+                string title = $"Расстановка — {SelectedLevel}";
 
-                var results = raw.GroupBy(p => p.RoomId)
-                    .Select(g =>
+                // Реальный колбэк Recompute: прогон расчёта с текущими опциями
+                // (правила количества и т.д.) и сериализация свежей сцены.
+                // Окно немодальное: пользователь может поменять правило
+                // количества в главном окне и нажать «Пересчитать» на странице.
+                var cmd = new OpenHtmlPreviewCommand(
+                    getSceneJson: () =>
                     {
-                        if (!roomsById.TryGetValue(g.Key, out var room))
-                            return null;
-                        var polygon = room.ToPolygon();
-                        if (polygon == null)
-                            return null;
-                        var rp = new RoomPolygon(
-                            room.Id, $"{room.Number}. {room.Name}", polygon,
-                            room.LevelElevation, Array.Empty<HVACSystem>());
-                        return new PlacementResult(rp, g.ToList(), true, null);
-                    })
-                    .Where(r => r != null)
-                    .Cast<PlacementResult>()
-                    .ToList();
+                        CalculateSafe();
+                        return PlacementSceneSerializer.ToJson(BuildPlacementResults(snapshot), title);
+                    },
+                    report: msg => StatusMessage = msg,
+                    title: title,
+                    modal: false);
 
-                string json = PlacementSceneSerializer.ToJson(results,
-                    $"Расстановка — {SelectedLevel}");
-                var cmd = new OpenHtmlPreviewCommand(() => json);
                 cmd.Execute(null);
                 StatusMessage = "HTML-превью открыт";
             }
