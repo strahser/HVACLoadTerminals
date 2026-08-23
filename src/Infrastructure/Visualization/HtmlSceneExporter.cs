@@ -221,6 +221,12 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
     return (n % 1 === 0) ? String(Math.round(n)) : n.toFixed(1);
   }
 
+  // U3.1: сцена хранит футы (Revit internal units), инженеру показываем мм.
+  var FT_TO_MM = 304.8;
+  function fmtMm(ft) {
+    return (Number(ft) * FT_TO_MM).toFixed(0);
+  }
+
   function buildData() {
     (SC.Rooms || []).forEach(function (r) {
       var bnd = (r.Boundary || []).map(function (p) { return [p.X, p.Y]; });
@@ -406,8 +412,8 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
       tooltip.style.left = (mx + 14) + 'px';
       tooltip.style.top = (my + 14) + 'px';
       tooltip.innerHTML = '<b>' + esc(best.family) + ' ' + esc(best.type) + '</b><br>' +
-        'Flow: ' + fmtFlow(best.flow) + ' m&sup3;/h<br>' +
-        'Pos: (' + best.x.toFixed(2) + ', ' + best.y.toFixed(2) + ') ft';
+        'Расход: ' + fmtFlow(best.flow) + ' м&sup3;/ч<br>' +
+        'Координаты: (' + fmtMm(best.x) + ', ' + fmtMm(best.y) + ') мм';
     } else {
       tooltip.style.display = 'none';
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using HVACLoadTerminals.Core.Models.Snapshot;
@@ -70,7 +71,8 @@ namespace HVACLoadTerminals.Core.Tests
 
             Assert.True(state.TotalDevices > 0);
             Assert.All(presenter.LastRawPlacements, p => Assert.Equal("a", p.RoomId));
-            Assert.DoesNotContain(state.Placements, p => p.RoomName == "b");
+            // U3.1: в строках размещений — «№. Имя», а не внутренний Id.
+            Assert.All(state.Placements, p => Assert.StartsWith("101.", p.RoomName));
             Assert.Contains("Выбрано 1 из 2", state.Status);
         }
 
@@ -191,6 +193,138 @@ namespace HVACLoadTerminals.Core.Tests
                 Assert.Equal("Уровень 1", e.LevelName);
                 Assert.NotEqual(e.Start, e.End);
             });
+        }
+
+        // ------------------------------------------------------------------
+        // U3.1: паритет и удобство хостов App ↔ ревит-стенд
+        // ------------------------------------------------------------------
+
+        /// <summary>Фейк планировщика: запоминает отложенный колбэк, не тикает сам.</summary>
+        private class FakeScheduler : ILiveRecalcScheduler
+        {
+            public int ScheduleCount;
+            public TimeSpan LastDelay = TimeSpan.MinValue;
+            private Action? _pending;
+
+            public void Cancel() => _pending = null;
+
+            public void Schedule(TimeSpan delay, Action callback)
+            {
+                ScheduleCount++;
+                LastDelay = delay;
+                _pending = callback;
+            }
+
+            public void RunPending()
+            {
+                Action? callback = _pending;
+                _pending = null;
+                callback?.Invoke();
+            }
+        }
+
+        [Fact]
+        public void Placement_Rows_Are_Mm_With_Number_Name_And_Level()
+        {
+            var presenter = CreateLoadedPresenter();
+            presenter.Rooms.First(r => r.RoomId == "b").IsIncluded = false;
+            presenter.Rooms.First(r => r.RoomId == "a").Supply = 2000; // гарантировать приборы
+
+            var state = presenter.Calculate();
+
+            var raw = presenter.LastRawPlacements;
+            Assert.NotEmpty(raw);
+            Assert.Equal(raw.Count, state.Placements.Count);
+            for (int i = 0; i < raw.Count; i++)
+            {
+                var row = state.Placements[i];
+                // Координаты в мм: футы * 304.8, округление до целых.
+                Assert.Equal(Math.Round(raw[i].Position.X * 304.8, 0), row.X);
+                Assert.Equal(Math.Round(raw[i].Position.Y * 304.8, 0), row.Y);
+                // «№. Имя» вместо внутреннего Id + уровень.
+                Assert.Equal("101. Кабинет 1", row.RoomName);
+                Assert.Equal("Уровень 1", row.LevelName);
+            }
+        }
+
+        [Theory]
+        [InlineData(0.55, "low")]   // <0.6 недогруз
+        [InlineData(0.6, "ok")]
+        [InlineData(0.75, "ok")]    // 0.6–0.9 норма
+        [InlineData(0.9, "ok")]
+        [InlineData(0.95, "high")]  // >0.9 перегруз
+        [InlineData(0, "")]
+        public void KefStatus_Follows_Owner_Thresholds(double kef, string expected)
+        {
+            Assert.Equal(expected, new PlacementRow { KEf = kef }.KefStatus);
+        }
+
+        [Fact]
+        public void LiveRecalc_Debounce_Runs_Calculate_Once_Per_Burst()
+        {
+            var presenter = CreateLoadedPresenter();
+            var fake = new FakeScheduler();
+            presenter.LiveRecalcScheduler = fake;
+
+            int calcCount = 0;
+            presenter.StateChanged += s => { if (s.IsCalculation) calcCount++; };
+
+            // Серия правок «на каждый символ»: три события подряд.
+            var room = presenter.Rooms.First(r => r.RoomId == "a");
+            room.HeatingW = 500;
+            room.HeatingW = 600;
+            room.Supply = 100;
+
+            // Пока окно debounce не истекло — ни одного пересчёта.
+            Assert.Equal(0, calcCount);
+
+            fake.RunPending(); // истекла пауза 300 мс → ровно один пересчёт
+
+            Assert.Equal(TimeSpan.FromMilliseconds(300), fake.LastDelay);
+            Assert.Equal(1, calcCount);
+        }
+
+        [Fact]
+        public void LiveRecalc_Off_Does_Not_Schedule()
+        {
+            var presenter = CreateLoadedPresenter();
+            var fake = new FakeScheduler();
+            presenter.LiveRecalcScheduler = fake;
+            presenter.LiveRecalc = false;
+
+            presenter.Rooms.First(r => r.RoomId == "a").HeatingW = 700;
+
+            Assert.Equal(0, fake.ScheduleCount);
+        }
+
+        [Fact]
+        public void Numeric_Options_Rejected_With_Message_Instead_Of_Silent_Clamp()
+        {
+            var presenter = CreateLoadedPresenter();
+            var messages = new List<string>();
+            presenter.ErrorSink = messages.Add;
+
+            presenter.FixedSupplyCount = 0;      // раньше молча превращалось в 1
+            Assert.Equal(2, presenter.FixedSupplyCount); // значение не изменилось
+            Assert.Contains(messages, m => m.Contains("N должно быть ≥ 1"));
+
+            presenter.MinWindowLengthRatio = 1.5;
+            Assert.Equal(0.6, presenter.MinWindowLengthRatio);
+            Assert.Contains(messages, m => m.Contains("Доля от окна"));
+
+            presenter.GrilleVelocityMs = -1;
+            Assert.Equal(2.0, presenter.GrilleVelocityMs);
+            Assert.Contains(messages, m => m.Contains("решётке"));
+
+            // Валидные значения применяются без сообщений об ошибке.
+            int before = messages.Count;
+            presenter.FixedSupplyCount = 3;
+            presenter.MinWindowLengthRatio = 0.7;
+            presenter.GrilleVelocityMs = 2.5;
+            Assert.Equal(before, messages.Count);
+            Assert.Equal(3, presenter.FixedSupplyCount);
+            Assert.Equal(0.7, presenter.MinWindowLengthRatio);
+            Assert.Equal(2.5, presenter.GrilleVelocityMs);
         }
     }
 }

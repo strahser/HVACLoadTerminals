@@ -71,6 +71,13 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// <summary>Load per device / device capacity (0 when not applicable).</summary>
         public double KEf { get; set; }
 
+        /// <summary>
+        /// U3.1: цветовая группа k_ef для таблиц и плана: «low» (&lt;0.6 недогруз),
+        /// «ok» (0.6–0.9 норма), «high» (&gt;0.9 перегруз); пусто — неприменимо.
+        /// </summary>
+        public string KefStatus =>
+            KEf <= 0 ? "" : KEf < 0.6 ? "low" : KEf > 0.9 ? "high" : "ok";
+
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

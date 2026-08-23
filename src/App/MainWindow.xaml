@@ -339,18 +339,37 @@
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Margin="4,4,4,6" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextDark}">
-                            Размещённые приборы (k_ef: &lt;0.6 недогруз · 0.6–0.8 оптимум · &gt;0.9 перегруз)
+                            Размещённые приборы (k_ef: &lt;0.6 недогруз · 0.6–0.9 норма · &gt;0.9 перегруз)
                         </TextBlock>
                         <DataGrid ItemsSource="{Binding Placements}" BorderThickness="1">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="RoomId" Binding="{Binding RoomName}" Width="80"/>
+                                <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="120"/>
+                                <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
                                 <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
                                 <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
                                 <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
-                                <DataGridTextColumn Header="X" Binding="{Binding X}" Width="75"/>
-                                <DataGridTextColumn Header="Y" Binding="{Binding Y}" Width="75"/>
+                                <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="80"/>
+                                <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="80"/>
                                 <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>
-                                <DataGridTextColumn Header="k_ef" Binding="{Binding KEf, StringFormat=F2}" Width="55"/>
+                                <!-- U3.1: k_ef цветом по порогам <0.6 / 0.6–0.9 / >0.9 -->
+                                <DataGridTextColumn Header="k_ef" Binding="{Binding KEf, StringFormat=F2}" Width="55">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding KefStatus}" Value="low">
+                                                    <Setter Property="Foreground" Value="#E67E22"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding KefStatus}" Value="ok">
+                                                    <Setter Property="Foreground" Value="#1E8E3E"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding KefStatus}" Value="high">
+                                                    <Setter Property="Foreground" Value="#D93025"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </DockPanel>

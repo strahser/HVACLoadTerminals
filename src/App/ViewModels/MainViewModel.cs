@@ -7,7 +7,6 @@ using System.Windows.Data;
 using System.Windows.Input;
 using HVACLoadTerminals.App.Commands;
 using HVACLoadTerminals.Core.Models;
-using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
 using HVACLoadTerminals.Infrastructure.Data;
 using HVACLoadTerminals.Infrastructure.Presentation;
@@ -100,7 +99,8 @@ namespace HVACLoadTerminals.App.ViewModels
             get => Workspace.FixedSupplyCount;
             set
             {
-                Workspace.FixedSupplyCount = Math.Max(1, value);
+                // U3.1: без молчаливого Math.Max — валидация с сообщением в presenter.
+                Workspace.FixedSupplyCount = value;
                 OnPropertyChanged(nameof(FixedSupplyCount));
                 RecalcIfLive();
             }
@@ -315,7 +315,7 @@ namespace HVACLoadTerminals.App.ViewModels
         private void RecalcIfLive()
         {
             if (LiveRecalc && Workspace.Rooms.Count > 0)
-                Workspace.Calculate();
+                CalculateSafe(); // U3.1: единый путь с логом таймингов для живого пересчёта
         }
 
         private void OnStateChanged(WorkspaceState state)
@@ -373,11 +373,11 @@ namespace HVACLoadTerminals.App.ViewModels
             };
             model.Axes.Add(new OxyPlot.Axes.LinearAxis
             {
-                Position = OxyPlot.Axes.AxisPosition.Bottom, Title = "X"
+                Position = OxyPlot.Axes.AxisPosition.Bottom, Title = "X, мм"
             });
             model.Axes.Add(new OxyPlot.Axes.LinearAxis
             {
-                Position = OxyPlot.Axes.AxisPosition.Left, Title = "Y"
+                Position = OxyPlot.Axes.AxisPosition.Left, Title = "Y, мм"
             });
 
             if (snapshot == null)
@@ -385,6 +385,9 @@ namespace HVACLoadTerminals.App.ViewModels
                 PlotModel = model;
                 return;
             }
+
+            // U3.1: план в тех же единицах, что таблица размещений — мм.
+            double mmPerFoot = LengthUnitConverter.MmPerFoot;
 
             bool allLevels = SelectedLevel == "Все уровни";
             foreach (var room in snapshot.Rooms)
@@ -401,12 +404,12 @@ namespace HVACLoadTerminals.App.ViewModels
                     Title = $"{room.Number}. {room.Name}"
                 };
                 foreach (var v in polygon.Vertices)
-                    line.Points.Add(new DataPoint(v.X, v.Y));
+                    line.Points.Add(new DataPoint(v.X * mmPerFoot, v.Y * mmPerFoot));
                 line.Points.Add(line.Points[0]);
                 model.Series.Add(line);
             }
 
-            var colorsBySystem = new Dictionary<string, OxyColor>
+            var colorBySystem = new Dictionary<string, OxyColor>
             {
                 ["Отопление"] = OxyColors.Orange,
                 ["Приток"] = OxyColors.Red,
@@ -421,14 +424,14 @@ namespace HVACLoadTerminals.App.ViewModels
                     continue;
                 var sideLine = new LineSeries
                 {
-                    Color = colorsBySystem.TryGetValue(edge.SystemName, out var sc)
+                    Color = colorBySystem.TryGetValue(edge.SystemName, out var sc)
                         ? sc : OxyColors.Purple,
                     StrokeThickness = 5,
                     LineStyle = LineStyle.Solid,
                     Title = $"Сторона: {edge.SystemName}"
                 };
-                sideLine.Points.Add(new DataPoint(edge.Start.X, edge.Start.Y));
-                sideLine.Points.Add(new DataPoint(edge.End.X, edge.End.Y));
+                sideLine.Points.Add(new DataPoint(edge.Start.X * mmPerFoot, edge.Start.Y * mmPerFoot));
+                sideLine.Points.Add(new DataPoint(edge.End.X * mmPerFoot, edge.End.Y * mmPerFoot));
                 model.Series.Add(sideLine);
             }
 
@@ -436,15 +439,39 @@ namespace HVACLoadTerminals.App.ViewModels
                 ? Placements.ToList()
                 : Placements.Where(p => p.LevelName == SelectedLevel).ToList();
 
-            foreach (var group in rows.GroupBy(p => p.SystemName))
+            // U3.1: k_ef цветом на плане по порогам <0.6 / 0.6–0.9 / >0.9.
+            // Отопление (k_ef неприменимо) остаётся оранжевым; приборы без k_ef — серые.
+            var colorByKefStatus = new Dictionary<string, OxyColor>
             {
+                ["low"] = OxyColor.FromRgb(230, 126, 34),   // недогруз <0.6
+                ["ok"] = OxyColor.FromRgb(30, 142, 62),     // норма 0.6–0.9
+                ["high"] = OxyColor.FromRgb(217, 48, 37)    // перегруз >0.9
+            };
+            string kefLabel(string status) => status switch
+            {
+                "low" => "недогруз (<0.6)",
+                "ok" => "норма (0.6–0.9)",
+                "high" => "перегруз (>0.9)",
+                _ => ""
+            };
+
+            foreach (var group in rows.GroupBy(p =>
+                         p.SystemName == "Отопление" ? "" : p.KefStatus))
+            {
+                string status = group.Key;
+                bool isHeatingGroup = group.All(p => p.SystemName == "Отопление");
                 var scatter = new ScatterSeries
                 {
                     MarkerType = MarkerType.Circle,
                     MarkerSize = 6,
-                    MarkerFill = colorsBySystem.TryGetValue(group.Key, out var c)
-                        ? c : OxyColors.Blue,
-                    Title = group.Key
+                    MarkerFill =
+                        status.Length == 0 && isHeatingGroup
+                            ? OxyColors.Orange
+                            : colorByKefStatus.TryGetValue(status, out var kc)
+                                ? kc : OxyColors.Blue,
+                    Title = status.Length == 0
+                        ? (isHeatingGroup ? "Отопление" : "Приток/Вытяжка · без k_ef")
+                        : $"Приток/Вытяжка · k_ef {kefLabel(status)}"
                 };
                 foreach (var p in group)
                     scatter.Points.Add(new ScatterPoint(p.X, p.Y));
@@ -535,33 +562,6 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
-        /// <summary>PlacementResult per room from the last Calculate (for the HTML scene).</summary>
-        private List<PlacementResult> BuildPlacementResults(RoomSnapshot snapshot)
-        {
-            var raw = Workspace.LastRawPlacements;
-
-            var roomsById = new Dictionary<string, SnapshotRoom>();
-            foreach (var room in snapshot.Rooms)
-                roomsById[room.Id] = room;
-
-            return raw.GroupBy(p => p.RoomId)
-                .Select(g =>
-                {
-                    if (!roomsById.TryGetValue(g.Key, out var room))
-                        return null;
-                    var polygon = room.ToPolygon();
-                    if (polygon == null)
-                        return null;
-                    var rp = new RoomPolygon(
-                        room.Id, $"{room.Number}. {room.Name}", polygon,
-                        room.LevelElevation, Array.Empty<HVACSystem>());
-                    return new PlacementResult(rp, g.ToList(), true, null);
-                })
-                .Where(r => r != null)
-                .Cast<PlacementResult>()
-                .ToList();
-        }
-
         /// <summary>Self-contained HTML scene of the current placements.</summary>
         private void ExportHtml()
         {
@@ -573,7 +573,6 @@ namespace HVACLoadTerminals.App.ViewModels
 
             try
             {
-                var snapshot = Workspace.CurrentSnapshot!;
                 string title = $"Расстановка — {SelectedLevel}";
 
                 // Реальный колбэк Recompute: прогон расчёта с текущими опциями
@@ -584,7 +583,8 @@ namespace HVACLoadTerminals.App.ViewModels
                     getSceneJson: () =>
                     {
                         CalculateSafe();
-                        return PlacementSceneSerializer.ToJson(BuildPlacementResults(snapshot), title);
+                        return PlacementSceneSerializer.ToJson(
+                            Workspace.BuildPlacementResults(), title);
                     },
                     report: msg => StatusMessage = msg,
                     title: title,

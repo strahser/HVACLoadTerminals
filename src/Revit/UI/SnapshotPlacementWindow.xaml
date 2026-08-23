@@ -17,12 +17,23 @@
             <TextBlock x:Name="StatusText" Text="Готово"/>
         </StatusBar>
 
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4">
+        <!-- U3.1: WrapPanel как в App — тулбар переносится, кнопки не обрезаются -->
+        <WrapPanel DockPanel.Dock="Top" VerticalAlignment="Center" Margin="4">
             <Button Content="Открыть снимок…" Click="OpenSnapshot_Click"/>
-            <Button Content="Нагрузки" Click="RegenLoads_Click"/>
+            <Button Content="Нагрузки" Click="RegenLoads_Click"
+                    ToolTip="Вернуть нагрузки к авторасчёту (100 Вт/м², кратности)"/>
             <TextBlock Text="Доля от окна:" VerticalAlignment="Center" Margin="10,0,3,0"/>
             <TextBox Text="{Binding MinWindowLengthRatio, UpdateSourceTrigger=PropertyChanged}"
                      Width="42" VerticalContentAlignment="Center" Padding="4,2"/>
+
+            <!-- U3.1: паритет с App — назначение -->
+            <TextBlock Text="Назначение:" VerticalAlignment="Center" Margin="10,0,3,0"/>
+            <TextBox x:Name="PurposeBox" Text="Office" Width="80"
+                     VerticalContentAlignment="Center" Padding="4,2"/>
+            <Button Content="Применить к уровню"
+                    Click="ApplyPurpose_Click"
+                    ToolTip="Назначение для всех помещений снимка (на стенде нет фильтра уровня)"/>
+
             <TextBlock Text="Приток:" VerticalAlignment="Center" Margin="10,0,3,0"/>
             <ComboBox ItemsSource="{Binding CountRules}" SelectedItem="{Binding SupplyRule}"
                       Width="100"/>
@@ -42,12 +53,25 @@
             <ComboBox ItemsSource="{Binding SingleRules}" SelectedItem="{Binding SingleDeviceRule}"
                       Width="80" Margin="2,0"
                       ToolTip="Где ставится одиночный прибор: в центре контура или в углу"/>
+
+            <!-- U3.1: паритет с App — скорость в решётке -->
+            <TextBlock Text="v решётки:" VerticalAlignment="Center" Margin="10,0,3,0"/>
+            <TextBox Text="{Binding GrilleVelocityMs, UpdateSourceTrigger=PropertyChanged}"
+                     Width="36" VerticalContentAlignment="Center" Padding="4,2"
+                     ToolTip="Скорость воздуха в решётке для подбора размера, м/с"/>
+
             <CheckBox Content="Живой пересчёт" IsChecked="{Binding LiveRecalc}"
-                      VerticalAlignment="Center" Margin="10,0,0,0"/>
+                      VerticalAlignment="Center" Margin="10,0,0,0"
+                      ToolTip="Автопересчёт после правок Q/расходов (коалесинг 300 мс)"/>
             <Button Content="▶ Рассчитать" Click="Calculate_Click" FontWeight="Bold"/>
+            <!-- U3.1: паритет с App — сохранить/загрузить проект, HTML -->
+            <Button Content="💾 Сохранить проект" Click="SaveProject_Click"/>
+            <Button Content="📂 Загрузить проект" Click="LoadProject_Click"/>
+            <Button Content="🌐 HTML" Click="ExportHtml_Click"
+                    ToolTip="Самодостаточный HTML со схемой и таблицей (WebView2/браузер)"/>
             <Button Content="✔ Записать в модель (ExternalEvent)"
                     Click="Place_Click" Background="#E8F5E9" FontWeight="Bold"/>
-        </StackPanel>
+        </WrapPanel>
 
         <Grid>
             <Grid.RowDefinitions>
@@ -79,14 +103,33 @@
                       AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
                       AlternatingRowBackground="#FAFAFA" Margin="0,4,0,0">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="RoomId" Binding="{Binding RoomName}" Width="90"/>
+                    <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="120"/>
+                    <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
                     <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
                     <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
                     <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
-                    <DataGridTextColumn Header="X" Binding="{Binding X}" Width="75"/>
-                    <DataGridTextColumn Header="Y" Binding="{Binding Y}" Width="75"/>
+                    <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="80"/>
+                    <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="80"/>
                     <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>
-                    <DataGridTextColumn Header="k_ef" Binding="{Binding KEf, StringFormat=F2}" Width="55"/>
+                    <!-- U3.1: k_ef цветом по порогам <0.6 / 0.6–0.9 / >0.9 -->
+                    <DataGridTextColumn Header="k_ef" Binding="{Binding KEf, StringFormat=F2}" Width="55">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding KefStatus}" Value="low">
+                                        <Setter Property="Foreground" Value="#E67E22"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding KefStatus}" Value="ok">
+                                        <Setter Property="Foreground" Value="#1E8E3E"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding KefStatus}" Value="high">
+                                        <Setter Property="Foreground" Value="#D93025"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </Grid>

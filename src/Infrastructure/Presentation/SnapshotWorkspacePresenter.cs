@@ -9,6 +9,50 @@ using HVACLoadTerminals.Infrastructure.Data;
 
 namespace HVACLoadTerminals.Infrastructure.Presentation
 {
+    /// <summary>U3.1: отложенный однократный вызов — коалесинг правок живого
+    /// пересчёта (правка Q на каждый символ больше не пересчитывает всё).</summary>
+    public interface ILiveRecalcScheduler
+    {
+        /// <summary>Отменить предыдущий отложенный вызов (если был).</summary>
+        void Cancel();
+
+        /// <summary>Запланировать <paramref name="callback"/> через <paramref name="delay"/>.</summary>
+        void Schedule(TimeSpan delay, Action callback);
+    }
+
+    /// <summary>Дефолтный планировщик на DispatcherTimer: тики приходят в UI-потоке
+    /// хоста, поэтому Calculate безопасно мутирует коллекции, связанные с таблицами.</summary>
+    public sealed class DispatcherTimerLiveRecalcScheduler : ILiveRecalcScheduler
+    {
+        private readonly System.Windows.Threading.DispatcherTimer _timer =
+            new System.Windows.Threading.DispatcherTimer();
+        private Action? _callback;
+
+        public void Cancel()
+        {
+            _callback = null;
+            _timer.Stop();
+        }
+
+        public void Schedule(TimeSpan delay, Action callback)
+        {
+            _callback = callback;
+            _timer.Stop();
+            _timer.Interval = delay;
+            _timer.Tick -= OnTick;
+            _timer.Tick += OnTick;
+            _timer.Start();
+        }
+
+        private void OnTick(object? sender, EventArgs e)
+        {
+            _timer.Stop();
+            Action? callback = _callback;
+            _callback = null;
+            callback?.Invoke();
+        }
+    }
+
     /// <summary>Aggregated workspace state pushed to hosts via StateChanged.</summary>
     public class WorkspaceState
     {
@@ -71,14 +115,47 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public void UseJsonCatalog(string path) =>
             CatalogRepository = new JsonCatalogRepository(path);
 
-        // ---- Options (plain fields; hosts bind their own controls to these) ----
+        // ---- Options (validated properties; hosts bind their own controls to these) ----
 
-        /// <summary>Owner requirement: device length ≥ this share of window width.</summary>
-        public double MinWindowLengthRatio { get; set; } = 0.6;
+        // U3.1: числовые поля валидируются с сообщением через ErrorSink —
+        // молчаливые Math.Max/клампы убраны; при невалидном вводе значение не меняется.
+
+        /// <summary>Owner requirement: device length ≥ this share of window width (0–1).</summary>
+        private double _minWindowLengthRatio = 0.6;
+        public double MinWindowLengthRatio
+        {
+            get => _minWindowLengthRatio;
+            set
+            {
+                if (double.IsNaN(value) || value < 0.0 || value > 1.0)
+                {
+                    ErrorSink?.Invoke($"Доля от окна должна быть в диапазоне 0–1 " +
+                                      $"(получено {value:F2}) — значение не изменено");
+                    return;
+                }
+                _minWindowLengthRatio = value;
+            }
+        }
 
         public CeilingCountRule SupplyRule { get; set; } = CeilingCountRule.Auto;
         public CeilingCountRule ExhaustRule { get; set; } = CeilingCountRule.ByFlow;
-        public int FixedSupplyCount { get; set; } = 2;
+
+        private int _fixedSupplyCount = 2;
+        /// <summary>Фиксированное количество приборов притока для правила Fixed (≥ 1).</summary>
+        public int FixedSupplyCount
+        {
+            get => _fixedSupplyCount;
+            set
+            {
+                if (value < 1)
+                {
+                    ErrorSink?.Invoke($"Количество приборов притока N должно быть ≥ 1 " +
+                                      $"(получено {value}) — значение не изменено");
+                    return;
+                }
+                _fixedSupplyCount = value;
+            }
+        }
 
         // ---- U2.1: mass placement patterns (owner defaults: supply = long side,
         // exhaust = short side, single device in the centre) ----
@@ -100,11 +177,35 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public IReadOnlyList<PatternEdge> LastPatternEdges { get; private set; }
             = Array.Empty<PatternEdge>();
 
-        /// <summary>Grille sizing velocity, m/s.</summary>
-        public double GrilleVelocityMs { get; set; } = 2.0;
+        private double _grilleVelocityMs = 2.0;
+        /// <summary>Grille sizing velocity, m/s (must be positive).</summary>
+        public double GrilleVelocityMs
+        {
+            get => _grilleVelocityMs;
+            set
+            {
+                if (double.IsNaN(value) || value <= 0)
+                {
+                    ErrorSink?.Invoke($"Скорость v в решётке должна быть больше 0 м/с " +
+                                      $"(получено {value:F2}) — значение не изменено");
+                    return;
+                }
+                _grilleVelocityMs = value;
+            }
+        }
 
-        /// <summary>Auto-recalculate after every load edit (debounced).</summary>
+        /// <summary>Auto-recalculate after load edits — debounced by
+        /// <see cref="LiveRecalcDebounceMs"/> after the LAST edit (U3.1: раньше
+        /// комментарий «debounced» был лживым — пересчёт шёл на каждый символ).</summary>
         public bool LiveRecalc { get; set; } = true;
+
+        /// <summary>U3.1: пауза коалесинга правок перед живым пересчётом, мс.</summary>
+        public int LiveRecalcDebounceMs { get; set; } = 300;
+
+        /// <summary>Планировщик отложенного пересчёта (тесты подменяют фейком;
+        /// по умолчанию — DispatcherTimer UI-потока хоста).</summary>
+        public ILiveRecalcScheduler LiveRecalcScheduler { get; set; } =
+            new DispatcherTimerLiveRecalcScheduler();
 
         /// <summary>For hosts binding a ComboBox of count rules.</summary>
         public CeilingCountRule[] CountRules { get; } =
@@ -575,27 +676,71 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 sink.Add($"{roomLabel}: {w}");
         }
 
-        private static List<PlacementRow> ToRows(
+        private List<PlacementRow> ToRows(
             IEnumerable<DevicePlacement> placements, Dictionary<string, double> kefByKey)
         {
+            var roomsById = new Dictionary<string, SnapshotRoom>();
+            foreach (var room in _snapshot?.Rooms ?? Enumerable.Empty<SnapshotRoom>())
+                roomsById[room.Id] = room;
+
             var result = new List<PlacementRow>();
             foreach (var p in placements)
             {
                 string key = p.RoomId + "|" + p.SystemName;
                 kefByKey.TryGetValue(key, out double k);
+                roomsById.TryGetValue(p.RoomId, out var room);
                 result.Add(new PlacementRow
                 {
-                    RoomName = p.RoomId,
+                    // U3.1: «№. Имя» вместо внутреннего Id + уровень комнаты.
+                    RoomName = room == null
+                        ? p.RoomId
+                        : $"{room.Number}. {room.Name}",
+                    LevelName = room?.LevelName ?? "",
                     Family = p.Device.FamilyName,
                     TypeName = p.Device.TypeName,
                     SystemName = p.SystemName,
-                    X = Math.Round(p.Position.X, 3),
-                    Y = Math.Round(p.Position.Y, 3),
+
+                    // U3.1: координаты инженеру — в мм (снимок/Revit хранят футы).
+                    X = Math.Round(LengthUnitConverter.UnitsToMm(p.Position.X), 0),
+                    Y = Math.Round(LengthUnitConverter.UnitsToMm(p.Position.Y), 0),
                     RotationDeg = Math.Round(p.Rotation * 180.0 / Math.PI, 1),
                     KEf = k
                 });
             }
             return result;
+        }
+
+        /// <summary>
+        /// U3.1: PlacementResult по комнатам из последнего Calculate — общая основа
+        /// HTML-сцены для обоих хостов (App и ревит-стенд).
+        /// </summary>
+        public List<PlacementResult> BuildPlacementResults()
+        {
+            var snapshot = _snapshot ?? throw new InvalidOperationException(
+                "Снимок не загружен — HTML-сцена не может быть построена");
+            if (LastRawPlacements.Count == 0)
+                throw new InvalidOperationException("Нет расчёта — HTML-сцена пуста");
+
+            var roomsById = new Dictionary<string, SnapshotRoom>();
+            foreach (var room in snapshot.Rooms)
+                roomsById[room.Id] = room;
+
+            return LastRawPlacements.GroupBy(p => p.RoomId)
+                .Select(g =>
+                {
+                    if (!roomsById.TryGetValue(g.Key, out var room))
+                        return null;
+                    var polygon = room.ToPolygon();
+                    if (polygon == null)
+                        return null;
+                    var rp = new RoomPolygon(
+                        room.Id, $"{room.Number}. {room.Name}", polygon,
+                        room.LevelElevation, Array.Empty<HVACSystem>());
+                    return new PlacementResult(rp, g.ToList(), true, null);
+                })
+                .Where(r => r != null)
+                .Cast<PlacementResult>()
+                .ToList();
         }
 
         private void HookLiveRecalc()
@@ -609,16 +754,31 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         e.PropertyName == nameof(RoomRow.Supply) ||
                         e.PropertyName == nameof(RoomRow.Exhaust))
                     {
-                        try
-                        {
-                            Calculate();
-                        }
-                        catch (Exception ex)
-                        {
-                            ErrorSink?.Invoke("Живой пересчёт: " + ex.Message);
-                        }
+                        ScheduleLiveRecalc();
                     }
                 };
+            }
+        }
+
+        /// <summary>U3.1: правки Q/расходов коалесируются — ровно один пересчёт через
+        /// <see cref="LiveRecalcDebounceMs"/> после ПОСЛЕДНЕЙ правки серии.</summary>
+        private void ScheduleLiveRecalc()
+        {
+            LiveRecalcScheduler.Cancel();
+            LiveRecalcScheduler.Schedule(
+                TimeSpan.FromMilliseconds(LiveRecalcDebounceMs), RunLiveRecalc);
+        }
+
+        private void RunLiveRecalc()
+        {
+            if (!LiveRecalc) return; // флажок сняли, пока пересчёт был отложен
+            try
+            {
+                Calculate();
+            }
+            catch (Exception ex)
+            {
+                ErrorSink?.Invoke("Живой пересчёт: " + ex.Message);
             }
         }
     }
