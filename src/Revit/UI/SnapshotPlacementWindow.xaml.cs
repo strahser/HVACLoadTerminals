@@ -77,8 +77,13 @@ namespace HVACLoadTerminals.Revit.UI
             }
         }
 
-        private void RegenLoads_Click(object sender, RoutedEventArgs e)
+        private void EditSystems_Click(object sender, RoutedEventArgs e)
         {
+            if ((sender as FrameworkElement)?.DataContext is RoomRow row)
+                new SystemEditorWindow(row) { Owner = this }.ShowDialog();
+        }
+
+        private void RegenLoads_Click(object sender, RoutedEventArgs e)        {
             try
             {
                 _presenter.RegenerateLoads();

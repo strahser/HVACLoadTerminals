@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using HVACLoadTerminals.Core.Models;
 
 namespace HVACLoadTerminals.Infrastructure.Presentation
@@ -54,6 +55,26 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public string Warning { get; set; } = "";
 
         public List<SystemRow> Systems { get; set; } = new List<SystemRow>();
+
+        /// <summary>S1.2: сводка «П1+П2 | В1» по включённым системам комнаты.</summary>
+        public string SystemsSummary
+        {
+            get
+            {
+                var list = Systems ?? new List<SystemRow>();
+                string supply = string.Join("+", list
+                    .Where(s => s.Type == HVACSystemType.Supply && s.IsIncluded)
+                    .Select(s => s.Name));
+                string exhaust = string.Join("+", list
+                    .Where(s => s.Type == HVACSystemType.Exhaust && s.IsIncluded)
+                    .Select(s => s.Name));
+                return $"{supply} | {exhaust}";
+            }
+        }
+
+        /// <summary>S1.2: уведомить таблицу об изменении списка систем.</summary>
+        public void RefreshSystemSummary() =>
+            OnPropertyChanged(nameof(SystemsSummary));
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) =>

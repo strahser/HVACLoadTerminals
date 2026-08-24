@@ -277,6 +277,15 @@
                             <DataGridTextColumn Header="Q, Вт" Binding="{Binding HeatingW}" Width="85"/>
                             <DataGridTextColumn Header="Приток, м³/ч" Binding="{Binding Supply}" Width="85"/>
                             <DataGridTextColumn Header="Вытяжка, м³/ч" Binding="{Binding Exhaust}" Width="90"/>
+                            <DataGridTextColumn Header="Системы" Binding="{Binding SystemsSummary, Mode=OneWay}" IsReadOnly="True" Width="95"/>
+                            <DataGridTemplateColumn Width="82">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Системы…" Padding="4,1"
+                                                Click="EditSystems_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Примечание" Binding="{Binding Warning}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>

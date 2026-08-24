@@ -182,5 +182,26 @@ namespace HVACLoadTerminals.Core.Tests
             row.Systems.Clear();
             Assert.Empty(presenter.GetSystemErrors(row));
         }
+
+        [Fact]
+        public void SystemsSummary_Lists_Included_Systems_Supply_First()
+        {
+            var row = new RoomRow
+            {
+                RoomId = "a",
+                Systems = new System.Collections.Generic.List<SystemRow>
+                {
+                    new SystemRow { Name = "П1", Type = HVACSystemType.Supply, FlowM3h = 120 },
+                    new SystemRow { Name = "П2", Type = HVACSystemType.Supply,
+                        FlowM3h = 80, IsIncluded = false },
+                    new SystemRow { Name = "В1", Type = HVACSystemType.Exhaust, FlowM3h = 200 }
+                }
+            };
+
+            Assert.Equal("П1 | В1", row.SystemsSummary);
+
+            row.Systems.Single(s => s.Name == "П2").IsIncluded = true;
+            Assert.Equal("П1+П2 | В1", row.SystemsSummary);
+        }
     }
 }
