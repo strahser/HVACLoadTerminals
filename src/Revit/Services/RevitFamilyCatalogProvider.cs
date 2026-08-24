@@ -171,7 +171,10 @@ namespace HVACLoadTerminals.Revit.Services
         private static bool IsExhaustName(string name) =>
             name.IndexOf("вытяж", StringComparison.OrdinalIgnoreCase) >= 0 ||
             name.IndexOf("exhaust", StringComparison.OrdinalIgnoreCase) >= 0 ||
-            name.IndexOf("extract", StringComparison.OrdinalIgnoreCase) >= 0;
+            name.IndexOf("extract", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("return", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("возврат", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("_ea", StringComparison.OrdinalIgnoreCase) >= 0;
 
         private static bool IsFanCoilName(string name) =>
             name.IndexOf("фанкойл", StringComparison.OrdinalIgnoreCase) >= 0 ||

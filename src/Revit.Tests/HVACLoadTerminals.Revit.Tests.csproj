@@ -1,0 +1,34 @@
+<Project Sdk="Nice3point.Revit.Sdk/6.2.3">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net48</TargetFramework>
+        <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
+        <Configurations>Debug.R24;Release.R24</Configurations>
+        <RootNamespace>HVACLoadTerminals.Revit.Tests</RootNamespace>
+        <AssemblyName>HVACLoadTerminals.Revit.Tests</AssemblyName>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <RevitLanguage Condition="'$(RevitLanguage)' == ''">Russian_RU</RevitLanguage>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <AssemblyAttribute Include="Nice3point.Revit.Injector.Attributes.RevitLanguageAttribute">
+            <_Parameter1>$(RevitLanguage)</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="2024.3.40"/>
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="2024.3.40"/>
+        <PackageReference Include="Nice3point.TUnit.Revit" Version="2024.1.1"/>
+        <PackageReference Include="TUnit" Version="1.44.0"/>
+        <PackageReference Include="Polyfill" Version="11.0.1"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Revit\HVACLoadTerminals.Revit.csproj"/>
+    </ItemGroup>
+
+</Project>

@@ -20,6 +20,14 @@ namespace HVACLoadTerminals.Revit.Services
             _doc = uiDoc.Document;
         }
 
+        /// <summary>S4.1: вариант для headless-тестов (TUnit) — документ есть,
+        /// UIDocument (ActiveUIDocument) в этом режиме отсутствует.</summary>
+        public RevitDevicePlacer(Document doc)
+        {
+            _uiDoc = null!;
+            _doc = doc ?? throw new ArgumentNullException(nameof(doc));
+        }
+
         public void PlaceDevices(IReadOnlyList<DevicePlacement> placements)
         {
             if (placements == null || placements.Count == 0) return;
