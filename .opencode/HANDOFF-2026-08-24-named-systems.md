@@ -24,7 +24,19 @@
 
 ## ИНСТРУКЦИЯ ПРОГОНА ДЛЯ ВЛАДЕЛЬЦА (S4.1 → S4.2)
 
+0. **ВАЖНО (24.08, 15:05)**: Revit сейчас ЗАПУЩЕН и держит старый DLL —
+   фикстуры S4.1 в нём ещё не загружены. Порядок: закрыть Revit →
+   `MSBuild HVACLoadTerminals.sln /t:Build /p:Configuration=Debug /v:m /nologo`
+   (addin скопируется в `C:\ProgramData\Autodesk\Revit\Addins\2024\HVACLoadTerminals`)
+   → открыть Revit 2024.
 1. Открыть Revit 2024 → рабочую КОПИЮ `ТестыОВ\newBuilding\HvackFinal.rvt`.
+2. Вкладка **HVAC Terminals** → «Run Tests»: фикстура
+   `NamedSystemsConversionFixture` (2 теста) синтезирует снимок из первых трёх
+   MEP Spaces, ставит П1=300/П2=200/В1=150, прогоняет размещение + ассайнер
+   ДВАЖДЫ внутри транзакции и откатывает её (модель остаётся чистой).
+   JSON-отчёт — `%LocalAppData%\HVACLoadTerminals\TestResults\`; приложить его
+   к `Tasks\Отчёты\S4.1_Отчёт_2026-08-24_150500.md` — это закроет критерии
+   S3.1(1)/S3.2(1)/S4.1.
 2. Вкладка **HVAC Terminals** → «По снимку помещений» → выбрать снимок уровня из
    `%AppData%\HeatLossRevit2\data\snapshots_raw\...` (например HvackFinal_v1.1.json).
    В сводке: помещения/приборы/предупреждения → режим «Разместить всё» (первый прогон).
