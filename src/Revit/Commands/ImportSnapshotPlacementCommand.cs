@@ -5,6 +5,7 @@ using System.Linq;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
 using HVACLoadTerminals.Infrastructure.Data;
@@ -151,6 +152,8 @@ namespace HVACLoadTerminals.Revit.Commands
 
                 var levelByName = LevelIndex(doc);
 
+                var placed =
+                    new List<(DevicePlacement Placement, Autodesk.Revit.DB.FamilyInstance Instance)>();
                 placer.PlaceDevicesInTransaction(
                     toPlace,
                     tx,
@@ -163,7 +166,11 @@ namespace HVACLoadTerminals.Revit.Commands
                             levelByName.TryGetValue(room.LevelName ?? "", out var lvl))
                             return lvl;
                         return null; // fallback: element id / first level inside placer
-                    });
+                    },
+                    instanceCreated: (p, instance) => placed.Add((p, instance)));
+
+                // S3.2: «разместил → назначил систему» в той же транзакции.
+                var assignment = new RevitSystemAssigner(doc).Assign(placed);
 
                 tx.Commit();
 
@@ -173,14 +180,26 @@ namespace HVACLoadTerminals.Revit.Commands
                              $"Размещено приборов: {toPlace.Count}\n" +
                              (deleted > 0 ? $"Удалено старых (замена): {deleted}\n" : "") +
                              $"Предупреждений: {build.Warnings.Count}";
+                if (assignment.Entries.Count > 0)
+                    report += "\n\nСистемы:\n" + assignment.FormatSummary();
+                if (assignment.SkippedNoConnector > 0)
+                    report +=
+                        $"\nБез коннектора (только параметры): {assignment.SkippedNoConnector}";
                 if (build.Warnings.Count > 0)
                     report += "\n\nПервые предупреждения:\n" +
                               string.Join("\n", build.Warnings.Take(8));
 
                 TaskDialog.Show("Расстановка по снимку", report);
+                string systemsLog = string.Join("; ", assignment.Entries.Select(e =>
+                    e.SystemName + ": " + e.ElementCount +
+                    (e.CreatedNew ? "*" : "")));
                 HvacLogger.Info(
-                    $"Snapshot placement: rooms={build.RoomsTotal} placed={toPlace.Count} " +
-                    $"deleted={deleted} warnings={build.Warnings.Count}");
+                    "Snapshot placement: rooms=" + build.RoomsTotal +
+                    " placed=" + toPlace.Count +
+                    " deleted=" + deleted +
+                    " warnings=" + build.Warnings.Count +
+                    " systems=[" + systemsLog + "]" +
+                    " assignWarnings=" + assignment.Warnings.Count);
                 return Result.Succeeded;
             }
             catch

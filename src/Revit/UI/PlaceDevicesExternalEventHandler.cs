@@ -69,6 +69,8 @@ namespace HVACLoadTerminals.Revit.UI
                 int deleted = placer.DeleteMarkedInstancesExact(markers);
 
                 var levelIndex = LevelIndex(doc);
+                var placed =
+                    new List<(DevicePlacement Placement, FamilyInstance Instance)>();
                 placer.PlaceDevicesInTransaction(
                     request.Placements,
                     tx,
@@ -78,12 +80,20 @@ namespace HVACLoadTerminals.Revit.UI
                         request.RoomLevels.TryGetValue(roomId, out var levelName) &&
                         levelIndex.TryGetValue(levelName, out var level)
                             ? level
-                            : null);
+                            : null,
+                    instanceCreated: (p, instance) => placed.Add((p, instance)));
+
+                // S3.2: «разместил → назначил систему» в той же транзакции.
+                var assignment = new RevitSystemAssigner(doc).Assign(placed);
 
                 tx.Commit();
 
+                string systemsNote = assignment.Entries.Count > 0
+                    ? "; системы: " + string.Join(", ", assignment.Entries.Select(e =>
+                        $"{e.SystemName}×{e.ElementCount}"))
+                    : "";
                 Completed?.Invoke($"Записано {request.Placements.Count} приборов " +
-                                  $"(заменено {deleted})");
+                                  $"(заменено {deleted}){systemsNote}");
             }
             catch (Exception ex)
             {
