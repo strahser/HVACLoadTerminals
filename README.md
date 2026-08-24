@@ -23,7 +23,7 @@ Core  ←  Infrastructure  ←  App (WPF) / Revit 2024 add-in
 | Слой | Проект | Назначение |
 |------|--------|------------|
 | **Core** | `src\Core` | Доменная логика (.NET Framework 4.8, без Revit/WPF): геометрия Clipper2, расчёт количества, подбор типоразмера, размещение трёх классов приборов, автогенерация нагрузок |
-| **Infrastructure** | `src\Infrastructure` | Загрузчик снимка, JSON/SQLite-каталоги, presenter рабочего места (`SnapshotWorkspacePresenter`), HTML-экспортёр + WebView2-хост, OxyPlot |
+| **Infrastructure** | `src\Infrastructure` | Загрузчик снимка, офлайн JSON-каталог приборов (CRUD), presenter рабочего места (`SnapshotWorkspacePresenter`), HTML-экспортёр + WebView2-хост, OxyPlot |
 | **App** | `src\App` | Автономный WPF-стенд «Снимок помещений» (без Revit) |
 | **Revit** | `src\Revit` | Add-in Revit 2024: команды ленты, стенд расстановки, запись FamilyInstance |
 | **Tests** | `src\Core.Tests` | xUnit-тесты ядра и presenter'а |
