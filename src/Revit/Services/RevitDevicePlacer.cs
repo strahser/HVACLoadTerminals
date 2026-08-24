@@ -48,7 +48,8 @@ namespace HVACLoadTerminals.Revit.Services
             IReadOnlyList<DevicePlacement> placements,
             Transaction tx,
             Func<DevicePlacement, string>? commentsFactory = null,
-            Func<string, Level?>? levelResolver = null)
+            Func<string, Level?>? levelResolver = null,
+            Action<DevicePlacement, FamilyInstance>? instanceCreated = null)
         {
             if (placements == null || placements.Count == 0) return;
             if (tx == null) throw new ArgumentNullException(nameof(tx));
@@ -84,13 +85,15 @@ namespace HVACLoadTerminals.Revit.Services
                 if (instance == null) continue;
 
                 ApplyRotation(instance, xyz, placement.Rotation);
-                ApplyAirflow(instance, placement.Device);
+                ApplyAirflow(instance, placement);
 
                 string? comments = commentsFactory?.Invoke(placement);
                 if (!string.IsNullOrEmpty(comments))
                     SetComments(instance, comments!);
                 else
                     SetComments(instance, $"System: {placement.SystemName}");
+
+                instanceCreated?.Invoke(placement, instance);
             }
         }
 
@@ -308,12 +311,19 @@ namespace HVACLoadTerminals.Revit.Services
         }
 
         /// <summary>
-        /// Writes the device max flow rate (m3/h) into the flow parameter
-        /// identified by <see cref="TerminalDevice.FlowParameterName"/>.
+        /// S3.1: пишет РАСЧЁТНЫЙ расход на приборе (CalculatedFlowM3h, м³/ч);
+        /// 0 → паспортный максимум типоразмера (legacy-путь). Параметр —
+        /// <see cref="TerminalDevice.FlowParameterName"/>.
         /// </summary>
-        private static void ApplyAirflow(FamilyInstance instance, TerminalDevice device)
+        private static void ApplyAirflow(FamilyInstance instance, DevicePlacement placement)
         {
+            var device = placement.Device;
             if (string.IsNullOrEmpty(device.FlowParameterName)) return;
+
+            double flowM3h = placement.CalculatedFlowM3h > 0
+                ? placement.CalculatedFlowM3h
+                : device.MaxFlowRate;
+            if (flowM3h <= 0) return;
 
             try
             {
@@ -321,7 +331,7 @@ namespace HVACLoadTerminals.Revit.Services
                 if (param != null && !param.IsReadOnly)
                 {
                     double internalValue = UnitUtils.ConvertToInternalUnits(
-                        device.MaxFlowRate, UnitTypeId.CubicMetersPerHour);
+                        flowM3h, UnitTypeId.CubicMetersPerHour);
                     param.Set(internalValue);
                 }
             }
