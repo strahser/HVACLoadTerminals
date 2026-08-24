@@ -29,6 +29,22 @@ namespace HVACLoadTerminals.App.ViewModels
         public ObservableCollection<PlacementRow> Placements { get; } =
             new ObservableCollection<PlacementRow>();
 
+        /// <summary>M1.1: представление таблицы приборов с фильтром по дереву CRM.</summary>
+        public ICollectionView PlacementsView
+        {
+            get
+            {
+                if (_placementsView != null)
+                    return _placementsView;
+                _placementsView = CollectionViewSource.GetDefaultView(Placements);
+                _placementsView.Filter = o =>
+                    o is PlacementRow p && MatchesSelectedNode(p);
+                return _placementsView;
+            }
+        }
+
+        private ICollectionView? _placementsView;
+
         private ICollectionView? _roomsView;
 
         public ICollectionView RoomsView
@@ -88,6 +104,38 @@ namespace HVACLoadTerminals.App.ViewModels
                 OnPropertyChanged(nameof(ShowRoomLabels));
                 PlotLevel();
             }
+        }
+
+        // ---- M1.2: дерево CRM «Системы → Уровни → Помещения» ----
+
+        public ObservableCollection<CrmNode> TreeRoots { get; } = new();
+
+        private CrmNode? _selectedNode;
+        public CrmNode? SelectedNode
+        {
+            get => _selectedNode;
+            set
+            {
+                _selectedNode = value;
+                OnPropertyChanged(nameof(SelectedNode));
+                PlacementsView.Refresh();
+                PlotLevel();
+            }
+        }
+
+        /// <summary>Совпадает ли строка приборов с выбранным узлом дерева.</summary>
+        private bool MatchesSelectedNode(PlacementRow p)
+        {
+            if (SelectedNode == null || SelectedNode.Kind == "") return true;
+            return SelectedNode.Kind switch
+            {
+                "System" => p.SystemName == SelectedNode.SystemName,
+                "Level" => p.LevelName == SelectedNode.LevelName &&
+                           (SelectedNode.SystemName == null ||
+                            p.SystemName == SelectedNode.SystemName),
+                "Room" => p.RoomId == SelectedNode.RoomId,
+                _ => true
+            };
         }
 
         // ---- Options (pass-through to presenter) ----
@@ -379,7 +427,9 @@ namespace HVACLoadTerminals.App.ViewModels
                 foreach (var row in state.Placements)
                     Placements.Add(row);
 
+                RebuildTree();
                 PlotLevel();
+                Raise3DChanged();
             }
             catch (Exception ex)
             {
@@ -392,6 +442,7 @@ namespace HVACLoadTerminals.App.ViewModels
         {
             try
             {
+                PlacementsView.Refresh();
                 PlotLevelCore();
             }
             catch (Exception ex)
@@ -400,6 +451,90 @@ namespace HVACLoadTerminals.App.ViewModels
                 AppLogger.Error("PlotLevel failed", ex);
             }
         }
+
+        // ---------------- M1.2: дерево CRM ----------------
+
+        /// <summary>Строит «Системы → Уровни → Помещения» из текущих размещений.
+        /// Помещения без приборов попадают в ветку «Без систем» своего уровня.</summary>
+        private void RebuildTree()
+        {
+            foreach (var n in TreeRoots) n.Children.Clear();
+            TreeRoots.Clear();
+
+            var bySystem = Placements
+                .GroupBy(p => p.SystemName)
+                .OrderBy(g => g.Key == "Отопление" ? 1 : 0)
+                .ThenByDescending(g => g.Sum(p => p.CalculatedFlow))
+                .ToList();
+
+            foreach (var sys in bySystem)
+            {
+                var systemNode = new CrmNode
+                {
+                    Kind = "System",
+                    Title = sys.Key,
+                    SystemName = sys.Key,
+                    DeviceCount = sys.Count()
+                };
+                foreach (var lvl in sys.GroupBy(p => p.LevelName).OrderBy(l => l.Key, StringComparer.Ordinal))
+                {
+                    var levelNode = new CrmNode
+                    {
+                        Kind = "Level",
+                        Title = string.IsNullOrEmpty(lvl.Key) ? "(без уровня)" : lvl.Key!,
+                        SystemName = sys.Key,
+                        LevelName = lvl.Key,
+                        DeviceCount = lvl.Count()
+                    };
+                    foreach (var roomGroup in lvl.GroupBy(p => p.RoomId).OrderBy(g => g.Key, StringComparer.Ordinal))
+                    {
+                        var firstRow = roomGroup.First();
+                        levelNode.Children.Add(new CrmNode
+                        {
+                            Kind = "Room",
+                            Title = firstRow.RoomName,
+                            SystemName = sys.Key,
+                            LevelName = lvl.Key,
+                            RoomId = roomGroup.Key,
+                            DeviceCount = roomGroup.Count()
+                        });
+                    }
+                    systemNode.Children.Add(levelNode);
+                }
+                TreeRoots.Add(systemNode);
+            }
+
+            OnPropertyChanged(nameof(TreeRoots));
+            if (SelectedNode != null &&
+                TreeRoots.Count == 0)
+                SelectedNode = null;
+        }
+
+        // ---------------- M3.1: 3D-вкладка ----------------
+
+        /// <summary>HTML 3D-сцены для WebView2; null — нет расчёта.</summary>
+        public string? Build3DHtml()
+        {
+            try
+            {
+                var results = Workspace.BuildPlacementResults();
+                string json = PlacementSceneSerializer.ToJson(
+                    results, $"Расстановка — {SelectedLevel}");
+                return HtmlSceneExporter.BuildHtml("3D · HVAC Terminals", json);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Build3DHtml failed", ex);
+                StatusMessage = "3D недоступно: " + ex.Message;
+                return null;
+            }
+        }
+
+        /// <summary>Сигнал хосту (окну): пересобрать 3D при активной вкладке.</summary>
+        public event Action? ThreeDChanged;
+
+        private void Raise3DChanged() => ThreeDChanged?.Invoke();
+
 
         private void PlotLevelCore()
         {

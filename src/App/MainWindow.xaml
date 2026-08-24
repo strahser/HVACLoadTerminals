@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:vm="clr-namespace:HVACLoadTerminals.App.ViewModels"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         Title="HVAC Terminals · Расстановка приборов по снимку помещений"
@@ -250,15 +251,125 @@
             </WrapPanel>
         </Border>
 
-        <!-- ============ РАБОЧАЯ ОБЛАСТЬ ============ -->
+        <!-- ============ РАБОЧАЯ ОБЛАСТЬ (M1.1 CRM-каркас) ============ -->
         <Grid Margin="8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="1.3*"/>
+            </Grid.RowDefinitions>
 
-            <!-- Помещения -->
-            <Border Grid.Column="0" Background="{StaticResource PanelBg}"
+            <!-- Верхний ряд: дерево / табы 2D+3D / свойства -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="260"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="300"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Дерево Системы → Уровни → Помещения -->
+                <Border Grid.Column="0" Background="{StaticResource PanelBg}"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                        CornerRadius="6" Margin="0,0,4,0">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Margin="10,8" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextDark}">Системы проекта</TextBlock>
+                        <TreeView ItemsSource="{Binding TreeRoots}"
+                                  SelectedItemChanged="CrmTree_SelectedItemChanged"
+                                  Margin="4,0,4,6" BorderThickness="0">
+                            <TreeView.ItemTemplate>
+                                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Title}"/>
+                                        <TextBlock Text="{Binding CountText, Mode=OneWay}"
+                                                   Foreground="{StaticResource TextMuted}"
+                                                   FontSize="11" Margin="6,0,0,0"/>
+                                    </StackPanel>
+                                </HierarchicalDataTemplate>
+                            </TreeView.ItemTemplate>
+                            <TreeView.ItemContainerStyle>
+                                <Style TargetType="TreeViewItem">
+                                    <Setter Property="Padding" Value="2,1"/>
+                                    <Setter Property="IsExpanded" Value="True"/>
+                                </Style>
+                            </TreeView.ItemContainerStyle>
+                        </TreeView>
+                    </DockPanel>
+                </Border>
+
+                <!-- Центр: табы План 2D / 3D -->
+                <Border Grid.Column="1" Background="{StaticResource PanelBg}"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                        CornerRadius="6">
+                    <TabControl x:Name="CenterTabs" SelectionChanged="CenterTabs_SelectionChanged"
+                                BorderThickness="0" Background="Transparent">
+                        <TabItem Header="План 2D">
+                            <DockPanel Margin="4">
+                                <DockPanel DockPanel.Dock="Top" Margin="2,2,2,6">
+                                    <ComboBox ItemsSource="{Binding Levels}"
+                                              SelectedItem="{Binding SelectedLevel}"
+                                              Width="150" Margin="0,0,8,0"
+                                              HorizontalAlignment="Left"/>
+                                    <TextBlock Text="Цвета:" VerticalAlignment="Center" Margin="0,0,4,0"
+                                               Foreground="{StaticResource TextMuted}"/>
+                                    <ComboBox ItemsSource="{Binding PlanColorModes}"
+                                              SelectedItem="{Binding SelectedColorMode}"
+                                              Width="120" VerticalContentAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+                                    <CheckBox Content="Подписи комнат" IsChecked="{Binding ShowRoomLabels}"
+                                              VerticalAlignment="Center" Margin="12,0,0,0"
+                                              HorizontalAlignment="Left"/>
+                                </DockPanel>
+                                <oxy:PlotView Model="{Binding PlotModel}"/>
+                            </DockPanel>
+                        </TabItem>
+                        <TabItem Header="3D">
+                            <wv2:WebView2 x:Name="Web3D"/>
+                        </TabItem>
+                    </TabControl>
+                </Border>
+
+                <!-- Свойства выбранного узла (M2: редактирование) -->
+                <Border Grid.Column="2" Background="{StaticResource PanelBg}"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                        CornerRadius="6" Margin="4,0,0,0">
+                    <DockPanel DataContext="{Binding SelectedNode}">
+                        <TextBlock DockPanel.Dock="Top" Margin="10,8" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextDark}">Свойства</TextBlock>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="10,4,10,8">
+                                <TextBlock Text="{Binding Title, TargetNullValue=—}"
+                                           FontSize="15" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDark}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Kind, TargetNullValue=—}" Margin="0,2,0,8"
+                                           Foreground="{StaticResource TextMuted}" FontSize="11"/>
+                                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,4"/>
+                                <Grid Margin="0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Приборов в выделении" Foreground="{StaticResource TextMuted}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding DeviceCount}"
+                                               FontWeight="SemiBold"/>
+                                </Grid>
+                                <TextBlock Margin="0,10,0,0" FontSize="11" LineHeight="16"
+                                           Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
+                                           Text="Выберите узел слева: фильтр таблицы и плана. Редактирование параметров системы/помещения — следующий этап (карточка M2)."/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <!-- Нижний ряд: помещения и приборы -->
+            <Grid Grid.Row="1" Margin="0,6,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+            <!-- Помещения (низ-лево) -->
+            <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource PanelBg}"
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                     CornerRadius="6" Margin="0,0,4,0">
                 <Grid>
@@ -327,46 +438,16 @@
                 </Grid>
             </Border>
 
-            <!-- План + размещения -->
-            <Grid Grid.Column="1" Margin="4,0,0,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <Border Grid.Row="0" Background="{StaticResource PanelBg}"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                        CornerRadius="6" Padding="6">
-                    <DockPanel>
-                    <DockPanel DockPanel.Dock="Top" Margin="4,4,4,6">
-                        <TextBlock FontWeight="SemiBold" VerticalAlignment="Center"
-                                   Foreground="{StaticResource TextDark}">План уровня:</TextBlock>
-                        <ComboBox ItemsSource="{Binding Levels}"
-                                  SelectedItem="{Binding SelectedLevel}"
-                                  Width="150" Margin="8,0,0,0"
-                                  HorizontalAlignment="Left"/>
-                        <!-- P4: раскраска приборов и легенда -->
-                        <TextBlock Text="Цвета:" VerticalAlignment="Center" Margin="14,0,4,0"
-                                   Foreground="{StaticResource TextMuted}"/>
-                        <ComboBox ItemsSource="{Binding PlanColorModes}"
-                                  SelectedItem="{Binding SelectedColorMode}"
-                                  Width="120" VerticalContentAlignment="Center"/>
-                        <CheckBox Content="Подписи комнат" IsChecked="{Binding ShowRoomLabels}"
-                                  VerticalAlignment="Center" Margin="12,0,0,0"/>
-                    </DockPanel>
-                        <oxy:PlotView Model="{Binding PlotModel}"/>
-                    </DockPanel>
-                </Border>
-
-                <Border Grid.Row="1" Background="{StaticResource PanelBg}"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                        CornerRadius="6" Padding="6" Margin="0,6,0,0">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Margin="4,4,4,6" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextDark}">
-                            Размещённые приборы (k_ef: &lt;0.6 недогруз · 0.6–0.9 норма · &gt;0.9 перегруз)
-                        </TextBlock>
-                        <DataGrid ItemsSource="{Binding Placements}" BorderThickness="1">
+            <!-- Приборы (низ-право), фильтруются деревом CRM -->
+            <Border Grid.Row="1" Grid.Column="1" Background="{StaticResource PanelBg}"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="6" Margin="4,0,0,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Margin="4,4,4,6" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextDark}">
+                        Размещённые приборы (k_ef: &lt;0.6 недогруз · 0.6–0.9 норма · &gt;0.9 перегруз)
+                    </TextBlock>
+                    <DataGrid ItemsSource="{Binding PlacementsView}" BorderThickness="1">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="120"/>
                                 <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>

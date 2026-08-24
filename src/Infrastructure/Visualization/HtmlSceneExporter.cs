@@ -231,7 +231,8 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
     (SC.Rooms || []).forEach(function (r) {
       var bnd = (r.Boundary || []).map(function (p) { return [p.X, p.Y]; });
       var off = (r.OffsetPolygon || []).map(function (p) { return [p.X, p.Y]; });
-      var room = { id: r.RoomId, name: r.RoomName, bnd: bnd, off: off, systems: r.Systems || [] };
+      var room = { id: r.RoomId, name: r.RoomName, bnd: bnd, off: off,
+                   baseZ: r.BaseZ || 0, systems: r.Systems || [] };
       rooms.push(room);
       room.systems.forEach(function (s) {
         (s.Placements || []).forEach(function (pl) {
@@ -562,22 +563,49 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
     var span = Math.max(b.maxX - b.minX, b.maxY - b.minY, 1);
     var center = new THREE.Vector3(b.cx, b.cy, 0);
 
+    var levelObjects = []; // M3.1: объекты, скрываемые фильтром уровня
+
     rooms.forEach(function (r) {
+      var z = r.baseZ || 0;
+
+      // M3.1: полупрозрачная плита этажа по контуру комнаты.
+      if (r.bnd.length >= 3) {
+        var shape = new THREE.Shape();
+        r.bnd.forEach(function (p, i) {
+          if (i === 0) shape.moveTo(p[0], p[1]); else shape.lineTo(p[0], p[1]);
+        });
+        var slab = new THREE.Mesh(
+          new THREE.ShapeGeometry(shape),
+          new THREE.MeshBasicMaterial({
+            color: 0xdfe6ef, transparent: true, opacity: 0.35, side: THREE.DoubleSide
+          }));
+        slab.position.set(0, 0, z);
+        slab.userData.levelZ = z;
+        scene.add(slab);
+        levelObjects.push(slab);
+      }
+
       if (r.bnd.length < 2) return;
       var pts = [];
-      r.bnd.forEach(function (p) { pts.push(p[0], p[1], 0); });
-      pts.push(r.bnd[0][0], r.bnd[0][1], 0);
+      r.bnd.forEach(function (p) { pts.push(p[0], p[1], z); });
+      pts.push(r.bnd[0][0], r.bnd[0][1], z);
       var geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-      scene.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x9aa5b1 })));
+      var roomLine = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x9aa5b1 }));
+      roomLine.userData.levelZ = z;
+      scene.add(roomLine);
+      levelObjects.push(roomLine);
 
       if (r.off.length >= 2) {
         var o = [];
-        r.off.forEach(function (p) { o.push(p[0], p[1], 0); });
-        o.push(r.off[0][0], r.off[0][1], 0);
+        r.off.forEach(function (p) { o.push(p[0], p[1], z); });
+        o.push(r.off[0][0], r.off[0][1], z);
         var geo2 = new THREE.BufferGeometry();
         geo2.setAttribute('position', new THREE.Float32BufferAttribute(o, 3));
-        scene.add(new THREE.Line(geo2, new THREE.LineBasicMaterial({ color: 0xffb000 })));
+        var offLine = new THREE.Line(geo2, new THREE.LineBasicMaterial({ color: 0xffb000 }));
+        offLine.userData.levelZ = z;
+        scene.add(offLine);
+        levelObjects.push(offLine);
       }
     });
 
@@ -588,8 +616,44 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
       // P3/M0.2: приборы на своей высоте (отметка уровня + установка), не на полу.
       mesh.position.set(p.x, p.y, p.z || 0);
       mesh.rotation.z = (p.rot || 0) * Math.PI / 180;
+      mesh.userData.levelZ = p.z || 0;
       scene.add(mesh);
+      levelObjects.push(mesh);
     });
+
+    // ---- M3.1: селектор уровня «Все этажи / отм. …» ----
+    var levels = [];
+    rooms.forEach(function (r) {
+      if (levels.indexOf(r.baseZ || 0) < 0) levels.push(r.baseZ || 0);
+    });
+    placementsFlat.forEach(function (p) {
+      if (levels.indexOf(p.z || 0) < 0) levels.push(p.z || 0);
+    });
+    levels.sort(function (a, b) { return a - b; });
+
+    if (levels.length > 1) {
+      var sel = document.createElement('select');
+      sel.style.cssText = 'position:absolute;top:8px;left:8px;z-index:6;' +
+        'padding:4px 6px;border-radius:4px;border:1px solid #30363d;' +
+        'background:#0d1117;color:#c9d1d9;font-size:12px;';
+      var optAll = document.createElement('option');
+      optAll.value = ''; optAll.textContent = 'Все этажи';
+      sel.appendChild(optAll);
+      levels.forEach(function (z) {
+        var o = document.createElement('option');
+        o.value = String(z);
+        o.textContent = 'Отм. ' + (z * FT_TO_MM).toFixed(0) + ' мм';
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', function () {
+        var v = sel.value === '' ? null : parseFloat(sel.value);
+        levelObjects.forEach(function (obj) {
+          obj.visible = (v === null) ||
+            Math.abs((obj.userData.levelZ || 0) - v) < 0.01;
+        });
+      });
+      container.appendChild(sel);
+    }
 
     var grid = new THREE.GridHelper(span * 2, 10, 0x404040, 0x26292e);
     grid.rotation.x = Math.PI / 2;

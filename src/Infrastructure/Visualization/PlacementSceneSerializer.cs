@@ -22,6 +22,9 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
 
         public string RoomName { get; set; } = string.Empty;
 
+        /// <summary>M1/M3.1: отметка уровня комнаты, футы — база плит этажей в 3D.</summary>
+        public double BaseZ { get; set; }
+
         public List<PointDto> Boundary { get; set; } = new List<PointDto>();
 
         /// <summary>Offset polygon (inward wall offset). Null until the engine provides it.</summary>
@@ -120,6 +123,7 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
                 {
                     RoomId = group.Key,
                     RoomName = first.Room.RoomName,
+                    BaseZ = first.Room.LevelOffset,
                     Boundary = first.Room.Boundary.Vertices
                         .Select(v => new PointDto { X = v.X, Y = v.Y })
                         .ToList(),
