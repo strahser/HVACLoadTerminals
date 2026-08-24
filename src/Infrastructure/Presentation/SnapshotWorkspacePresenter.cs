@@ -316,6 +316,58 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             RaiseStatusOnly($"Включено помещений: {CountIncluded()} из {Rooms.Count}");
         }
 
+        // ---- S1.1: именованные системы помещения ----
+
+        /// <summary>Пустой список систем → автодефолт П1/В1 из оценки нагрузок;
+        /// заданный пользователем список не трогается (обратная совместимость).</summary>
+        public void EnsureDefaultSystems(RoomRow row)
+        {
+            var systems = row.Systems ??= new List<SystemRow>();
+            if (systems.Count > 0)
+                return;
+            if (row.Supply > 0)
+                systems.Add(new SystemRow
+                {
+                    Name = "П1",
+                    Type = HVACSystemType.Supply,
+                    FlowM3h = Math.Round(row.Supply, 1)
+                });
+            if (row.Exhaust > 0)
+                systems.Add(new SystemRow
+                {
+                    Name = "В1",
+                    Type = HVACSystemType.Exhaust,
+                    FlowM3h = Math.Round(row.Exhaust, 1)
+                });
+        }
+
+        /// <summary>Ошибки списка систем комнаты: пустое имя, дубликат имени,
+        /// неположительный расход. Пустой список — валиден (дефолт будет построен).</summary>
+        public IReadOnlyList<string> GetSystemErrors(RoomRow row)
+        {
+            var errors = new List<string>();
+            var label = $"{row.Number}. {row.Name}".Trim(' ', '.');
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var s in row.Systems ?? new List<SystemRow>())
+            {
+                string name = (s.Name ?? "").Trim();
+                if (name.Length == 0)
+                    errors.Add($"{label}: система с пустым именем");
+                else if (!seen.Add(name))
+                    errors.Add($"{label}: дубликат имени системы «{name}»");
+                if (s.FlowM3h <= 0)
+                    errors.Add($"{label}: расход системы «{name}» должен быть > 0 " +
+                               $"(сейчас {s.FlowM3h:F1})");
+            }
+            return errors;
+        }
+
+        private void ReportSystemErrors(RoomRow row)
+        {
+            foreach (var error in GetSystemErrors(row))
+                ErrorSink?.Invoke(error);
+        }
+
         /// <summary>Full recalculation of all three classes. Raises StateChanged.</summary>
         public WorkspaceState Calculate()
         {
@@ -367,6 +419,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             {
                 if (!row.IsIncluded)
                     continue;
+                EnsureDefaultSystems(row);
+                ReportSystemErrors(row);
                 if (!roomsById.TryGetValue(row.RoomId, out var snapRoom))
                     continue;
                 var polygon = snapRoom.ToPolygon();

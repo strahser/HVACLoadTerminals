@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.ComponentModel;
+using HVACLoadTerminals.Core.Models;
 
 namespace HVACLoadTerminals.Infrastructure.Presentation
 {
@@ -50,6 +52,45 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         }
 
         public string Warning { get; set; } = "";
+
+        public List<SystemRow> Systems { get; set; } = new List<SystemRow>();
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged(string name) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    /// <summary>One named system of a room (S1.1): a room may carry several
+    /// supply and several exhaust systems, each placed independently.</summary>
+    public class SystemRow : INotifyPropertyChanged
+    {
+        private string _name = "";
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(nameof(Name)); }
+        }
+
+        private HVACSystemType _type = HVACSystemType.Supply;
+        public HVACSystemType Type
+        {
+            get => _type;
+            set { _type = value; OnPropertyChanged(nameof(Type)); }
+        }
+
+        private double _flowM3h;
+        public double FlowM3h
+        {
+            get => _flowM3h;
+            set { _flowM3h = value; OnPropertyChanged(nameof(FlowM3h)); }
+        }
+
+        private bool _isIncluded = true;
+        public bool IsIncluded
+        {
+            get => _isIncluded;
+            set { _isIncluded = value; OnPropertyChanged(nameof(IsIncluded)); }
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) =>
