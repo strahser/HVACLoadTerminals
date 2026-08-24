@@ -27,6 +27,10 @@ namespace HVACLoadTerminals.Core.Services
         public double EdgeMarginMm { get; set; } = 50;
 
         public int MaxDevicesPerWindow { get; set; } = 20;
+
+        /// <summary>P3/M0.2: высота установки прибора над уровнем, мм
+        /// (подоконная практика ~500 мм от пола).</summary>
+        public double MountHeightMm { get; set; } = 500;
     }
 
     /// <summary>Placements plus human-readable warnings for one room.</summary>
@@ -129,14 +133,23 @@ namespace HVACLoadTerminals.Core.Services
                         Math.Max(countByPower, countByLength),
                         1, options.MaxDevicesPerWindow);
 
+                    // P2: длина покрывает ≥60 % окна → правило «по длине»,
+                    // иначе количество диктует мощность.
+                    string optionLabel = deviceLenFt > 0 && countByLength >= countByPower
+                        ? CalculationOptionLabels.Length
+                        : CalculationOptionLabels.MinByFlow;
+
                     double marginFt = LengthUnitConverter.MmToUnits(options.EdgeMarginMm);
                     double span = width - 2 * marginFt;
                     if (span <= 1e-6)
                         span = width;
 
+                    int addedFrom = placements.Count;
                     placements.AddRange(Distribute(
                         device, room.Id, center, alongDir, normal, span,
                         count, offsetFt, boundary, centroid));
+                    for (int i = addedFrom; i < placements.Count; i++)
+                        placements[i].CalculationOption = optionLabel;
 
                     if (deviceLenFt > 0 &&
                         count * deviceLenFt + 1e-9 <
@@ -206,6 +219,16 @@ namespace HVACLoadTerminals.Core.Services
                         warnings.Add("Контур помещения не содержит пригодных граней");
                     }
                 }
+            }
+
+            // P2/P3: нормализация меток и высоты установки для всех размещений.
+            // Ветвь окон уже проставила directive_length/minimum_terminals;
+            // fallback-ветви (наружная стена / грань контура) — минимум по мощности.
+            foreach (var p in placements)
+            {
+                if (string.IsNullOrEmpty(p.CalculationOption))
+                    p.CalculationOption = CalculationOptionLabels.MinByFlow;
+                p.MountHeightMm = options.MountHeightMm;
             }
 
             // Capacity check for the whole room.

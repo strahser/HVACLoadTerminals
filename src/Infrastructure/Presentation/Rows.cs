@@ -133,8 +133,19 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// <summary>Load per device / device capacity (0 when not applicable).</summary>
         public double KEf { get; set; }
 
+        /// <summary>M0.1: k_ef для таблицы — «—» вместо 0, когда коэффициент
+        /// неприменим (отопление или у типоразмера не задан паспортный расход).</summary>
+        public string KEfText => KEf > 0 ? KEf.ToString("F2") : "—";
+
+        /// <summary>P2: правило количества (словарь прототипа):
+        /// device_area / minimum_terminals / directive_length / directive_terminals.</summary>
+        public string CalculationOption { get; set; } = "";
+
         /// <summary>S2.2: расчётный расход на прибор, м³/ч (0 — не применим).</summary>
         public double CalculatedFlow { get; set; }
+
+        /// <summary>P3/M0.2: высота установки над уровнем, мм (0 = на полу).</summary>
+        public double MountHeightMm { get; set; }
 
         /// <summary>
         /// U3.1: цветовая группа k_ef для таблиц и плана: «low» (&lt;0.6 недогруз),

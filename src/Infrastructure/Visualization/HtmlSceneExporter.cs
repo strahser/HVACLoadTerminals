@@ -236,9 +236,12 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
       room.systems.forEach(function (s) {
         (s.Placements || []).forEach(function (pl) {
           placementsFlat.push({
-            x: pl.Position.X, y: pl.Position.Y, rot: pl.RotationDegrees,
+            x: pl.Position.X, y: pl.Position.Y, z: pl.Position.Z || 0,
+            rot: pl.RotationDegrees,
             family: pl.FamilyName, type: pl.TypeName, flow: pl.Flow,
             calc: pl.CalculatedFlowM3h || 0,
+            option: pl.CalculationOption || '',
+            mountMm: pl.MountHeightMm || 0,
             color: s.Color, roomId: r.RoomId
           });
         });
@@ -415,7 +418,10 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
       tooltip.innerHTML = '<b>' + esc(best.family) + ' ' + esc(best.type) + '</b><br>' +
         'Расход: ' + fmtFlow(best.flow) + ' м&sup3;/ч<br>' +
         (best.calc > 0 ? 'Расход расч.: ' + fmtFlow(best.calc) + ' м&sup3;/ч<br>' : '') +
-        'Координаты: (' + fmtMm(best.x) + ', ' + fmtMm(best.y) + ') мм';
+        (best.option ? 'Расчёт: ' + esc(best.option) + '<br>' : '') +
+        (best.mountMm > 0 ? 'Высота: ' + best.mountMm + ' мм<br>' : '') +
+        'Координаты: (' + fmtMm(best.x) + ', ' + fmtMm(best.y) +
+        (best.z ? ', h=' + fmtMm(best.z) : '') + ') мм';
     } else {
       tooltip.style.display = 'none';
     }
@@ -579,7 +585,8 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
       var geo = new THREE.BoxGeometry(2, 0.3, 1);
       var mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(p.color || '#e6194b') });
       var mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(p.x, p.y, 0);
+      // P3/M0.2: приборы на своей высоте (отметка уровня + установка), не на полу.
+      mesh.position.set(p.x, p.y, p.z || 0);
       mesh.rotation.z = (p.rot || 0) * Math.PI / 180;
       scene.add(mesh);
     });

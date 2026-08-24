@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HVACLoadTerminals.Core.Models;
+using HVACLoadTerminals.Core.Services;
 using Newtonsoft.Json;
 
 namespace HVACLoadTerminals.Infrastructure.Visualization
@@ -56,6 +57,12 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
 
         /// <summary>S2.2: расчётный расход на прибор, м³/ч (0 — не применим).</summary>
         public double CalculatedFlowM3h { get; set; }
+
+        /// <summary>P2: правило количества (словарь прототипа).</summary>
+        public string CalculationOption { get; set; } = string.Empty;
+
+        /// <summary>P3/M0.2: высота установки над уровнем, мм.</summary>
+        public double MountHeightMm { get; set; }
     }
 
     /// <summary>2D point in scene coordinates (feet, Revit internal units).</summary>
@@ -64,6 +71,10 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
         public double X { get; set; }
 
         public double Y { get; set; }
+
+        /// <summary>P3/M0.2: абсолютная высота, футы (отметка уровня + установка).
+        /// 0 в 2D-контексте (границы комнат).</summary>
+        public double Z { get; set; }
     }
 
     /// <summary>
@@ -115,6 +126,9 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
                     OffsetPolygon = null
                 };
 
+                // P3/M0.2: база по Z — отметка уровня комнаты (футы).
+                double baseZ = first.Room.LevelOffset;
+
                 int colorIndex = 0;
                 foreach (var result in group)
                 {
@@ -128,12 +142,19 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
                         Placements = result.Placements
                             .Select(p => new PlacementPointDto
                             {
-                                Position = new PointDto { X = p.Position.X, Y = p.Position.Y },
+                                Position = new PointDto
+                                {
+                                    X = p.Position.X,
+                                    Y = p.Position.Y,
+                                    Z = baseZ + LengthUnitConverter.MmToUnits(p.MountHeightMm)
+                                },
                                 RotationDegrees = p.Rotation * 180.0 / Math.PI,
                                 FamilyName = p.Device.FamilyName,
                                 TypeName = p.Device.TypeName,
                                 Flow = p.Device.MaxFlowRate,
-                                CalculatedFlowM3h = p.CalculatedFlowM3h
+                                CalculatedFlowM3h = p.CalculatedFlowM3h,
+                                CalculationOption = p.CalculationOption,
+                                MountHeightMm = p.MountHeightMm
                             })
                             .ToList()
                     });

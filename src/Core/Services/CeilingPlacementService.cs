@@ -58,6 +58,10 @@ namespace HVACLoadTerminals.Core.Services
         /// <summary>Count for <see cref="CeilingCountRule.Fixed"/>.</summary>
         public int FixedCount { get; set; } = 2;
 
+        /// <summary>P3/M0.2: высота потолка над отметкой уровня, мм (0 = неизвестна).
+        /// Высота установки прибора = потолок − CeilingOffsetMm типоразмера.</summary>
+        public double RoomHeightMm { get; set; } = 0;
+
         // ---- U2.1: mass placement patterns ----
 
         /// <summary>Mass placement pattern (grid by default, wall rows opt-in).</summary>
@@ -154,6 +158,29 @@ namespace HVACLoadTerminals.Core.Services
             if (count < 1)
                 return Warn("Нагрузка не задана — количество приборов не рассчитать");
 
+            // P2: метка правила количества — словарь прототипа. В Auto фиксируем,
+            // какая оценка дала большее N (площадь или расход).
+            double areaN = device.ServiceAreaM2 > 0 && roomAreaM2 > 0
+                ? Math.Ceiling(roomAreaM2 / device.ServiceAreaM2) : 0;
+            double flowN = requiredFlow > 0
+                ? Math.Ceiling(requiredFlow / device.MaxFlowRate) : 0;
+            string optionLabel = options.CountRule switch
+            {
+                CeilingCountRule.ByArea => CalculationOptionLabels.Area,
+                CeilingCountRule.ByFlow => CalculationOptionLabels.MinByFlow,
+                CeilingCountRule.Fixed => CalculationOptionLabels.FixedN,
+                _ => areaN >= flowN
+                    ? CalculationOptionLabels.Area
+                    : CalculationOptionLabels.MinByFlow
+            };
+
+            // P3/M0.2: высота установки = потолок − потолочный offset типоразмера.
+            double mountHeightMm = 0;
+            if (options.RoomHeightMm > 0 || device.CeilingOffsetMm > 0)
+            {
+                mountHeightMm = Math.Max(0, options.RoomHeightMm - device.CeilingOffsetMm);
+            }
+
             // --- geometry: inward offset, then grid ---
             double clearanceFt = LengthUnitConverter.MmToUnits(options.WallClearanceMm);
             var offset = _offsetService.OffsetInward(boundary, clearanceFt);
@@ -223,7 +250,11 @@ namespace HVACLoadTerminals.Core.Services
 
                 bool rotated = selectedEdge != null && count > 1;
                 placements.Add(new DevicePlacement(
-                    device, valid, rotated ? rowRotation : 0, roomId, systemName));
+                    device, valid, rotated ? rowRotation : 0, roomId, systemName)
+                {
+                    CalculationOption = optionLabel,
+                    MountHeightMm = mountHeightMm
+                });
             }
 
             if (placements.Count < count)

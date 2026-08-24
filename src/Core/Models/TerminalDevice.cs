@@ -25,6 +25,10 @@ namespace HVACLoadTerminals.Core.Models
         /// <summary>Device footprint height (depth from the wall), mm. 0 = unknown.</summary>
         public double HeightMm { get; }
 
+        /// <summary>P3/M0.2: потолочный offset типоразмера, мм — заглубление прибора
+        /// от чистого потолка (аналог ceiling_offset прототипа). 0 = не задан.</summary>
+        public double CeilingOffsetMm { get; }
+
         /// <summary>Effective capacity for the given system type, Watts or m3/h.</summary>
         public double CapacityFor(HVACSystemType type) =>
             type == HVACSystemType.Heating && HeatingCapacityW > 0 ? HeatingCapacityW : CoolingCapacityW;
@@ -41,7 +45,8 @@ namespace HVACLoadTerminals.Core.Models
             double widthMm = 0,
             double heightMm = 0,
             double heatingCapacityW = 0,
-            double serviceAreaM2 = 0)
+            double serviceAreaM2 = 0,
+            double ceilingOffsetMm = 0)
         {
             Id = id;
             FamilyName = familyName;
@@ -55,6 +60,7 @@ namespace HVACLoadTerminals.Core.Models
             HeightMm = heightMm;
             HeatingCapacityW = heatingCapacityW;
             ServiceAreaM2 = serviceAreaM2;
+            CeilingOffsetMm = ceilingOffsetMm;
         }
 
         public override string ToString() => $"{FamilyName} - {TypeName} ({MaxFlowRate} m3/h)";

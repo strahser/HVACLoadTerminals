@@ -19,6 +19,16 @@ namespace HVACLoadTerminals.Core.Models
         /// (например отопительные приборы с нагрузкой в Вт).</summary>
         public double CalculatedFlowM3h { get; set; }
 
+        /// <summary>P2: метка правила количества (словарь прототипа:
+        /// device_area / minimum_terminals / directive_length / directive_terminals).
+        /// Пусто = не рассчитывалось движком.</summary>
+        public string CalculationOption { get; set; } = "";
+
+        /// <summary>P3/M0.2: высота установки НАД отметкой уровня, мм.
+        /// 0 = на полу (прежнее поведение); потолочные — высота потолка минус
+        /// ceiling_offset типоразмера; настенные отопительные ~500 мм.</summary>
+        public double MountHeightMm { get; set; }
+
         public DevicePlacement(
             TerminalDevice device,
             Point2D position,

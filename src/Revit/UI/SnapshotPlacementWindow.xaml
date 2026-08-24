@@ -118,11 +118,12 @@
                     <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
                     <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
                     <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding CalculatedFlow, StringFormat=F1}" Width="90"/>
+                    <DataGridTextColumn Header="Высота, мм" Binding="{Binding MountHeightMm}" Width="70"/>
                     <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="80"/>
                     <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="80"/>
                     <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>
-                    <!-- U3.1: k_ef цветом по порогам <0.6 / 0.6–0.9 / >0.9 -->
-                    <DataGridTextColumn Header="k_ef" Binding="{Binding KEf, StringFormat=F2}" Width="55">
+                    <!-- U3.1/M0.1: k_ef цветом по порогам, «—» когда неприменим -->
+                    <DataGridTextColumn Header="k_ef" Binding="{Binding KEfText}" Width="55">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="FontWeight" Value="SemiBold"/>
@@ -140,6 +141,8 @@
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
+                    <!-- P2: правило количества — словарь прототипа -->
+                    <DataGridTextColumn Header="Расчёт" Binding="{Binding CalculationOption}" Width="110"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Grid>

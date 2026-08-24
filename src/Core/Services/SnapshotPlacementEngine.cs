@@ -94,13 +94,15 @@ namespace HVACLoadTerminals.Core.Services
                 // S2.1: placement per NAMED system of the room; no user systems →
                 // auto-default П1/В1 from the estimate (backward compatibility).
                 var systems = ResolveSystems(room.Id ?? "", load, systemsByRoom);
+                double roomHeightMm = load.HeightM > 0 ? load.HeightM * 1000 : 0;
                 foreach (var system in systems)
                 {
                     if (system.Type == HVACSystemType.Supply && system.FlowRate > 0)
                     {
                         var res = _ceilingService.PlaceForRoom(
                             room.Id ?? "", polygon, system.FlowRate, room.Area,
-                            HVACSystemType.Supply, catalog, system.Name);
+                            HVACSystemType.Supply, catalog, system.Name,
+                            new CeilingPlacementOptions { RoomHeightMm = roomHeightMm });
                         placements.AddRange(res.Placements);
                         AddWarnings(warnings, label, res.Warnings);
                     }
@@ -108,7 +110,8 @@ namespace HVACLoadTerminals.Core.Services
                     {
                         var res = _ceilingService.PlaceForRoom(
                             room.Id ?? "", polygon, system.FlowRate, room.Area,
-                            HVACSystemType.Exhaust, catalog, system.Name);
+                            HVACSystemType.Exhaust, catalog, system.Name,
+                            new CeilingPlacementOptions { RoomHeightMm = roomHeightMm });
                         placements.AddRange(res.Placements);
                         AddWarnings(warnings, label, res.Warnings);
                     }
