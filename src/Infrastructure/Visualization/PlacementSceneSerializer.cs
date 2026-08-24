@@ -53,6 +53,9 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
         public string TypeName { get; set; } = string.Empty;
 
         public double Flow { get; set; }
+
+        /// <summary>S2.2: расчётный расход на прибор, м³/ч (0 — не применим).</summary>
+        public double CalculatedFlowM3h { get; set; }
     }
 
     /// <summary>2D point in scene coordinates (feet, Revit internal units).</summary>
@@ -129,7 +132,8 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
                                 RotationDegrees = p.Rotation * 180.0 / Math.PI,
                                 FamilyName = p.Device.FamilyName,
                                 TypeName = p.Device.TypeName,
-                                Flow = p.Device.MaxFlowRate
+                                Flow = p.Device.MaxFlowRate,
+                                CalculatedFlowM3h = p.CalculatedFlowM3h
                             })
                             .ToList()
                     });

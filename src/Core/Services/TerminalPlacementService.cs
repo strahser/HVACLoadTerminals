@@ -235,6 +235,13 @@ namespace HVACLoadTerminals.Core.Services
                 ? true
                 : totalCapacity >= required - 1e-9;
 
+            if (system.FlowRate > 0 && placements.Count > 0)
+            {
+                double perDevice = system.FlowRate / placements.Count;
+                foreach (var placement in placements)
+                    placement.CalculatedFlowM3h = perDevice;
+            }
+
             string? warning = isOptimal
                 ? null
                 : $"Total capacity ({totalCapacity:F1}) less than required ({required:F1})";

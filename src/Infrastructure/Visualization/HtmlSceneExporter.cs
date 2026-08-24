@@ -238,6 +238,7 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
           placementsFlat.push({
             x: pl.Position.X, y: pl.Position.Y, rot: pl.RotationDegrees,
             family: pl.FamilyName, type: pl.TypeName, flow: pl.Flow,
+            calc: pl.CalculatedFlowM3h || 0,
             color: s.Color, roomId: r.RoomId
           });
         });
@@ -413,6 +414,7 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
       tooltip.style.top = (my + 14) + 'px';
       tooltip.innerHTML = '<b>' + esc(best.family) + ' ' + esc(best.type) + '</b><br>' +
         'Расход: ' + fmtFlow(best.flow) + ' м&sup3;/ч<br>' +
+        (best.calc > 0 ? 'Расход расч.: ' + fmtFlow(best.calc) + ' м&sup3;/ч<br>' : '') +
         'Координаты: (' + fmtMm(best.x) + ', ' + fmtMm(best.y) + ') мм';
     } else {
       tooltip.style.display = 'none';

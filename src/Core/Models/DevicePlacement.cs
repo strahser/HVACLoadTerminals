@@ -14,6 +14,11 @@ namespace HVACLoadTerminals.Core.Models
         /// <summary>Which side (Bottom/Right/Top/Left) the device is on. Auto = not set.</summary>
         public CoordinateSystem WallSide { get; }
 
+        /// <summary>S2.2: расчётный расход на прибор, м³/ч (расход системы / число
+        /// приборов; аналог flow_to_device_calculated прототипа). 0 = не применим
+        /// (например отопительные приборы с нагрузкой в Вт).</summary>
+        public double CalculatedFlowM3h { get; set; }
+
         public DevicePlacement(
             TerminalDevice device,
             Point2D position,

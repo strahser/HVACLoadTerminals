@@ -758,7 +758,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     X = Math.Round(LengthUnitConverter.UnitsToMm(p.Position.X), 0),
                     Y = Math.Round(LengthUnitConverter.UnitsToMm(p.Position.Y), 0),
                     RotationDeg = Math.Round(p.Rotation * 180.0 / Math.PI, 1),
-                    KEf = k
+                    KEf = k,
+                    CalculatedFlow = Math.Round(p.CalculatedFlowM3h, 1)
                 });
             }
             return result;

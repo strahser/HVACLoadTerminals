@@ -348,6 +348,7 @@
                                 <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
                                 <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
                                 <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
+                                <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding CalculatedFlow, StringFormat=F1}" Width="90"/>
                                 <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="80"/>
                                 <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="80"/>
                                 <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>

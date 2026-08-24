@@ -230,6 +230,13 @@ namespace HVACLoadTerminals.Core.Services
                 warnings.Add(
                     $"Размещено {placements.Count} из {count}: контур/отступ не вмещают сетку");
 
+            if (requiredFlow > 0 && placements.Count > 0)
+            {
+                double perDevice = requiredFlow / placements.Count;
+                foreach (var placement in placements)
+                    placement.CalculatedFlowM3h = perDevice;
+            }
+
             // Capacity check.
             if (requiredFlow > 0 &&
                 placements.Count * device.MaxFlowRate + 1e-9 < requiredFlow)
