@@ -23,8 +23,10 @@ namespace HVACLoadTerminals.Revit.Commands
             try
             {
                 // Provide the active Document to integration test fixtures via static holder
-                var activeDoc = commandData.Application.ActiveUIDocument?.Document;
+                var activeUiDoc = commandData.Application.ActiveUIDocument;
+                var activeDoc = activeUiDoc?.Document;
                 TestDocumentContext.Document = activeDoc;
+                TestDocumentContext.UIDocument = activeUiDoc;
                 HvacLogger.Info($"  Active doc: {(activeDoc != null ? activeDoc.Title : "<null>")}");
 
                 var results = RevitTestRunner.RunAll(Assembly.GetExecutingAssembly());

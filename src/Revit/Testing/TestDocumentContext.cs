@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
 
 namespace HVACLoadTerminals.Revit.Testing
 {
@@ -14,5 +15,11 @@ namespace HVACLoadTerminals.Revit.Testing
         /// when null.
         /// </summary>
         public static Document? Document { get; set; }
+
+        /// <summary>
+        /// S4.1: активный UIDocument для фикстур, создающих экземпляры семейств
+        /// (RevitDevicePlacer требует UIDocument). Null вне живой сессии Revit.
+        /// </summary>
+        public static UIDocument? UIDocument { get; set; }
     }
 }
