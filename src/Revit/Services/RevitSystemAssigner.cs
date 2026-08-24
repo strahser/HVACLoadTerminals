@@ -86,13 +86,30 @@ namespace HVACLoadTerminals.Revit.Services
                 WriteFlow(instance, placement.CalculatedFlowM3h);
 
                 var connector = GetFirstConnector(instance);
-                if (connector == null)
+                if (connector == null || !IsHvacConnector(connector))
                 {
                     report.SkippedNoConnector++;
                     report.Warnings.Add(
                         $"{placement.SystemName} / {placement.Device.FamilyName} " +
-                        $"«{placement.Device.TypeName}»: у прибора нет коннектора — " +
+                        $"«{placement.Device.TypeName}»: у прибора нет воздушного коннектора — " +
                         "система не назначена, записаны только параметры");
+                    continue;
+                }
+
+                // Коннектор чужого направления (приточный прибор с вытяжным
+                // коннектором и наоборот) system.Add отклоняет целиком —
+                // отсекаем заранее, чтобы не ронять назначение системы.
+                var expectedDuctSystemType = placement.Device.SystemType == HVACSystemType.Supply
+                    ? DuctSystemType.SupplyAir
+                    : DuctSystemType.ExhaustAir;
+                if (connector.DuctSystemType != null &&
+                    !Equals(connector.DuctSystemType, expectedDuctSystemType) &&
+                    placement.Device.SystemType is HVACSystemType.Supply or HVACSystemType.Exhaust)
+                {
+                    report.Warnings.Add(
+                        $"{placement.SystemName} / {placement.Device.FamilyName} " +
+                        $"«{placement.Device.TypeName}»: коннектор не соответствует классу " +
+                        "прибора — система не назначена, записаны только параметры");
                     continue;
                 }
 
@@ -122,9 +139,13 @@ namespace HVACLoadTerminals.Revit.Services
                 }
                 catch (Exception ex)
                 {
+                    string ductName;
+                    try { ductName = connector.DuctSystemType.ToString(); }
+                    catch { ductName = "?"; }
                     report.Warnings.Add(
-                        $"{placement.SystemName}: не удалось назначить систему — {ex.Message}");
-                }
+                        $"{placement.SystemName}: не удалось назначить систему " +
+                        $"[тип='{systemType.Name}', duct={ductName}] " +
+                        $"{ex.GetType().Name}: {ex.Message}");                }
             }
 
             report.Entries.AddRange(entriesByName.Values.OrderBy(e => e.SystemName));
@@ -141,32 +162,114 @@ namespace HVACLoadTerminals.Revit.Services
             return manager.Connectors.Cast<Connector>().FirstOrDefault();
         }
 
+        /// <summary>Коннектор воздушного домена HVAC (не трубопроводный/электрический).
+        /// Добавление чужедоменных коннекторов в систему постит ошибку Revit и
+        /// приводит к откату всей транзакции размещения при Commit.</summary>
+        private static bool IsHvacConnector(Connector connector)
+        {
+            try
+            {
+                return Equals(connector.Domain, Domain.DomainHvac);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         /// <summary>
-        /// Тип системы: по классу прибора — «ADSK_Приточный воздух» /
-        /// «ADSK_Отработанный воздух» (HvacSystemData.SystemType потерянной ветки);
-        /// если ADSK-типов нет — тип по DuctSystemType коннектора; иначе первый доступный.
+        /// Тип системы ТОЛЬКО из воздушных (воздуховодных) типов модели:
+        /// 1) предпочтительный ADSK-тип по классу прибора; 2) тип, чья
+        /// классификация совпадает с DuctSystemType коннектора; 3) тип по маппингу
+        /// коннектора; иначе null (прибор пропускается с warning). Произвольный
+        /// «первый попавшийся» тип запрещён: трубопроводный/иной домен даёт
+        /// несовместимый system.Add и откат транзакции при Commit.
         /// </summary>
         private MechanicalSystemType? ResolveSystemType(
             HVACSystemType deviceSystemType, Connector connector)
         {
+            var airTypes = AirTypes(AllSystemTypes());
+            if (airTypes.Count == 0)
+                return null;
+
             string preferred = deviceSystemType == HVACSystemType.Supply
                 ? SupplySystemTypeName
                 : ExhaustSystemTypeName;
-
-            var types = AllSystemTypes();
-            var byPreferred = FindType(types, preferred);
+            var byPreferred = FindType(airTypes, preferred);
             if (byPreferred != null)
                 return byPreferred;
 
-            string mapped = MapDuctSystemType(connector.DuctSystemType);
-            if (mapped != null)
+            if (connector.DuctSystemType != null)
             {
-                var byDuct = FindType(types, mapped);
-                if (byDuct != null)
-                    return byDuct;
+                var byClassification = airTypes.FirstOrDefault(t =>
+                    ClassificationMatchesConnector(t, connector.DuctSystemType));
+                if (byClassification != null)
+                    return byClassification;
+
+                string mapped = MapDuctSystemType(connector.DuctSystemType);
+                if (mapped != null)
+                {
+                    var byDuct = FindType(airTypes, mapped);
+                    if (byDuct != null)
+                        return byDuct;
+                }
             }
 
-            return types.FirstOrDefault();
+            return null;
+        }
+
+        /// <summary>Воздушные типы механических систем — классификация содержит
+        /// «воздух»/«air». Кэшируется на прогон.</summary>
+        private List<MechanicalSystemType> AirTypes(IList<MechanicalSystemType> all)
+        {
+            if (_airTypes != null) return _airTypes;
+            var list = new List<MechanicalSystemType>();
+            foreach (var t in all)
+            {
+                var vs = SystemClassificationString(t);
+                if (vs != null &&
+                    (vs.IndexOf("воздух", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     vs.IndexOf("air", StringComparison.OrdinalIgnoreCase) >= 0))
+                    list.Add(t);
+            }
+            _airTypes = list;
+            return list;
+        }
+
+        private string? SystemClassificationString(MechanicalSystemType type)
+        {
+            try
+            {
+                var p = type.get_Parameter(BuiltInParameter.RBS_SYSTEM_CLASSIFICATION_PARAM);
+                return p?.AsValueString();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>Классификация типа СТРОГО соответствует направлению коннектора.
+        /// «Return Air»/рециркуляция сознательно НЕ считается вытяжкой: добавление
+        /// ExhaustAir-коннекторов в систему возврата даёт несовместимость и откат
+        /// транзакции (дефект прогона 2026-08-24).</summary>
+        private bool ClassificationMatchesConnector(
+            MechanicalSystemType type, DuctSystemType ductSystemType)
+        {
+            var vs = SystemClassificationString(type);
+            if (vs == null) return false;
+
+            bool isExhaustLike =
+                vs.IndexOf("exhaust", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                vs.IndexOf("вытяж", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                vs.IndexOf("удаля", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool isSupplyLike =
+                vs.IndexOf("supply", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                vs.IndexOf("приточ", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            return Equals(ductSystemType, DuctSystemType.ExhaustAir) ? isExhaustLike
+                 : Equals(ductSystemType, DuctSystemType.SupplyAir) ? isSupplyLike
+                 : false;
         }
 
         private static string? MapDuctSystemType(DuctSystemType? ductSystemType)
@@ -191,6 +294,8 @@ namespace HVACLoadTerminals.Revit.Services
             _typeCache[name] = type;
             return type;
         }
+
+        private List<MechanicalSystemType>? _airTypes;
 
         private IList<MechanicalSystemType> _allTypes = Array.Empty<MechanicalSystemType>();
         private bool _typesLoaded;

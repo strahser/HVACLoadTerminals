@@ -11,20 +11,20 @@ namespace HVACLoadTerminals.Revit.Services
 {
     public class RevitDevicePlacer : IDevicePlacer
     {
-        private readonly UIDocument _uiDoc;
         private readonly Document _doc;
 
+        // Поля типа UIDocument в классе НЕТ: в headless-режиме (TUnit-тесты)
+        // сборка RevitAPIUI недоступна, и JIT методов класса падает на её
+        // резолве. UIDocument используется только в конструкторе ниже.
         public RevitDevicePlacer(UIDocument uiDoc)
         {
-            _uiDoc = uiDoc ?? throw new ArgumentNullException(nameof(uiDoc));
-            _doc = uiDoc.Document;
+            _doc = uiDoc?.Document ?? throw new ArgumentNullException(nameof(uiDoc));
         }
 
         /// <summary>S4.1: вариант для headless-тестов (TUnit) — документ есть,
         /// UIDocument (ActiveUIDocument) в этом режиме отсутствует.</summary>
         public RevitDevicePlacer(Document doc)
         {
-            _uiDoc = null!;
             _doc = doc ?? throw new ArgumentNullException(nameof(doc));
         }
 
@@ -161,7 +161,11 @@ namespace HVACLoadTerminals.Revit.Services
         /// Collects Comments of all family instances starting with "HLT|" —
         /// idempotency markers placed by this plugin.
         /// </summary>
-        public List<string> CollectMarkers()
+        public List<string> CollectMarkers() => CollectMarkers("HLT|");
+
+        /// <summary>Сбор маркеров с произвольным префиксом (тестовые фикстуры
+        /// используют свой префикс, чтобы не пересекаться с продуктовыми HLT|).</summary>
+        public List<string> CollectMarkers(string markerPrefix)
         {
             var result = new List<string>();
             var instances = new FilteredElementCollector(_doc)
@@ -172,7 +176,7 @@ namespace HVACLoadTerminals.Revit.Services
             {
                 var p = fi.LookupParameter("Comments");
                 string value = p?.AsString() ?? "";
-                if (value.StartsWith("HLT|", StringComparison.Ordinal))
+                if (value.StartsWith(markerPrefix, StringComparison.Ordinal))
                     result.Add(value);
             }
             return result;
