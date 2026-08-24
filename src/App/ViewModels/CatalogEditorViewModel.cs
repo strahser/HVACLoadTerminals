@@ -27,6 +27,13 @@ namespace HVACLoadTerminals.App.ViewModels
         private double _serviceAreaM2;
         private double _widthMm;
         private double _heightMm;
+        private double _ceilingOffsetMm;
+        private double _wallOffsetMm;
+        private int _directiveTerminals;
+        private double _directiveLengthMm;
+        private string _orientationOption1 = "";
+        private string _orientationOption2 = "";
+        private string _singleOrientation = "";
 
         public string Id
         {
@@ -100,6 +107,56 @@ namespace HVACLoadTerminals.App.ViewModels
             set { _heightMm = value; OnPropertyChanged(nameof(HeightMm)); }
         }
 
+        /// <summary>P1: заглубление от потолка (аналог ceiling_offset).</summary>
+        public double CeilingOffsetMm
+        {
+            get => _ceilingOffsetMm;
+            set { _ceilingOffsetMm = value; OnPropertyChanged(nameof(CeilingOffsetMm)); }
+        }
+
+        /// <summary>P1: отступ от стены типоразмера (аналог wall_offset);
+        /// &gt;0 переопределяет общий отступ сетки.</summary>
+        public double WallOffsetMm
+        {
+            get => _wallOffsetMm;
+            set { _wallOffsetMm = value; OnPropertyChanged(nameof(WallOffsetMm)); }
+        }
+
+        /// <summary>P1: директивное количество (аналог directive_terminals).</summary>
+        public int DirectiveTerminals
+        {
+            get => _directiveTerminals;
+            set { _directiveTerminals = value; OnPropertyChanged(nameof(DirectiveTerminals)); }
+        }
+
+        /// <summary>P1: директивная длина, мм (аналог directive_length).</summary>
+        public double DirectiveLengthMm
+        {
+            get => _directiveLengthMm;
+            set { _directiveLengthMm = value; OnPropertyChanged(nameof(DirectiveLengthMm)); }
+        }
+
+        /// <summary>P1: ориентация option1 (device_orientation_option1).</summary>
+        public string OrientationOption1
+        {
+            get => _orientationOption1;
+            set { _orientationOption1 = value ?? ""; OnPropertyChanged(nameof(OrientationOption1)); }
+        }
+
+        /// <summary>P1: ориентация option2 (device_orientation_option2).</summary>
+        public string OrientationOption2
+        {
+            get => _orientationOption2;
+            set { _orientationOption2 = value ?? ""; OnPropertyChanged(nameof(OrientationOption2)); }
+        }
+
+        /// <summary>P1: ориентация одиночного прибора.</summary>
+        public string SingleOrientation
+        {
+            get => _singleOrientation;
+            set { _singleOrientation = value ?? ""; OnPropertyChanged(nameof(SingleOrientation)); }
+        }
+
         public static TerminalDeviceRow From(TerminalDevice d) => new()
         {
             Id = d.Id,
@@ -113,7 +170,14 @@ namespace HVACLoadTerminals.App.ViewModels
             HeatingCapacityW = d.HeatingCapacityW,
             ServiceAreaM2 = d.ServiceAreaM2,
             WidthMm = d.WidthMm,
-            HeightMm = d.HeightMm
+            HeightMm = d.HeightMm,
+            CeilingOffsetMm = d.CeilingOffsetMm,
+            WallOffsetMm = d.WallOffsetMm,
+            DirectiveTerminals = d.DirectiveTerminals,
+            DirectiveLengthMm = d.DirectiveLengthMm,
+            OrientationOption1 = d.OrientationOption1,
+            OrientationOption2 = d.OrientationOption2,
+            SingleOrientation = d.SingleOrientation
         };
 
         public TerminalDevice ToDevice() => new(
@@ -128,7 +192,14 @@ namespace HVACLoadTerminals.App.ViewModels
             widthMm: WidthMm,
             heightMm: HeightMm,
             heatingCapacityW: HeatingCapacityW,
-            serviceAreaM2: ServiceAreaM2);
+            serviceAreaM2: ServiceAreaM2,
+            ceilingOffsetMm: CeilingOffsetMm,
+            wallOffsetMm: WallOffsetMm,
+            directiveTerminals: DirectiveTerminals,
+            directiveLengthMm: DirectiveLengthMm,
+            orientationOption1: OrientationOption1.Trim(),
+            orientationOption2: OrientationOption2.Trim(),
+            singleOrientation: SingleOrientation.Trim());
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) =>

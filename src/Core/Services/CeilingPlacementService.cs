@@ -182,7 +182,11 @@ namespace HVACLoadTerminals.Core.Services
             }
 
             // --- geometry: inward offset, then grid ---
-            double clearanceFt = LengthUnitConverter.MmToUnits(options.WallClearanceMm);
+            // P1: отступ типоразмера (wall_offset прототипа) приоритетнее общего.
+            double clearanceMm = device.WallOffsetMm > 0
+                ? device.WallOffsetMm
+                : options.WallClearanceMm;
+            double clearanceFt = LengthUnitConverter.MmToUnits(clearanceMm);
             var offset = _offsetService.OffsetInward(boundary, clearanceFt);
             if (offset == null || offset.Count < 3)
             {

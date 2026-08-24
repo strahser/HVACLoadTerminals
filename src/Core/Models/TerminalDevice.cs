@@ -29,6 +29,29 @@ namespace HVACLoadTerminals.Core.Models
         /// от чистого потолка (аналог ceiling_offset прототипа). 0 = не задан.</summary>
         public double CeilingOffsetMm { get; }
 
+        /// <summary>P1: отступ от стены для этого типоразмера, мм (аналог
+        /// wall_offset прототипа). &gt;0 переопределяет общий WallClearanceMm.</summary>
+        public double WallOffsetMm { get; }
+
+        /// <summary>P1: директивное количество приборов (аналог directive_terminals
+        /// прототипа). 0 = правило не задано на типоразмере.</summary>
+        public int DirectiveTerminals { get; }
+
+        /// <summary>P1: директивная длина размещения, мм (аналог directive_length:
+        /// N = ceil(длина участка / директивная длина)). 0 = не задана.</summary>
+        public double DirectiveLengthMm { get; }
+
+        /// <summary>P1: ориентация option1 (аналог device_orientation_option1):
+        /// сторона длинного плеча для расстановки вдоль стен.</summary>
+        public string OrientationOption1 { get; }
+
+        /// <summary>P1: ориентация option2 (аналог device_orientation_option2).</summary>
+        public string OrientationOption2 { get; }
+
+        /// <summary>P1: ориентация одиночного прибора (аналог
+        /// single_device_orientation): center / corner.</summary>
+        public string SingleOrientation { get; }
+
         /// <summary>Effective capacity for the given system type, Watts or m3/h.</summary>
         public double CapacityFor(HVACSystemType type) =>
             type == HVACSystemType.Heating && HeatingCapacityW > 0 ? HeatingCapacityW : CoolingCapacityW;
@@ -46,7 +69,13 @@ namespace HVACLoadTerminals.Core.Models
             double heightMm = 0,
             double heatingCapacityW = 0,
             double serviceAreaM2 = 0,
-            double ceilingOffsetMm = 0)
+            double ceilingOffsetMm = 0,
+            double wallOffsetMm = 0,
+            int directiveTerminals = 0,
+            double directiveLengthMm = 0,
+            string orientationOption1 = "",
+            string orientationOption2 = "",
+            string singleOrientation = "")
         {
             Id = id;
             FamilyName = familyName;
@@ -61,6 +90,12 @@ namespace HVACLoadTerminals.Core.Models
             HeatingCapacityW = heatingCapacityW;
             ServiceAreaM2 = serviceAreaM2;
             CeilingOffsetMm = ceilingOffsetMm;
+            WallOffsetMm = wallOffsetMm;
+            DirectiveTerminals = directiveTerminals;
+            DirectiveLengthMm = directiveLengthMm;
+            OrientationOption1 = orientationOption1 ?? "";
+            OrientationOption2 = orientationOption2 ?? "";
+            SingleOrientation = singleOrientation ?? "";
         }
 
         public override string ToString() => $"{FamilyName} - {TypeName} ({MaxFlowRate} m3/h)";

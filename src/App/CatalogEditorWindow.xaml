@@ -185,6 +185,15 @@
                 <DataGridTextColumn Header="S обслуж., м²" Binding="{Binding ServiceAreaM2, UpdateSourceTrigger=PropertyChanged}" Width="78"/>
                 <DataGridTextColumn Header="Длина, мм" Binding="{Binding WidthMm, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
                 <DataGridTextColumn Header="Высота, мм" Binding="{Binding HeightMm, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
+                <!-- P1: поля прототипа — отступы, директивы, ориентации
+                     (ceiling_offset / wall_offset / directive_terminals / directive_length) -->
+                <DataGridTextColumn Header="Отступ потолка, мм" Binding="{Binding CeilingOffsetMm, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                <DataGridTextColumn Header="Отступ стены, мм" Binding="{Binding WallOffsetMm, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                <DataGridTextColumn Header="Директ. кол-во" Binding="{Binding DirectiveTerminals, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
+                <DataGridTextColumn Header="Директ. длина, мм" Binding="{Binding DirectiveLengthMm, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                <DataGridTextColumn Header="Ориент. 1" Binding="{Binding OrientationOption1, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
+                <DataGridTextColumn Header="Ориент. 2" Binding="{Binding OrientationOption2, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
+                <DataGridTextColumn Header="Одиночный" Binding="{Binding SingleOrientation, UpdateSourceTrigger=PropertyChanged}" Width="75"/>
                 <DataGridTextColumn Header="Производитель" Binding="{Binding Manufacturer, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>

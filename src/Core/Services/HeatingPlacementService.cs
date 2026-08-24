@@ -85,7 +85,11 @@ namespace HVACLoadTerminals.Core.Services
 
             var edges = RoomGeometryAnalyzer.GetEdges(boundary);
             var centroid = boundary.Center;
-            double offsetFt = LengthUnitConverter.MmToUnits(options.CenterOffsetMm);
+            // P1: отступ типоразмера (wall_offset прототипа) приоритетнее общего.
+            double centerMm = device.WallOffsetMm > 0
+                ? device.WallOffsetMm
+                : options.CenterOffsetMm;
+            double offsetFt = LengthUnitConverter.MmToUnits(centerMm);
 
             var openings = (allOpenings ?? Array.Empty<SnapshotOpening>())
                 .Where(o => o != null && o.SpaceId == room.Id)
