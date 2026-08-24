@@ -176,7 +176,7 @@ namespace HVACLoadTerminals.Core.Tests
             presenter.Calculate();
 
             var supplies = presenter.LastRawPlacements
-                .Where(p => p.SystemName == "Приток").ToList();
+                .Where(p => p.SystemName == "П1").ToList();
             var heatings = presenter.LastRawPlacements
                 .Where(p => p.SystemName == "Отопление").ToList();
 
@@ -244,7 +244,7 @@ namespace HVACLoadTerminals.Core.Tests
             restored.Calculate();
 
             var supplies = restored.LastRawPlacements
-                .Where(p => p.SystemName == "Приток").ToList();
+                .Where(p => p.SystemName == "П1").ToList();
             Assert.NotEmpty(supplies);
             Assert.All(supplies, p => Assert.Equal("SUP-TINY", p.Device.Id));
         }

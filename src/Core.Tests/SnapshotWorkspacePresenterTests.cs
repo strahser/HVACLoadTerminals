@@ -186,8 +186,9 @@ namespace HVACLoadTerminals.Core.Tests
 
             presenter.Calculate();
 
-            Assert.Contains(presenter.LastPatternEdges, e => e.SystemName == "Приток");
-            Assert.Contains(presenter.LastPatternEdges, e => e.SystemName == "Вытяжка");
+            // S2.1: рёбра паттернов именуются по системам комнаты (автодефолт П1/В1).
+            Assert.Contains(presenter.LastPatternEdges, e => e.SystemName == "П1");
+            Assert.Contains(presenter.LastPatternEdges, e => e.SystemName == "В1");
             Assert.All(presenter.LastPatternEdges, e =>
             {
                 Assert.Equal("Уровень 1", e.LevelName);

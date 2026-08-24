@@ -114,7 +114,7 @@ namespace HVACLoadTerminals.Core.Tests
                 presenter.Calculate();
 
                 var supplyRows = presenter.LastRawPlacements
-                    .Where(p => p.SystemName == "Приток")
+                    .Where(p => p.SystemName == "П1")
                     .ToList();
                 Assert.NotEmpty(supplyRows);
                 double expected = 300.0 / supplyRows.Count;
@@ -126,7 +126,7 @@ namespace HVACLoadTerminals.Core.Tests
                     presenter.LastRawPlacements.ToList(),
                     new System.Collections.Generic.List<string>(),
                     new System.Collections.Generic.Dictionary<string, double>(), 0);
-                foreach (var r in state.Placements.Where(x => x.SystemName == "Приток"))
+                foreach (var r in state.Placements.Where(x => x.SystemName == "П1"))
                     Assert.Equal(Math.Round(expected, 1), r.CalculatedFlow);
 
                 string sceneJson = PlacementSceneSerializer.ToJson(

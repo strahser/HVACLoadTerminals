@@ -433,6 +433,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 wallsByRoom.TryGetValue(row.RoomId, out var walls);
 
                 var roomWarnings = new List<string>();
+                var grilleInfo = new List<string>();
                 double roomAreaM2 = row.Area > 0 ? row.Area : polygon.Area * LengthUnitConverter.MmPerFoot / 1_000_000.0;
 
                 if (row.HeatingW > 0)
@@ -448,58 +449,64 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     roomWarnings.AddRange(res.Warnings);
                 }
 
-                if (row.Supply > 0)
+                // S2.1: расстановка по КАЖДОЙ именованной системе комнаты;
+                // EnsureDefaultSystems уже построил П1/В1 для пустых списков.
+                foreach (var system in row.Systems ?? new List<SystemRow>())
                 {
-                    var res = _ceilingService.PlaceForRoom(
-                        row.RoomId, polygon, row.Supply, roomAreaM2,
-                        HVACSystemType.Supply, catalog, "Приток",
-                        new CeilingPlacementOptions
-                        {
-                            CountRule = SupplyRule,
-                            FixedCount = FixedSupplyCount,
-                            Pattern = SupplyPattern,
-                            SingleRule = SingleDeviceRule
-                        });
-                    placements.AddRange(res.Placements);
-                    StoreKef(kefByKey, res, row.Supply);
-                    AddPatternEdge(patternEdges, res, snapRoom, "Приток");
-                    roomWarnings.AddRange(res.Warnings);
-                }
-
-                if (row.Exhaust > 0)
-                {
-                    var res = _ceilingService.PlaceForRoom(
-                        row.RoomId, polygon, row.Exhaust, roomAreaM2,
-                        HVACSystemType.Exhaust, catalog, "Вытяжка",
-                        new CeilingPlacementOptions
-                        {
-                            CountRule = ExhaustRule,
-                            Pattern = ExhaustPattern,
-                            SingleRule = SingleDeviceRule
-                        });
-                    placements.AddRange(res.Placements);
-                    StoreKef(kefByKey, res, row.Exhaust);
-                    AddPatternEdge(patternEdges, res, snapRoom, "Вытяжка");
-                    roomWarnings.AddRange(res.Warnings);
-
-                    // Grille dimensions from the equivalent diameter (C1.5).
-                    if (res.Placements.Count > 0)
+                    if (!system.IsIncluded || system.FlowM3h <= 0)
+                        continue;
+                    if (system.Type == HVACSystemType.Supply)
                     {
-                        var size = _grilleService.Size(
-                            row.Exhaust,
-                            new GrilleSizingOptions { VelocityMs = GrilleVelocityMs });
-                        row.Warning = size.Grilles.Count == 1
-                            ? $"решётка {size.Grilles[0].LengthMm:F0}×{size.Grilles[0].HeightMm:F0}"
-                            : $"{size.Grilles.Count} решётки по " +
-                              $"{size.Grilles[0].LengthMm:F0}×{size.Grilles[0].HeightMm:F0}";
+                        var res = _ceilingService.PlaceForRoom(
+                            row.RoomId, polygon, system.FlowM3h, roomAreaM2,
+                            HVACSystemType.Supply, catalog, system.Name,
+                            new CeilingPlacementOptions
+                            {
+                                CountRule = SupplyRule,
+                                FixedCount = FixedSupplyCount,
+                                Pattern = SupplyPattern,
+                                SingleRule = SingleDeviceRule
+                            });
+                        placements.AddRange(res.Placements);
+                        StoreKef(kefByKey, res, system.FlowM3h);
+                        AddPatternEdge(patternEdges, res, snapRoom, system.Name);
+                        roomWarnings.AddRange(res.Warnings);
+                    }
+                    else if (system.Type == HVACSystemType.Exhaust)
+                    {
+                        var res = _ceilingService.PlaceForRoom(
+                            row.RoomId, polygon, system.FlowM3h, roomAreaM2,
+                            HVACSystemType.Exhaust, catalog, system.Name,
+                            new CeilingPlacementOptions
+                            {
+                                CountRule = ExhaustRule,
+                                Pattern = ExhaustPattern,
+                                SingleRule = SingleDeviceRule
+                            });
+                        placements.AddRange(res.Placements);
+                        StoreKef(kefByKey, res, system.FlowM3h);
+                        AddPatternEdge(patternEdges, res, snapRoom, system.Name);
+                        roomWarnings.AddRange(res.Warnings);
+
+                        // Grille dimensions from the equivalent diameter (C1.5),
+                        // sized per exhaust system.
+                        if (res.Placements.Count > 0)
+                        {
+                            var size = _grilleService.Size(
+                                system.FlowM3h,
+                                new GrilleSizingOptions { VelocityMs = GrilleVelocityMs });
+                            grilleInfo.Add(
+                                $"{system.Name}: " + (size.Grilles.Count == 1
+                                    ? $"решётка {size.Grilles[0].LengthMm:F0}×{size.Grilles[0].HeightMm:F0}"
+                                    : $"{size.Grilles.Count} решётки по " +
+                                      $"{size.Grilles[0].LengthMm:F0}×{size.Grilles[0].HeightMm:F0}"));
+                        }
                     }
                 }
-                else
-                {
-                    row.Warning = "";
-                }
 
-                row.Warning = CombineExhaustInfo(roomWarnings, row.Warning);
+                row.Warning = string.Join("; ", grilleInfo);
+                if (roomWarnings.Count > 0)
+                    row.Warning = CombineExhaustInfo(roomWarnings, row.Warning);
                 AddWarnings(warnings, $"{row.Number}. {row.Name}", roomWarnings);
             }
 
@@ -696,9 +703,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                          $"Размещение: {placements.Count} приборов за {elapsedMs:F0} мс, " +
                          $"предупреждений: {warnings.Count}",
                 TotalDevices = placements.Count,
-                HeatingCount = placements.Count(p => p.SystemName == "Отопление"),
-                SupplyCount = placements.Count(p => p.SystemName == "Приток"),
-                ExhaustCount = placements.Count(p => p.SystemName == "Вытяжка"),
+                HeatingCount = placements.Count(p => p.Device.SystemType == HVACSystemType.Heating),
+                SupplyCount = placements.Count(p => p.Device.SystemType == HVACSystemType.Supply),
+                ExhaustCount = placements.Count(p => p.Device.SystemType == HVACSystemType.Exhaust),
                 ElapsedMs = elapsedMs,
                 IsCalculation = true
             };

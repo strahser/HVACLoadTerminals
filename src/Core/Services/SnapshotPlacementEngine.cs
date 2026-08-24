@@ -35,7 +35,8 @@ namespace HVACLoadTerminals.Core.Services
         public SnapshotBuildResult Build(
             RoomSnapshot snapshot,
             IReadOnlyList<TerminalDevice> catalog,
-            double minWindowLengthRatio = 0.6)
+            double minWindowLengthRatio = 0.6,
+            IReadOnlyDictionary<string, IReadOnlyList<HVACSystem>>? systemsByRoom = null)
         {
             if (snapshot == null)
                 throw new ArgumentNullException(nameof(snapshot));
@@ -90,22 +91,33 @@ namespace HVACLoadTerminals.Core.Services
                     AddWarnings(warnings, label, res.Warnings);
                 }
 
-                if (load.SupplyFlowM3h > 0)
+                // S2.1: placement per NAMED system of the room; no user systems →
+                // auto-default П1/В1 from the estimate (backward compatibility).
+                var systems = ResolveSystems(room.Id ?? "", load, systemsByRoom);
+                foreach (var system in systems)
                 {
-                    var res = _ceilingService.PlaceForRoom(
-                        room.Id ?? "", polygon, load.SupplyFlowM3h, room.Area,
-                        HVACSystemType.Supply, catalog, "Приток");
-                    placements.AddRange(res.Placements);
-                    AddWarnings(warnings, label, res.Warnings);
-                }
-
-                if (load.ExhaustFlowM3h > 0)
-                {
-                    var res = _ceilingService.PlaceForRoom(
-                        room.Id ?? "", polygon, load.ExhaustFlowM3h, room.Area,
-                        HVACSystemType.Exhaust, catalog, "Вытяжка");
-                    placements.AddRange(res.Placements);
-                    AddWarnings(warnings, label, res.Warnings);
+                    if (system.Type == HVACSystemType.Supply && system.FlowRate > 0)
+                    {
+                        var res = _ceilingService.PlaceForRoom(
+                            room.Id ?? "", polygon, system.FlowRate, room.Area,
+                            HVACSystemType.Supply, catalog, system.Name);
+                        placements.AddRange(res.Placements);
+                        AddWarnings(warnings, label, res.Warnings);
+                    }
+                    else if (system.Type == HVACSystemType.Exhaust && system.FlowRate > 0)
+                    {
+                        var res = _ceilingService.PlaceForRoom(
+                            room.Id ?? "", polygon, system.FlowRate, room.Area,
+                            HVACSystemType.Exhaust, catalog, system.Name);
+                        placements.AddRange(res.Placements);
+                        AddWarnings(warnings, label, res.Warnings);
+                    }
+                    else
+                    {
+                        warnings.Add(
+                            $"{label}: система «{system.Name}» типа {system.Type} " +
+                            $"с расходом {system.FlowRate:F0} м³/ч пропущена");
+                    }
                 }
 
                 if (placements.Count > before)
@@ -120,6 +132,25 @@ namespace HVACLoadTerminals.Core.Services
                 RoomsPlaced = roomsPlaced,
                 RoomsSkippedNoPolygon = skipped
             };
+        }
+
+        /// <summary>User systems of the room when given and non-empty; otherwise
+        /// the П1/В1 defaults derived from the load estimate.</summary>
+        private static IReadOnlyList<HVACSystem> ResolveSystems(
+            string roomId,
+            EstimatedRoomLoads load,
+            IReadOnlyDictionary<string, IReadOnlyList<HVACSystem>>? systemsByRoom)
+        {
+            if (systemsByRoom != null &&
+                systemsByRoom.TryGetValue(roomId, out var custom) &&
+                custom is { Count: > 0 })
+                return custom;
+            var defaults = new List<HVACSystem>();
+            if (load.SupplyFlowM3h > 0)
+                defaults.Add(new HVACSystem("П1", HVACSystemType.Supply, load.SupplyFlowM3h));
+            if (load.ExhaustFlowM3h > 0)
+                defaults.Add(new HVACSystem("В1", HVACSystemType.Exhaust, load.ExhaustFlowM3h));
+            return defaults;
         }
 
         private static void AddWarnings(
