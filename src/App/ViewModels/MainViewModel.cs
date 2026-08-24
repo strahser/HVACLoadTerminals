@@ -12,6 +12,7 @@ using HVACLoadTerminals.Infrastructure.Data;
 using HVACLoadTerminals.Infrastructure.Presentation;
 using HVACLoadTerminals.Infrastructure.Visualization;
 using OxyPlot;
+using OxyPlot.Annotations;
 using OxyPlot.Series;
 
 namespace HVACLoadTerminals.App.ViewModels
@@ -55,6 +56,36 @@ namespace HVACLoadTerminals.App.ViewModels
                 _selectedLevel = value;
                 OnPropertyChanged(nameof(SelectedLevel));
                 RoomsView.Refresh();
+                PlotLevel();
+            }
+        }
+
+        // ---- P4: раскраска плана и подписи комнат ----
+
+        /// <summary>Режимы раскраски приборов на плане (аналог SetColor прототипа).</summary>
+        public IReadOnlyList<string> PlanColorModes { get; } =
+            new[] { "По k_ef", "По системам" };
+
+        private string _selectedColorMode = "По k_ef";
+        public string SelectedColorMode
+        {
+            get => _selectedColorMode;
+            set
+            {
+                _selectedColorMode = value ?? "По k_ef";
+                OnPropertyChanged(nameof(SelectedColorMode));
+                PlotLevel();
+            }
+        }
+
+        private bool _showRoomLabels;
+        public bool ShowRoomLabels
+        {
+            get => _showRoomLabels;
+            set
+            {
+                _showRoomLabels = value;
+                OnPropertyChanged(nameof(ShowRoomLabels));
                 PlotLevel();
             }
         }
@@ -195,6 +226,9 @@ namespace HVACLoadTerminals.App.ViewModels
         public ICommand LoadProjectCommand { get; }
         public ICommand ExportHtmlCommand { get; }
         public ICommand ExportTaskCommand { get; }
+
+        /// <summary>P6: выгрузка Excel-отчёта (level_values + Приборы).</summary>
+        public ICommand ExportExcelCommand { get; }
         public ICommand EditCatalogCommand { get; }
 
         private PlotModel? _plotModel;
@@ -237,6 +271,8 @@ namespace HVACLoadTerminals.App.ViewModels
             ExportHtmlCommand = new RelayCommand(_ => ExportHtml());
             ExportTaskCommand = new RelayCommand(_ => ExportTask(), _ =>
                 Workspace.LastRawPlacements.Count > 0);
+            ExportExcelCommand = new RelayCommand(_ => ExportExcel(), _ =>
+                Placements.Count > 0);
             EditCatalogCommand = new RelayCommand(_ => EditCatalog());
 
             Workspace.ErrorSink = msg =>
@@ -442,43 +478,112 @@ namespace HVACLoadTerminals.App.ViewModels
                 ? Placements.ToList()
                 : Placements.Where(p => p.LevelName == SelectedLevel).ToList();
 
-            // U3.1: k_ef цветом на плане по порогам <0.6 / 0.6–0.9 / >0.9.
-            // Отопление (k_ef неприменимо) остаётся оранжевым; приборы без k_ef — серые.
-            var colorByKefStatus = new Dictionary<string, OxyColor>
+            if (SelectedColorMode == "По системам")
             {
-                ["low"] = OxyColor.FromRgb(230, 126, 34),   // недогруз <0.6
-                ["ok"] = OxyColor.FromRgb(30, 142, 62),     // норма 0.6–0.9
-                ["high"] = OxyColor.FromRgb(217, 48, 37)    // перегруз >0.9
-            };
-            string kefLabel(string status) => status switch
-            {
-                "low" => "недогруз (<0.6)",
-                "ok" => "норма (0.6–0.9)",
-                "high" => "перегруз (>0.9)",
-                _ => ""
-            };
-
-            foreach (var group in rows.GroupBy(p =>
-                         p.SystemName == "Отопление" ? "" : p.KefStatus))
-            {
-                string status = group.Key;
-                bool isHeatingGroup = group.All(p => p.SystemName == "Отопление");
-                var scatter = new ScatterSeries
+                // P4: цвет = система (аналог SetColor прототипа): канонические цвета
+                // классов + палитра для именованных П1/П2/В1…
+                var palette = new[]
                 {
-                    MarkerType = MarkerType.Circle,
-                    MarkerSize = 6,
-                    MarkerFill =
-                        status.Length == 0 && isHeatingGroup
-                            ? OxyColors.Orange
-                            : colorByKefStatus.TryGetValue(status, out var kc)
-                                ? kc : OxyColors.Blue,
-                    Title = status.Length == 0
-                        ? (isHeatingGroup ? "Отопление" : "Приток/Вытяжка · без k_ef")
-                        : $"Приток/Вытяжка · k_ef {kefLabel(status)}"
+                    OxyColors.Red, OxyColors.Green, OxyColors.Blue,
+                    OxyColors.Purple, OxyColors.HotPink, OxyColors.Teal,
+                    OxyColors.Brown, OxyColors.Olive, OxyColors.SteelBlue
                 };
-                foreach (var p in group)
-                    scatter.Points.Add(new ScatterPoint(p.X, p.Y));
-                model.Series.Add(scatter);
+                var bySystem = new Dictionary<string, OxyColor>();
+                int idx = 0;
+                foreach (var name in rows.Select(p => p.SystemName).Distinct())
+                {
+                    bySystem[name] = name == "Отопление"
+                        ? OxyColors.Orange
+                        : palette[idx++ % palette.Length];
+                }
+
+                foreach (var group in rows.GroupBy(p => p.SystemName))
+                {
+                    var scatter = new ScatterSeries
+                    {
+                        MarkerType = MarkerType.Circle,
+                        MarkerSize = 6,
+                        MarkerFill = bySystem[group.Key],
+                        Title = $"{group.Key} · {group.Count()} шт"
+                    };
+                    foreach (var p in group)
+                        scatter.Points.Add(new ScatterPoint(p.X, p.Y));
+                    model.Series.Add(scatter);
+                }
+            }
+            else
+            {
+                // U3.1: k_ef цветом на плане по порогам <0.6 / 0.6–0.9 / >0.9.
+                // Отопление (k_ef неприменимо) остаётся оранжевым; приборы без k_ef — серые.
+                var colorByKefStatus = new Dictionary<string, OxyColor>
+                {
+                    ["low"] = OxyColor.FromRgb(230, 126, 34),   // недогруз <0.6
+                    ["ok"] = OxyColor.FromRgb(30, 142, 62),     // норма 0.6–0.9
+                    ["high"] = OxyColor.FromRgb(217, 48, 37)    // перегруз >0.9
+                };
+                string kefLabel(string status) => status switch
+                {
+                    "low" => "недогруз (<0.6)",
+                    "ok" => "норма (0.6–0.9)",
+                    "high" => "перегруз (>0.9)",
+                    _ => ""
+                };
+
+                foreach (var group in rows.GroupBy(p =>
+                             p.SystemName == "Отопление" ? "" : p.KefStatus))
+                {
+                    string status = group.Key;
+                    bool isHeatingGroup = group.All(p => p.SystemName == "Отопление");
+                    var scatter = new ScatterSeries
+                    {
+                        MarkerType = MarkerType.Circle,
+                        MarkerSize = 6,
+                        MarkerFill =
+                            status.Length == 0 && isHeatingGroup
+                                ? OxyColors.Orange
+                                : colorByKefStatus.TryGetValue(status, out var kc)
+                                    ? kc : OxyColors.Blue,
+                        Title = status.Length == 0
+                            ? (isHeatingGroup ? "Отопление" : "Приток/Вытяжка · без k_ef")
+                            : $"Приток/Вытяжка · k_ef {kefLabel(status)}"
+                    };
+                    foreach (var p in group)
+                        scatter.Points.Add(new ScatterPoint(p.X, p.Y));
+                    model.Series.Add(scatter);
+                }
+            }
+
+            // P4: подписи комнат — № · площадь · Σрасход систем комнаты.
+            if (ShowRoomLabels)
+            {
+                foreach (var room in snapshot.Rooms)
+                {
+                    if (!allLevels && room.LevelName != SelectedLevel)
+                        continue;
+                    var polygon = room.ToPolygon();
+                    if (polygon == null)
+                        continue;
+
+                    double roomFlow = rows
+                        .Where(p => p.RoomName.StartsWith($"{room.Number}. ", StringComparison.Ordinal))
+                        .Sum(p => p.CalculatedFlow);
+                    string label = string.Format("{0} · {1:F0} м²", room.Number, room.Area);
+                    if (roomFlow > 0)
+                        label += $"\n{roomFlow:F0} м³/ч";
+
+                    model.Annotations.Add(new TextAnnotation
+                    {
+                        Text = label,
+                        TextPosition = new DataPoint(
+                            polygon.Center.X * mmPerFoot, polygon.Center.Y * mmPerFoot),
+                        TextHorizontalAlignment = HorizontalAlignment.Center,
+                        TextVerticalAlignment = VerticalAlignment.Middle,
+                        FontSize = 9,
+                        TextColor = OxyColors.Black,
+                        Stroke = OxyColors.Transparent,
+                        Background = OxyColor.FromArgb(160, 255, 255, 255)
+                    });
+                }
             }
 
             PlotModel = model;
@@ -642,6 +747,42 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 StatusMessage = "Ошибка экспорта задания: " + ex.Message;
                 AppLogger.Error("ExportTask failed", ex);
+            }
+        }
+
+        /// <summary>P6: выгрузка результатов в Excel (листы «level_values» и
+        /// «Приборы») — аналог вкладки Downloads прототипа.</summary>
+        private void ExportExcel()
+        {
+            if (Placements.Count == 0)
+            {
+                StatusMessage = "Рассчитайте размещение перед экспортом в Excel";
+                return;
+            }
+
+            try
+            {
+                string snapshotName = System.IO.Path.GetFileNameWithoutExtension(
+                    string.IsNullOrEmpty(Workspace.SnapshotPath)
+                        ? "placement"
+                        : Workspace.SnapshotPath);
+                var dlg = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Экспорт результатов в Excel",
+                    Filter = "Книга Excel (*.xlsx)|*.xlsx|Все файлы|*.*",
+                    FileName = snapshotName + "_отчёт.xlsx"
+                };
+                if (dlg.ShowDialog() != true)
+                    return;
+
+                PlacementExcelExporter.Save(dlg.FileName, Placements.ToList());
+                StatusMessage = $"Excel сохранён: {dlg.FileName} ({Placements.Count} приборов)";
+                AppLogger.Info("Placement excel exported: " + dlg.FileName);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка экспорта Excel: " + ex.Message;
+                AppLogger.Error("ExportExcel failed", ex);
             }
         }
 

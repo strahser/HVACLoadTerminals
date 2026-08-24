@@ -753,6 +753,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 result.Add(new PlacementRow
                 {
                     // U3.1: «№. Имя» вместо внутреннего Id + уровень комнаты.
+                    RoomId = p.RoomId,
                     RoomName = room == null
                         ? p.RoomId
                         : $"{room.Number}. {room.Name}",

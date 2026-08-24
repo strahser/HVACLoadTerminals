@@ -121,6 +121,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
     /// <summary>One computed device position with the loading factor.</summary>
     public class PlacementRow : INotifyPropertyChanged
     {
+        /// <summary>P6: идентификатор комнаты (S_ID прототипа).</summary>
+        public string RoomId { get; set; } = "";
+
         public string RoomName { get; set; } = "";
         public string LevelName { get; set; } = "";
         public string Family { get; set; } = "";

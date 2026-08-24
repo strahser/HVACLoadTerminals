@@ -230,8 +230,12 @@
                     🌐 HTML
                 </Button>
                 <Button Command="{Binding ExportTaskCommand}"
-                        ToolTip="JSON-задание в формате прототипа: S_ID, system_name, instance_points (мм)">
+                        ToolTip="JSON в схеме прототипа (S_ID/system_name/instance_points, мм)">
                     ⬇ Задание JSON
+                </Button>
+                <Button Command="{Binding ExportExcelCommand}" Margin="3"
+                        ToolTip="Excel-отчёт: лист level_values (сводка по помещениям×системам) + лист Приборы">
+                    ⬇ Excel
                 </Button>
                 <Button Command="{Binding SaveProjectCommand}" Content="💾 Сохранить проект"/>
                 <Button Command="{Binding LoadProjectCommand}" Content="📂 Загрузить проект"/>
@@ -334,14 +338,22 @@
                         BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                         CornerRadius="6" Padding="6">
                     <DockPanel>
-                        <DockPanel DockPanel.Dock="Top" Margin="4,4,4,6">
-                            <TextBlock FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextDark}">План уровня:</TextBlock>
-                            <ComboBox ItemsSource="{Binding Levels}"
-                                      SelectedItem="{Binding SelectedLevel}"
-                                      Width="170" Margin="8,0,0,0"
-                                      HorizontalAlignment="Left"/>
-                        </DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="4,4,4,6">
+                        <TextBlock FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextDark}">План уровня:</TextBlock>
+                        <ComboBox ItemsSource="{Binding Levels}"
+                                  SelectedItem="{Binding SelectedLevel}"
+                                  Width="150" Margin="8,0,0,0"
+                                  HorizontalAlignment="Left"/>
+                        <!-- P4: раскраска приборов и легенда -->
+                        <TextBlock Text="Цвета:" VerticalAlignment="Center" Margin="14,0,4,0"
+                                   Foreground="{StaticResource TextMuted}"/>
+                        <ComboBox ItemsSource="{Binding PlanColorModes}"
+                                  SelectedItem="{Binding SelectedColorMode}"
+                                  Width="120" VerticalContentAlignment="Center"/>
+                        <CheckBox Content="Подписи комнат" IsChecked="{Binding ShowRoomLabels}"
+                                  VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </DockPanel>
                         <oxy:PlotView Model="{Binding PlotModel}"/>
                     </DockPanel>
                 </Border>
