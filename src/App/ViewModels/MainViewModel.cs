@@ -194,6 +194,7 @@ namespace HVACLoadTerminals.App.ViewModels
         public ICommand SaveProjectCommand { get; }
         public ICommand LoadProjectCommand { get; }
         public ICommand ExportHtmlCommand { get; }
+        public ICommand ExportTaskCommand { get; }
         public ICommand EditCatalogCommand { get; }
 
         private PlotModel? _plotModel;
@@ -234,6 +235,8 @@ namespace HVACLoadTerminals.App.ViewModels
             SaveProjectCommand = new RelayCommand(_ => SaveProject());
             LoadProjectCommand = new RelayCommand(_ => LoadProject());
             ExportHtmlCommand = new RelayCommand(_ => ExportHtml());
+            ExportTaskCommand = new RelayCommand(_ => ExportTask(), _ =>
+                Workspace.LastRawPlacements.Count > 0);
             EditCatalogCommand = new RelayCommand(_ => EditCatalog());
 
             Workspace.ErrorSink = msg =>
@@ -596,6 +599,49 @@ namespace HVACLoadTerminals.App.ViewModels
             catch (Exception ex)
             {
                 StatusMessage = "Ошибка экспорта HTML: " + ex.Message;
+            }
+        }
+
+        private void ExportTask()
+        {
+            if (Workspace.LastRawPlacements.Count == 0 ||
+                Workspace.CurrentSnapshot == null)
+            {
+                StatusMessage = "Рассчитайте размещение перед экспортом задания";
+                return;
+            }
+
+            try
+            {
+                string snapshotName = System.IO.Path.GetFileNameWithoutExtension(
+                    string.IsNullOrEmpty(Workspace.SnapshotPath)
+                        ? "placement"
+                        : Workspace.SnapshotPath);
+                var dlg = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Экспорт задания JSON (формат прототипа)",
+                    Filter = "Задание (*.json)|*.json|Все файлы|*.*",
+                    FileName = snapshotName + "_task.json"
+                };
+                if (dlg.ShowDialog() != true)
+                    return;
+
+                var levelOffsets = Workspace.CurrentSnapshot.Rooms
+                    .Where(r => r.Id != null)
+                    .GroupBy(r => r.Id)
+                    .ToDictionary(g => g.Key, g => g.First().LevelElevation);
+                PlacementTaskExporter.Save(
+                    dlg.FileName,
+                    PlacementTaskExporter.Build(
+                        Workspace.LastRawPlacements, levelOffsets));
+
+                StatusMessage = "Задание сохранено: " + dlg.FileName;
+                AppLogger.Info("Placement task exported: " + dlg.FileName);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка экспорта задания: " + ex.Message;
+                AppLogger.Error("ExportTask failed", ex);
             }
         }
 

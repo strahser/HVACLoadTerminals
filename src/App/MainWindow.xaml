@@ -229,6 +229,10 @@
                         ToolTip="Самодостаточный HTML со схемой и таблицей">
                     🌐 HTML
                 </Button>
+                <Button Command="{Binding ExportTaskCommand}"
+                        ToolTip="JSON-задание в формате прототипа: S_ID, system_name, instance_points (мм)">
+                    ⬇ Задание JSON
+                </Button>
                 <Button Command="{Binding SaveProjectCommand}" Content="💾 Сохранить проект"/>
                 <Button Command="{Binding LoadProjectCommand}" Content="📂 Загрузить проект"/>
 
