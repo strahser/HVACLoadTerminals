@@ -1,391 +1,110 @@
 # HVAC Load Terminals
 
-Подбор и расстановка воздухораспределительных устройств (ВРУ) в помещениях по известной нагрузке (расход воздуха, приток, вытяжка, холодильная нагрузка) с превью в HTML и в Revit с отменой транзакции.
+Универсальная расстановка приборов вентиляции и отопления — приточные/вытяжные
+диффузоры и решётки, фанкойлы, отопительные приборы (радиаторы/конвекторы) —
+по нагрузке (расход воздуха, мощность) с офлайн-стендом WPF, интерактивным
+HTML-превью (WebView2) и записью в модель Revit 2024.
+
+Данные помещений берутся из **снимка HeatLossRevit2** (`snapshots_raw\*.json`) —
+работа без открытой модели Revit; нагрузки автогенерируются (100 Вт/м²,
+кратности по назначению помещения).
 
 ## Архитектура
 
-Проект построен по принципу чистой архитектуры: ядро (Core) не зависит от Revit/WPF, инфраструктура реализует интерфейсы, Revit и App — адаптеры.
+Чистая архитектура: ядро не зависит от Revit/WPF; App и Revit — два хоста
+над одним ядром и одним presenter'ом.
 
 ```
-Core ← Infrastructure ← App / Revit
+Core  ←  Infrastructure  ←  App (WPF) / Revit 2024 add-in
+                ↑
+          Core.Tests (xUnit)
 ```
-
-### Слои
 
 | Слой | Проект | Назначение |
 |------|--------|------------|
-| **Core** | HVACLoadTerminals.Core | Чистая доменная логика (C#, .NET 4.8). Модели, сервисы, интерфейсы. Нет зависимостей от Revit/WPF |
-| **Infrastructure** | HVACLoadTerminals.Infrastructure | Реализации: сериализация сцены, HTML-экспортёр, локальный HTTP-сервер, визуализация OxyPlot, хранилище JSON/SQLite |
-| **App** | HVACLoadTerminals.App | Desktop WPF-приложение для автономного тестирования без Revit |
-| **Revit** | HVACLoadTerminals.Revit | Revit 2024 add-in: команды, сервисы Revit API, тест-раннер |
+| **Core** | `src\Core` | Доменная логика (.NET Framework 4.8, без Revit/WPF): геометрия Clipper2, расчёт количества, подбор типоразмера, размещение трёх классов приборов, автогенерация нагрузок |
+| **Infrastructure** | `src\Infrastructure` | Загрузчик снимка, JSON/SQLite-каталоги, presenter рабочего места (`SnapshotWorkspacePresenter`), HTML-экспортёр + WebView2-хост, OxyPlot |
+| **App** | `src\App` | Автономный WPF-стенд «Снимок помещений» (без Revit) |
+| **Revit** | `src\Revit` | Add-in Revit 2024: команды ленты, стенд расстановки, запись FamilyInstance |
+| **Tests** | `src\Core.Tests` | xUnit-тесты ядра и presenter'а |
 
-### Зависимости
+## Рабочий стенд «Снимок помещений» (App)
 
-```
-Core (чистая C#)
-  ↑
-Infrastructure (реализации)
-  ↑        ↑
-App (WPF)  Revit (API)
-```
+1. **① Открыть снимок…** — JSON из `%AppData%\HeatLossRevit2\data\snapshots_raw\`;
+   нагрузки подставляются автоматически.
+2. Таблица помещений: фильтр по уровню, чекбокс «Включено» (групповые операции
+   «Включить уровень» / «Только видимые»), inline-правка Q и расходов,
+   «Живой пересчёт» с debounce ~300 мс.
+3. Правила расстановки:
+   - режимы количества: `Auto` / `ByArea` / `ByFlow` / `Fixed`;
+   - паттерны массовой расстановки (`WallPattern`): `CeilingGrid` (сетка по потолку),
+     `LongSide`, `ShortSide`, `Explicit`; дефолт владельца — приток вдоль длинной
+     стороны, вытяжка вдоль короткой;
+   - правило одиночного прибора (`SingleRule`): `Center` / `Corner`;
+   - доля длины приборов от ширины окна (по умолчанию 0.6), скорость решётки v;
+4. **▶ РАССЧИТАТЬ** — отопление под каждым окном, приток/вытяжка по паттернам;
+   план OxyPlot с подсветкой выбранной стороны и k_ef цветом; координаты в мм.
+5. **🌐 HTML** — интерактивное превью в общем WebView2-хосте (офлайн `file://`,
+   мост postMessage, Recompute); фолбэк — локальный HTTP-сервер + браузер.
+6. **💾/📂 Проект** (`*.hvacproj.json`) — round-trip состояния вместе с флагами комнат.
+7. **🗂 Каталог приборов…** — офлайн CRUD-редактор типоразмеров
+   (`%AppData%\HVACLoadTerminals\catalog.json`; seed при первом запуске —
+   `CatalogFactory`, 14 типоразмеров).
 
-## Возможности
+## Revit 2024 add-in
 
-### Режимы количества
+Вкладка **HVAC Terminals**, панель **Placement**:
 
-| Режим | Описание | Параметры |
-|-------|----------|-----------|
-| `ByCalculation` | Автоматический расчёт: `ceil(нагрузка / мощность прибора)` | — |
-| `ByCount` | Заданное точное количество | `FixedCount` |
-| `ByStep` | Начиная от минимума с шагом | `StepCount`, `MaxCount` |
+| Кнопка | Команда | Назначение |
+|--------|---------|------------|
+| Place\nTerminals | `PlaceTerminalsCommand` | WPF-окно подбора по MEP Spaces (автономный режим) |
+| Review\nPlacement | `ReviewPlacementCommand` | Модельные линии контуров Space на плане |
+| Export\nRooms | `ExportRoomDataCommand` | Экспорт геометрии/систем Space в JSON |
+| Mass\nPlacement | `RevitHtmlPlacementCommand` | Массовая расстановка всех Spaces: HTML+Revit превью, Place/Cancel (rollback) |
+| Individual\nPlacement | `RevitIndividualPlacementCommand` | Только выделенные Spaces |
+| По снимку\nпомещений | `ImportSnapshotPlacementCommand` | Снимок → расчёт ядром → запись трёх классов приборов; идемпотентность маркером `HLT\|<DocumentTitle>\|<roomId>\|<systemName>` в «Комментариях» (Пропустить/Заменить/Всё) |
+| Стенд\nрасстановки | `SnapshotStandCommand` | Modeless-окно стенда (паритет с App); запись через ExternalEvent без блокировки Revit |
+| Run\nTests | `RevitTestRunnerCommand` | In-process тесты Revit API, JSON-отчёт в `%LocalAppData%\HVACLoadTerminals\TestResults\` |
 
-### Параметры размещения
+## Ключевые сервисы ядра
 
-| Параметр | Тип | Описание |
-|----------|-----|----------|
-| `WallOffsetMm` | double | Расстояние от стены до центра прибора (мм, по умолчанию 500) |
-| `SidePreference` | enum | Сторона размещения: `Any`, `LongSide`, `ShortSide` |
-| `CoordinateSystem` | enum | Условная система координат: `Auto`, `Bottom`, `Right`, `Top`, `Left` |
-| `SpacingMm` | double | Расстояние между приборами (0 = авто, равномерно) |
-| `StartOffsetMm` | double | Отступ от краёв стены (мм) |
-
-### Геометрические операции (Clipper2)
-
-- Смещение полигона внутрь (OffsetInward) с точностью Clipper2
-- Объединение, разность, очистка полигонов
-- Классификация рёбер: длина, ориентация, внутренние нормали
-- Выбор.primary стены по предпочтению (длинная/короткая)
-
-### Визуализация
-
-- **HTML-превью**: интерактивный 2D Canvas + опциональный Three.js 3D (CDN)
-- **WPF OxyPlot**: полигоны, смещённые контуры, точки размещения
-- **Revit-превью**: маркеры + модальный диалог Place/Cancel (rollback транзакции)
-
-### Автосбор семейств из Revit
-
-- Категории: `OST_DuctTerminal` (воздухораспределители), `OST_MechanicalEquipment` (фанкойлы)
-- Параметры: Air Flow / Cooling Capacity / Width / Height (RU + EN имена)
-- Классификация по типу системы (Supply/Exhaust/FanCoil/Cooling)
-
-### Массовая и индивидуальная расстановка
-
-- **Mass Placement**: все MEP Spaces в модели, автоматически
-- **Individual Placement**: только выделенные помещения
-
-## Возможности (детально)
-
-### Выбор стороны (SidePreference)
-
-| Значение | Поведение |
-|----------|-----------|
-| `Any` | Выбирается первое доступное ребро |
-| `LongSide` | Приоритет длинным рёбрам (top/bottom) |
-| `ShortSide` | Приоритет коротким рёбрам (left/right) |
-
-### Условная система координат (CoordinateSystem)
-
-| Значение | Поведение |
-|----------|-----------|
-| `Auto` | Автоматический выбор по нормали к primary ребру |
-| `Bottom` | Приборы вдоль нижней стены |
-| `Right` | Приборы вдоль правой стены |
-| `Top` | Приборы вдоль верхней стены |
-| `Left` | Приборы вдоль левой стены |
-
-### Вращение приборов
-
-Прибор поворачивается так, чтобы его передняя часть (front face) была направлена внутрь помещения. Угол вычисляется через `Math.Atan2(normal.Y, normal.X)`.
-
-### Цвета систем
-
-| Система | Цвет |
-|---------|------|
-| Supply (приток) | Красный |
-| Exhaust (вытяжка) | Зелёный |
-| FanCoil (фанкойл) | Оранжевый |
-| Cooling (охлаждение) | Синий |
+| Сервис | Назначение |
+|--------|------------|
+| `SnapshotPlacementEngine` | Конвейер «снимок → нагрузки → размещение» для App и Revit |
+| `LoadsEstimatorService` | Автогенерация нагрузок: Q = S×100 Вт/м² (угловые ×1.1), вентиляция по назначению/кратностям |
+| `HeatingPlacementService` | Отопительный прибор под каждым окном; суммарная длина ≥60 % ширины окна; fallback — длиннейшая наружная стена |
+| `CeilingPlacementService` | Потолочная сетка по площади обслуживания (Clipper2 offset), паттерны LongSide/ShortSide, min distance, SingleRule |
+| `TerminalPlacementService` | Настенное размещение вдоль рёбер (SidePreference, CoordinateSystem, SpacingMm) |
+| `QuantityCalculator` | Режимы ByCalculation/ByCount/ByStep/ByArea/ByLength/Auto |
+| `TerminalSelectionService` | Подбор типоразмера: мин. количество → мин. запас; коэффициент загрузки k_ef (<0.6 недогруз … >0.9 перегруз) |
+| `GrilleSizingService` | Геометрия решёток из эквивалентного диаметра: H = max(D−200; √(A/3); 100 мм), аспект ≤3, разбивка на N штук |
+| `RoomGeometryAnalyzer` / `PolygonOffsetService` | Классификация рёбер, внутренний офсет полигона (Clipper2) |
 
 ## Сборка
 
-### Требования
+Требования: .NET Framework 4.8, MSBuild (VS 2022), для Revit-проекта —
+Revit 2024 (`RevitAPI.dll` из `C:\Program Files\Autodesk\Revit 2024`).
+NuGet: Clipper2, xUnit, Newtonsoft.Json, OxyPlot.Wpf, Microsoft.Web.WebView2.
 
-- Visual Studio 2022 (Community/Professional) с MSBuild 17
-- .NET Framework 4.8 SDK (SDK-style проекты)
-- NuGet-кэш (офлайн): Clipper2 2.0.0, xUnit 2.5.3, Newtonsoft.Json 13.0.3, OxyPlot.Wpf 2.1.2
-
-### Команды сборки
-
-```bash
-# Сборка всего решения (Debug)
+```bat
+:: Полное решение (4 проекта, включая Revit)
 "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" ^
   HVACLoadTerminals.sln /t:Build /p:Configuration=Debug /v:m /nologo
 
-# Сборка только Core
-"C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" ^
-  src\Core\HVACLoadTerminals.Core.csproj /t:Build /p:Configuration=Debug /v:m /nologo
-
-# Сборка только Revit
-"C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" ^
-  src\Revit\HVACLoadTerminals.Revit.csproj /t:Build /p:Configuration=Debug /v:m /nologo
-
-# Сборка только App
-"C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" ^
-  src\App\HVACLoadTerminals.App.csproj /t:Build /p:Configuration=Debug /v:m /nologo
-
-# Запуск тестов Core (xUnit)
-"C:\Program Files\dotnet\dotnet.exe" test src\Core.Tests\HVACLoadTerminals.Core.Tests.csproj --nologo -v q
+:: Быстрая проверка без Revit SDK: ядро + тесты
+dotnet build src\Core.Tests\HVACLoadTerminals.Core.Tests.csproj --nologo -v q
+dotnet test  src\Core.Tests\HVACLoadTerminals.Core.Tests.csproj --nologo -v q
 ```
 
-### Структура вывода
+## Установка в Revit
 
-```
-src/Core/bin/Debug/net48/HVACLoadTerminals.Core.dll
-src/Infrastructure/bin/Debug/net48/HVACLoadTerminals.Infrastructure.dll
-src/App/bin/Debug/net48/HVACLoadTerminals.App.exe
-src/Revit/bin/Debug/net48/HVACLoadTerminals.Revit.dll
-```
+1. Собрать `HVACLoadTerminals.Revit.dll`.
+2. Скопировать `src\Revit\HVACLoadTerminals.addin` в `%APPDATA%\Autodesk\Revit\Addins\2024\`
+   (при необходимости поправить путь к DLL внутри).
+3. Запустить Revit 2024 — вкладка «HVAC Terminals».
 
-## Установка в Revit 2024
+## Лицензии
 
-### Содержимое addin-файла
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<RevitAddIns>
-  <AddIn Type="Application">
-    <Name>HVAC Load Terminals</Name>
-    <Assembly>HVACLoadTerminals.Revit.dll</Assembly>
-    <AddInId>A1B2C3D4-E5F6-7890-ABCD-EF1234567890</AddInId>
-    <FullClassName>HVACLoadTerminals.Revit.Application</FullClassName>
-    <VendorId>HVACTerminals</VendorId>
-    <VendorDescription>HVAC Terminals Project</VendorDescription>
-  </AddIn>
-</RevitAddIns>
-```
-
-### Установка
-
-1. Собрать `HVACLoadTerminals.Revit.dll` (см. раздел "Сборка")
-2. Скопировать `src\Revit\HVACLoadTerminals.addin` в:
-   ```
-   %APPDATA%\Autodesk\Revit\Addins\2024\
-   ```
-3. При необходимости отредактировать путь к DLL в `.addin` файле
-4. Запустить Revit 2024 — вкладка "HVAC Terminals" появится на ленте
-
-### Вкладка "HVAC Terminals"
-
-| Кнопка | Команда | Описание |
-|--------|---------|----------|
-| **Place Terminals** | `PlaceTerminalsCommand` | Открывает WPF-окно с OxyPlot для подбора (автономный режим) |
-| **Review Placement** | `ReviewPlacementCommand` | Рисует модельные линии на плане этажа (выберите Space) |
-| **Export Rooms** | `ExportRoomDataCommand` | Экспорт геометрии и систем Space в JSON |
-| **Mass Placement** | `RevitHtmlPlacementCommand` | Массовая расстановка всех Spaces: HTML-превью + Revit-превью + Place/Cancel |
-| **Individual Placement** | `RevitIndividualPlacementCommand` | Расстановка только выделенных Spaces |
-| **Run Tests** | `RevitTestRunnerCommand` | Запуск автотестов в Revit, JSON-отчёт |
-
-## Тесты
-
-### Core.Tests (xUnit, 33 теста)
-
-| Файл | Тесты | Описание |
-|------|-------|----------|
-| `GeometryTests.cs` | Геометрические операции | Clipper2: offset, union, difference, clean polygon |
-| `QuantityCalculatorTests.cs` | Расчёт количества | ByCalculation, ByCount, ByStep, edge cases |
-| `RoomGeometryAnalyzerTests.cs` | Анализ рёбер | Классификация, выбор primary ребра, координатная система |
-| `PlacementServiceTests.cs` | Интеграционные тесты | Расстановка: количество, позиции, смещение, вращение, фильтрация |
-
-```bash
-# Запуск всех тестов
-"C:\Program Files\dotnet\dotnet.exe" test src\Core.Tests\HVACLoadTerminals.Core.Tests.csproj --nologo -v q
-
-# Ожидаемый результат: 33 passed, 0 failed
-```
-
-### Revit-тесты (in-process, через RunTests)
-
-| Фикстура | Тесты | Описание |
-|-----------|-------|----------|
-| `SpaceExtractionFixture` | Rooms_AreExtracted, Polygon_IsValid | Извлечение комнат из модели |
-| `FamilyCatalogFixture` | Families_AreCollected, FlowParam_Mapped, SystemType_Classified | Автосбор каталога семейств |
-| `PlacementFixture` | Quantity_ByCalculation, Positions_InsidePolygon, Offset_500mm, Rotation_MatchesNormal | Расстановка (чистый C# + Revit) |
-| `PreviewRollbackFixture` | Preview_RequiresStartedTransaction, Preview_NullUIDoc_Throws | Превью и откат транзакции |
-
-Запуск: кнопка **Run Tests** на вкладке "HVAC Terminals".
-Отчёт: `%LocalAppData%\HVACLoadTerminals\TestResults\revit-tests-<timestamp>.json`
-
-## Использование
-
-### Типовой сценарий (Revit)
-
-1. Открыть модель Revit 2024 с MEP Spaces
-2. (Опционально) **Run Tests** — проверить работоспособность
-3. **Mass Placement** — расстановка по всем Spaces:
-   - Автосбор семейств из модели
-   - Расчёт количества и позиций
-   - HTML-превью в браузере (Canvas2D + Three.js)
-   - Revit-превью с маркерами
-   - **Place** =.commit, **Cancel** =rollback (ничего не остаётся)
-4. Или **Individual Placement** — только для выделенных Spaces
-
-### Типовой сценарий (Desktop App)
-
-1. Запустить `src\App\bin\Debug\net48\HVACLoadTerminals.App.exe`
-2. Загружаются демо-данные (комнаты + каталог приборов)
-3. Выбрать комнату в списке
-4. **Calculate Placement** — расчёт + визуализация на OxyPlot
-5. **Show All Rooms** — показать все комнаты
-6. **Export/Import to JSON** — сохранение/загрузка данных
-
-### Структура каталога
-
-```
-HVACLoadTerminals/
-├── src/
-│   ├── Core/
-│   │   ├── Models/
-│   │   │   ├── Point2D.cs                    # Геометрическая точка
-│   │   │   ├── Polygon2D.cs                  # Полигон (с ContainsPoint, GetMinDistanceToEdge)
-│   │   │   ├── RoomPolygon.cs                # Помещение с полигоном и системами
-│   │   │   ├── HVACSystem.cs                 # Система (тип, расход, нагрузка)
-│   │   │   ├── HVACSystemType.cs             # Enum: Supply/Exhaust/FanCoil/Cooling
-│   │   │   ├── TerminalDevice.cs              # Прибор из каталога
-│   │   │   ├── DevicePlacement.cs            # Размещённый прибор (координаты, вращение)
-│   │   │   ├── PlacementResult.cs            # Результат расчёта
-│   │   │   ├── PlacementOptions.cs           # Параметры размещения
-│   │   │   ├── PlacementMode.cs              # Enum: ByCalculation/ByCount/ByStep
-│   │   │   ├── PlacementSide.cs              # Enum: Any/LongSide/ShortSide
-│   │   │   ├── CoordinateSystem.cs           # Enum: Auto/Bottom/Right/Top/Left
-│   │   │   ├── RoomPlacementRequest.cs       # Запрос на расстановку
-│   │   │   └── RoomPlacementConfig.cs        # Конфигурация для помещения
-│   │   ├── Services/
-│   │   │   ├── ClipperGeometryService.cs     # Обёртка Clipper2 (offset, union, difference)
-│   │   │   ├── PolygonOffsetService.cs       # Смещение полигона внутрь (Clipper2)
-│   │   │   ├── RoomGeometryAnalyzer.cs       # Классификация рёбер, выбор primary
-│   │   │   ├── QuantityCalculator.cs         # Расчёт количества (3 режима)
-│   │   │   ├── TerminalSelectionService.cs   # Подбор оптимального прибора
-│   │   │   ├── TerminalPlacementService.cs   # Оркестрация расстановки
-│   │   │   └── LengthUnitConverter.cs        # Конвертация мм ↔ единицы Revit
-│   │   └── Interfaces/
-│   │       ├── IRoomGeometryProvider.cs      # Получение полигонов помещений
-│   │       ├── ITerminalCatalogRepository.cs # Каталог приборов
-│   │       ├── ITerminalPlacementService.cs  # Сервис расстановки
-│   │       ├── IPolygonVisualizer.cs         # Визуализация
-│   │       └── IDevicePlacer.cs              # Физическая установка
-│   ├── Infrastructure/
-│   │   ├── Data/
-│   │   │   ├── JsonRoomDataStore.cs          # Хранилище JSON
-│   │   │   └── SQLiteTerminalCatalogRepository.cs  # Каталог SQLite
-│   │   ├── Services/
-│   │   │   └── DemoRoomDataService.cs        # Демо-данные
-│   │   └── Visualization/
-│   │       ├── PlacementSceneSerializer.cs   # Сериализация сцены в JSON
-│   │       ├── HtmlSceneExporter.cs          # Экспорт в HTML5 (Canvas2D + Three.js)
-│   │       ├── HtmlPreviewServer.cs          # Локальный HTTP-сервер (preview bridge)
-│   │       ├── IHtmlPreviewHost.cs           # Интерфейс хоста превью
-│   │       └── OxyPlotVisualizer.cs          # Визуализация OxyPlot.Wpf
-│   ├── App/
-│   │   ├── MainWindow.xaml                   # WPF окно (OxyPlot + панель)
-│   │   ├── MainWindow.xaml.cs
-│   │   ├── ViewModels/
-│   │   │   ├── MainViewModel.cs              # ViewModel (комнаты, расстановка)
-│   │   │   └── RelayCommand.cs               # Команда WPF
-│   │   └── Commands/
-│   │       └── OpenHtmlPreviewCommand.cs      # Команда открытия HTML-превью (общий WebView2-хост)
-│   └── Revit/
-│       ├── Application.cs                    # IExternalApplication (лента, кнопки)
-│       ├── HVACLoadTerminals.addin            # Revit addin-манифест
-│       ├── Commands/
-│       │   ├── PlaceTerminalsCommand.cs       # WPF-окно (автономный)
-│       │   ├── ReviewPlacementCommand.cs      # Модельные линии
-│       │   ├── ExportRoomDataCommand.cs       # Экспорт JSON
-│       │   ├── RevitHtmlPlacementCommand.cs   # Mass Placement (HTML + Revit)
-│       │   ├── RevitIndividualPlacementCommand.cs  # Individual Placement
-│       │   └── RevitTestRunnerCommand.cs      # Запуск автотестов
-│       ├── Services/
-│       │   ├── RevitRoomGeometryProvider.cs   # Извлечение геометрии Space
-│       │   ├── RevitFamilyCatalogProvider.cs  # Автосбор семейств
-│       │   ├── RevitDevicePlacer.cs           # Физическая установка FamilyInstance
-│       │   └── RevitPlacementPreviewService.cs # Превью + Place/Cancel
-│       └── Testing/
-│           ├── RevitTestAttribute.cs          # Атрибут [RevitTest]
-│           ├── RevitTestFixtureAttribute.cs   # Атрибут [RevitTestFixture]
-│           ├── RevitTestRunner.cs             # Discovery + execution + JSON report
-│           ├── Assert.cs                      # Минимальные assertion-хелперы
-│           ├── TestAssertFailedException.cs   # Исключение при ошибке assert
-│           ├── TestDocumentContext.cs          # Static holder для Document
-│           ├── RunnerSmokeFixture.cs          # Smoke-тест (2 метода)
-│           └── RevitIntegrationFixtures.cs    # 4 фикстуры, 13 тестов
-└── HVACLoadTerminals.sln                      # Решение (4 проекта)
-```
-
-## Технические детали
-
-### Формат JSON-сцены
-
-```json
-{
-  "Title": "Terminal Placement",
-  "Rooms": [
-    {
-      "Id": "12345",
-      "Name": "Room 101",
-      "Boundary": [[0,0],[12,0],[12,-8],[0,-8]],
-      "Systems": [
-        { "Name": "Supply", "Type": "Supply", "FlowRate": 1200 }
-      ],
-      "Placements": [
-        {
-          "DeviceId": "D1",
-          "FamilyName": "Diffuser",
-          "Position": [2.5, -4.0],
-          "Rotation": 1.57,
-          "SystemName": "Supply",
-          "EdgeIndex": 0,
-          "Side": "Bottom"
-        }
-      ]
-    }
-  ]
-}
-```
-
-### Единицы измерения
-
-| Параметр | Единицы в Revit API | Единицы в HTML/JSON |
-|----------|---------------------|---------------------|
-| Координаты | Футы (internal) | Футы (feet) |
-| Расход воздуха | куб.м/час (converted) | куб.м/час |
-| Холодильная нагрузка | Ватты (converted) | Ватты |
-| Смещение от стены | мм (параметр) → футы (расчёт) | мм (параметр) |
-| Размеры приборов | мм (converted) | мм |
-
-### Цвета систем (HTML-превью)
-
-| Тип системы | HEX цвет | Описание |
-|-------------|----------|----------|
-| Supply | `#E74C3C` | Красный (приток) |
-| Exhaust | `#2ECC71` | Зелёный (вытяжка) |
-| FanCoil | `#F39C12` | Оранжевый (фанкойл) |
-| Cooling | `#3498DB` | Синий (охлаждение) |
-
-## Лицензии и зависимости
-
-### Внешние библиотеки
-
-| Пакет | Версия | Назначение |
-|-------|--------|------------|
-| Clipper2 | 2.0.0 | Геометрические операции (offset, union, difference) |
-| xUnit | 2.5.3 | Unit-тестирование (Core.Tests) |
-| Newtonsoft.Json | 13.0.3 | Сериализация JSON |
-| OxyPlot.Wpf | 2.1.2 | Визуализация в WPF |
-| Microsoft.Extensions.DependencyInjection | 8.0.0 | DI в WPF-приложении |
-| RevitAPI | 2024 | Revit API (только для Revit-проекта) |
-
-### Revit API
-
-Проект использует Revit 2024 API (RevitAPI.dll, RevitAPIUI.dll). Доступ к API осуществляется через:
-- `Autodesk.Revit.DB` — геометрия, элементы, транзакции
-- `Autodesk.Revit.UI` — интерфейс, команды, диалоги
-- `Autodesk.Revit.DB.Mechanical` — MEP Spaces
+Код проекта — см. [LICENSE.txt](LICENSE.txt). Внешние библиотеки: Clipper2 (Apache-2.0),
+Newtonsoft.Json (MIT), OxyPlot (MIT), xUnit (Apache-2.0), Microsoft.Web.WebView2 (MIT),
+Revit API (Autodesk).
