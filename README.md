@@ -118,14 +118,20 @@ Revit 2024 (`RevitAPI.dll` из `C:\Program Files\Autodesk\Revit 2024`).
 NuGet: Clipper2, xUnit, Newtonsoft.Json, OxyPlot.Wpf, Microsoft.Web.WebView2.
 
 ```bat
-:: Полное решение (4 проекта, включая Revit)
+:: Полное решение (4 проекта, включая Revit) — закрывать App.exe/Revit перед сборкой!
+taskkill /F /IM HVACLoadTerminals.App.exe 2>nul
 "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" ^
   HVACLoadTerminals.sln /t:Build /p:Configuration=Debug /v:m /nologo
 
-:: Быстрая проверка без Revit SDK: ядро + тесты
+:: Быстрая проверка без Revit SDK: ядро + тесты (работает и при открытом App)
 dotnet build src\Core.Tests\HVACLoadTerminals.Core.Tests.csproj --nologo -v q
 dotnet test  src\Core.Tests\HVACLoadTerminals.Core.Tests.csproj --nologo -v q
 ```
+
+> **Известные ограничения сборки**: `HVACLoadTerminals.sln` лочит
+> `HVACLoadTerminals.Core.dll`/`Infrastructure.dll`, если запущены
+> `HVACLoadTerminals.App.exe` или Revit с загруженным addin (`MSB3027`).
+> `153/153` и `EXITCODE=0` верны при закрытых хостах; `src\Core.Tests` собирается всегда.
 
 ## Установка в Revit
 
