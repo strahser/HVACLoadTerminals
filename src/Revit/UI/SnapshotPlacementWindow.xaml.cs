@@ -19,6 +19,7 @@ namespace HVACLoadTerminals.Revit.UI
     public partial class SnapshotPlacementWindow : Window
     {
         private readonly SnapshotWorkspacePresenter _presenter;
+        private readonly CrmViewModel _crm;
         private readonly PlaceDevicesExternalEventHandler? _handler;
         private readonly ExternalEvent? _externalEvent;
 
@@ -34,6 +35,19 @@ namespace HVACLoadTerminals.Revit.UI
             _handler = handler;
 
             DataContext = _presenter;
+
+            // M1.1b: общее CRM-ядро (дерево + панели свойств) как в App.
+            _crm = new CrmViewModel(presenter);
+            CrmTree.ItemsSource = _crm.TreeRoots;
+            PropertiesHost.DataContext = _crm;
+            _crm.HostRecalcRequested += () =>
+            {
+                try { _presenter.Calculate(); }
+                catch (Exception ex) { StatusText.Text = "Пересчёт: " + ex.Message; }
+            };
+            _crm.HostStatus += msg => StatusText.Text = msg;
+            _crm.SelectionChanged += RefreshPlacementsFilter;
+
             _presenter.StateChanged += OnStateChanged;
 
             if (handler != null)
@@ -45,16 +59,30 @@ namespace HVACLoadTerminals.Revit.UI
             // U3.1: валидация числовых полей и прочие предупреждения — в статус-строку.
             _presenter.ErrorSink = msg => StatusText.Text = msg;
 
-            Closed += (_, _) => _presenter.StateChanged -= OnStateChanged;
+            Closed += (_, _) =>
+            {
+                _presenter.StateChanged -= OnStateChanged;
+                _crm.Detach();
+            };
         }
 
         private void OnStateChanged(WorkspaceState state)
         {
             RoomsGrid.ItemsSource = state.Rooms;
-            PlacementsGrid.ItemsSource = state.IsCalculation
-                ? state.Placements
-                : PlacementsGrid.ItemsSource;
+            if (state.IsCalculation || state.Placements.Count > 0)
+                PlacementsGrid.ItemsSource = state.Placements;
+            RefreshPlacementsFilter();
             StatusText.Text = state.Status;
+        }
+
+        /// <summary>M1.1b: таблица приборов фильтруется выбором узла дерева.</summary>
+        private void RefreshPlacementsFilter()
+        {
+            if (PlacementsGrid?.ItemsSource == null)
+                return;
+            var view = System.ComponentModel.CollectionViewSource
+                .GetDefaultView(PlacementsGrid.ItemsSource);
+            view.Filter = o => o is PlacementRow p && _crm.MatchesSelectedNode(p);
         }
 
         private void OpenSnapshot_Click(object sender, RoutedEventArgs e)
@@ -82,6 +110,22 @@ namespace HVACLoadTerminals.Revit.UI
             if ((sender as FrameworkElement)?.DataContext is RoomRow row)
                 new SystemEditorWindow(row) { Owner = this }.ShowDialog();
         }
+
+        /// <summary>M2.3: «Системы…» из панели свойств помещения.</summary>
+        private void EditSystemsPanel_Click(object sender, RoutedEventArgs e)
+        {
+            var room = _crm.SelectedRoom.Room;
+            if (room != null)
+            {
+                new SystemEditorWindow(room) { Owner = this }.ShowDialog();
+                _crm.RefreshPanels();
+            }
+        }
+
+        /// <summary>M1.1b: выбор узла дерева CRM.</summary>
+        private void CrmTree_SelectedItemChanged(
+            object sender, RoutedPropertyChangedEventArgs<object> e) =>
+            _crm.SelectedNode = e.NewValue as CrmNode;
 
         private void RegenLoads_Click(object sender, RoutedEventArgs e)        {
             try

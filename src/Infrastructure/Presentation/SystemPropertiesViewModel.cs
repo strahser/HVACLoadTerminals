@@ -7,9 +7,8 @@ using System.Windows.Input;
 using HVACLoadTerminals.Core.Interfaces;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Services;
-using HVACLoadTerminals.Infrastructure.Presentation;
 
-namespace HVACLoadTerminals.App.ViewModels
+namespace HVACLoadTerminals.Infrastructure.Presentation
 {
     /// <summary>Элемент ComboBox типоразмеров панели системы: null-Id = автоподбор.</summary>
     public class DeviceOption
@@ -25,19 +24,38 @@ namespace HVACLoadTerminals.App.ViewModels
     }
 
     /// <summary>
-    /// M2.1: панель свойств системы (ветка дерева «Система»). Правки пишутся во
-    /// ВСЕ строки этой системы во всех комнатах через presenter и при включённом
-    /// «Живом пересчёте» сразу перестраивают расстановку/таблицы/план.
+    /// M2.1/M1.1b: панель свойств системы (ветка дерева «Система»), общая для App и
+    /// ревит-стенда. Правки пишутся во ВСЕ строки этой системы во всех комнатах
+    /// через presenter; пересчёт запрашивается у хоста (<see cref="CrmViewModel"/>).
     /// </summary>
     public class SystemPropertiesViewModel : INotifyPropertyChanged
     {
-        private readonly MainViewModel _owner;
+        private readonly CrmViewModel _owner;
         private bool _loading;
 
-        public SystemPropertiesViewModel(MainViewModel owner)
+        private sealed class Relay : ICommand
+        {
+            private readonly Action<object?> _execute;
+            private readonly Func<object?, bool>? _canExecute;
+            public Relay(Action<object?> execute, Func<object?, bool>? canExecute = null)
+            {
+                _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+                _canExecute = canExecute;
+            }
+            public bool CanExecute(object? parameter) =>
+                _canExecute == null || _canExecute(parameter);
+            public void Execute(object? parameter) => _execute(parameter);
+            public event EventHandler? CanExecuteChanged
+            {
+                add => CommandManager.RequerySuggested += value;
+                remove => CommandManager.RequerySuggested -= value;
+            }
+        }
+
+        public SystemPropertiesViewModel(CrmViewModel owner)
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
-            ApplyNameCommand = new RelayCommand(_ => ApplyName(),
+            ApplyNameCommand = new Relay(_ => ApplyName(),
                 _ => ShowEditing && !string.IsNullOrWhiteSpace(NameEditor));
         }
 
@@ -71,9 +89,6 @@ namespace HVACLoadTerminals.App.ViewModels
         public ObservableCollection<DeviceOption> Devices { get; } =
             new ObservableCollection<DeviceOption>();
 
-        private double? _edgeOffsetMm;
-        private double? _ceilingOffsetMm;
-
         private DeviceOption? _selectedDevice;
         public DeviceOption? SelectedDevice
         {
@@ -88,7 +103,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 if (SystemName != null)
                 {
                     Workspace.SetSystemDeviceTypeId(SystemName, value?.Id);
-                    _owner.RecalcIfLive();
+                    _owner.RequestRecalc();
                 }
             }
         }
@@ -119,7 +134,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 if (!_loading && SystemName != null)
                 {
                     Workspace.SetSystemCountRule(SystemName, value);
-                    _owner.RecalcIfLive();
+                    _owner.RequestRecalc();
                 }
             }
         }
@@ -137,7 +152,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 if (!_loading && SystemName != null)
                 {
                     Workspace.SetSystemFixedCount(SystemName, value);
-                    _owner.RecalcIfLive();
+                    _owner.RequestRecalc();
                 }
             }
         }
@@ -159,7 +174,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 if (!_loading && SystemName != null)
                 {
                     Workspace.SetSystemEdgeOffset(SystemName, value);
-                    _owner.RecalcIfLive();
+                    _owner.RequestRecalc();
                 }
             }
         }
@@ -177,10 +192,13 @@ namespace HVACLoadTerminals.App.ViewModels
                 if (!_loading && SystemName != null)
                 {
                     Workspace.SetSystemCeilingOffset(SystemName, value);
-                    _owner.RecalcIfLive();
+                    _owner.RequestRecalc();
                 }
             }
         }
+
+        private double? _edgeOffsetMm;
+        private double? _ceilingOffsetMm;
 
         private string _edgeOffsetText = "";
         /// <summary>Чего касается «отступ от стен» для этой системы (типоразмер/умолчание).</summary>
@@ -217,7 +235,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 if (!_loading && SystemName != null)
                 {
                     Workspace.SetSystemPattern(SystemName, value);
-                    _owner.RecalcIfLive();
+                    _owner.RequestRecalc();
                 }
             }
         }
@@ -238,7 +256,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 if (!_loading && SystemName != null)
                 {
                     Workspace.SetSystemSingleRule(SystemName, value);
-                    _owner.RecalcIfLive();
+                    _owner.RequestRecalc();
                 }
             }
         }
@@ -337,7 +355,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 return;
             string? error = _owner.RenameSelectedSystem(NameEditor);
             if (error != null)
-                _owner.StatusMessage = "Переименование: " + error;
+                _owner.ReportStatus("Переименование: " + error);
         }
 
         /// <summary>M2.2: мини-схема комнаты-примера — контур, пунктир офсетного
@@ -436,8 +454,8 @@ namespace HVACLoadTerminals.App.ViewModels
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Мини-схема отступов не построена", ex);
                 SchemeModel = null;
+                _owner.ReportStatus("Мини-схема отступов не построена: " + ex.Message);
             }
         }
 
@@ -470,9 +488,9 @@ namespace HVACLoadTerminals.App.ViewModels
                     if (devices.Count > 0)
                         return devices;
                 }
-                catch (Exception ex)
+                catch
                 {
-                    AppLogger.Error("Панель системы: каталог недоступен", ex);
+                    // ниже фолбэк на каталог последнего расчёта
                 }
             }
             return (Workspace.LastUsedCatalog ?? Array.Empty<TerminalDevice>())

@@ -29,11 +29,11 @@ namespace HVACLoadTerminals.App
         /// <summary>M2.3: «Системы…» из панели свойств помещения.</summary>
         private void EditSystemsPanel_Click(object sender, RoutedEventArgs e)
         {
-            var room = _vm.SelectedRoom.Room;
+            var room = _vm.Crm.SelectedRoom.Room;
             if (room != null)
             {
                 new SystemEditorWindow(room) { Owner = this }.ShowDialog();
-                _vm.SelectedRoom.Refresh(); // сводка систем могла измениться
+                _vm.Crm.RefreshPanels(); // сводка систем могла измениться
             }
         }
 

@@ -345,7 +345,7 @@
                                    Foreground="{StaticResource TextDark}">Свойства</TextBlock>
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel Margin="10,4,10,8">
-                                <TextBlock Text="{Binding SelectedNode.Title, TargetNullValue=Выберите систему слева}"
+                                <TextBlock Text="{Binding Crm.SelectedNode.Title, TargetNullValue=Выберите систему слева}"
                                            FontSize="15" FontWeight="SemiBold"
                                            Foreground="{StaticResource TextDark}" TextWrapping="Wrap"/>
                                 <TextBlock Text="{Binding SelectedSystem.TypeText}"
@@ -354,23 +354,23 @@
                                 <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,4"/>
 
                                 <!-- M2.1: редактор свойств системы (не отопление) -->
-                                <StackPanel Visibility="{Binding SelectedSystem.ShowEditing,
+                                <StackPanel Visibility="{Binding Crm.SelectedSystem.ShowEditing,
                                                         Converter={StaticResource BoolToVis}}">
                                     <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Имя системы</TextBlock>
                                     <DockPanel Margin="0,1,0,10">
                                         <Button DockPanel.Dock="Right" Content="✓"
-                                                Command="{Binding SelectedSystem.ApplyNameCommand}"
+                                                Command="{Binding Crm.SelectedSystem.ApplyNameCommand}"
                                                 ToolTip="Переименовать систему во всех помещениях"
                                                 Padding="8,3" Margin="4,0,0,0"/>
-                                        <TextBox Text="{Binding SelectedSystem.NameEditor, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox Text="{Binding Crm.SelectedSystem.NameEditor, UpdateSourceTrigger=PropertyChanged}"
                                                  Padding="5,3" VerticalContentAlignment="Center"/>
                                     </DockPanel>
 
                                     <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Типоразмер прибора</TextBlock>
-                                    <ComboBox ItemsSource="{Binding SelectedSystem.Devices}"
-                                              SelectedItem="{Binding SelectedSystem.SelectedDevice}"
+                                    <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Devices}"
+                                              SelectedItem="{Binding Crm.SelectedSystem.SelectedDevice}"
                                               DisplayMemberPath="Label" Margin="0,1,0,2"/>
-                                    <TextBlock Text="{Binding SelectedSystem.DeviceInfoText}"
+                                    <TextBlock Text="{Binding Crm.SelectedSystem.DeviceInfoText}"
                                                FontSize="11" LineHeight="15" TextWrapping="Wrap"
                                                Foreground="{StaticResource TextMuted}" Margin="0,0,0,10"/>
 
@@ -380,30 +380,30 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <ComboBox ItemsSource="{Binding SelectedSystem.Rules}"
-                                                  SelectedItem="{Binding SelectedSystem.Rule}"/>
+                                        <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Rules}"
+                                                  SelectedItem="{Binding Crm.SelectedSystem.Rule}"/>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal"
                                                     VerticalAlignment="Center"
-                                                    Visibility="{Binding SelectedSystem.IsFixedVisible,
+                                                    Visibility="{Binding Crm.SelectedSystem.IsFixedVisible,
                                                                  Converter={StaticResource BoolToVis}}">
                                             <TextBlock Text="N=" VerticalAlignment="Center" Margin="8,0,2,0"
                                                        Foreground="{StaticResource TextMuted}"/>
                                             <TextBox Width="42" Padding="4,2"
-                                                     Text="{Binding SelectedSystem.FixedCount, UpdateSourceTrigger=PropertyChanged}"
+                                                     Text="{Binding Crm.SelectedSystem.FixedCount, UpdateSourceTrigger=PropertyChanged}"
                                                      ToolTip="Фиксированное число приборов в помещении"/>
                                         </StackPanel>
                                     </Grid>
                                     <!-- N-калькулятор: почему такое количество приборов -->
-                                    <TextBlock Text="{Binding SelectedSystem.FormulaText}"
+                                    <TextBlock Text="{Binding Crm.SelectedSystem.FormulaText}"
                                                FontSize="11" LineHeight="15" TextWrapping="Wrap"
                                                Foreground="{StaticResource TextDark}" Margin="0,0,0,10"/>
 
                                     <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Паттерн расстановки</TextBlock>
-                                    <ComboBox ItemsSource="{Binding SelectedSystem.Patterns}"
-                                              SelectedItem="{Binding SelectedSystem.Pattern}" Margin="0,1,0,6"/>
+                                    <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Patterns}"
+                                              SelectedItem="{Binding Crm.SelectedSystem.Pattern}" Margin="0,1,0,6"/>
                                     <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Одиночный прибор</TextBlock>
-                                    <ComboBox ItemsSource="{Binding SelectedSystem.SingleRules}"
-                                              SelectedItem="{Binding SelectedSystem.SinglePlacementRule}" Margin="0,1,0,8"/>
+                                    <ComboBox ItemsSource="{Binding Crm.SelectedSystem.SingleRules}"
+                                              SelectedItem="{Binding Crm.SelectedSystem.SinglePlacementRule}" Margin="0,1,0,8"/>
 
                                     <!-- M2.2: отступы размещения -->
                                     <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Отступы размещения, мм</TextBlock>
@@ -417,17 +417,17 @@
                                         <TextBlock Text="От стен:" VerticalAlignment="Center"
                                                    Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
                                         <TextBox Grid.Column="1" Padding="4,2"
-                                                 Text="{Binding SelectedSystem.EdgeOffsetMm, TargetNullValue=''}"
+                                                 Text="{Binding Crm.SelectedSystem.EdgeOffsetMm, TargetNullValue=''}"
                                                  ToolTip="Смещение зоны размещения от стен внутрь помещения (buffer(-x)). Пусто — по типоразмеру/500 мм"/>
                                         <TextBlock Grid.Column="2" Text="От потолка:" VerticalAlignment="Center"
                                                    Foreground="{StaticResource TextMuted}" Margin="8,0,4,0"/>
                                         <TextBox Grid.Column="3" Padding="4,2"
-                                                 Text="{Binding SelectedSystem.CeilingOffsetMm, TargetNullValue=''}"
+                                                 Text="{Binding Crm.SelectedSystem.CeilingOffsetMm, TargetNullValue=''}"
                                                  ToolTip="Заглубление прибора от чистого потолка; высота установки = H потолка − offset. Пусто — по типоразмеру"/>
                                     </Grid>
-                                    <TextBlock Text="{Binding SelectedSystem.EdgeOffsetText}"
+                                    <TextBlock Text="{Binding Crm.SelectedSystem.EdgeOffsetText}"
                                                FontSize="10" Foreground="{StaticResource TextMuted}" Margin="0,0,0,4"/>
-                                    <oxy:PlotView Model="{Binding SelectedSystem.SchemeModel}"
+                                    <oxy:PlotView Model="{Binding Crm.SelectedSystem.SchemeModel}"
                                                   Height="140" Margin="0,0,0,8"/>
                                 </StackPanel>
 
@@ -445,23 +445,23 @@
                                         <RowDefinition/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Text="Помещений" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding SelectedSystem.RoomCount}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Crm.SelectedSystem.RoomCount}" FontWeight="SemiBold"/>
                                     <TextBlock Grid.Row="1" Text="Приборов" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedSystem.DeviceCount}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Crm.SelectedSystem.DeviceCount}" FontWeight="SemiBold"/>
                                     <TextBlock Grid.Row="2" Text="Σ расход" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedSystem.FlowText}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Crm.SelectedSystem.FlowText}" FontWeight="SemiBold"/>
                                     <TextBlock Grid.Row="3" Text="k_ef средний" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedSystem.KefText}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Crm.SelectedSystem.KefText}" FontWeight="SemiBold"/>
                                     <TextBlock Grid.Row="4" Text="Типоразмер" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedSystem.ActualDeviceText}"
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Crm.SelectedSystem.ActualDeviceText}"
                                                FontWeight="SemiBold" MaxWidth="190" TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding SelectedSystem.ActualDeviceText}"/>
+                                               ToolTip="{Binding Crm.SelectedSystem.ActualDeviceText}"/>
                                 </Grid>
 
                                 <!-- M2.3: свойства помещения -->
-                                <StackPanel Visibility="{Binding HasSelectedRoom,
+                                <StackPanel Visibility="{Binding Crm.HasSelectedRoom,
                                                         Converter={StaticResource BoolToVis}}"
-                                            DataContext="{Binding SelectedRoom}">
+                                            DataContext="{Binding Crm.SelectedRoom}">
                                     <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,6"/>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -538,7 +538,7 @@
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasSelectedSystem}" Value="False">
+                                                <DataTrigger Binding="{Binding Crm.HasSelectedSystem}" Value="False">
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                 </DataTrigger>
                                             </Style.Triggers>

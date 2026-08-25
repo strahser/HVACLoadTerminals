@@ -1,8 +1,9 @@
 <Window x:Class="HVACLoadTerminals.Revit.UI.SnapshotPlacementWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:oxy="http://oxyplot.org/wpf"
         Title="Стенд расстановки по снимку (modeless)"
-        Height="700" Width="1250"
+        Height="760" Width="1420"
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
@@ -10,6 +11,7 @@
             <Setter Property="Padding" Value="10,5"/>
             <Setter Property="Margin" Value="3"/>
         </Style>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
 
     <DockPanel>
@@ -26,7 +28,6 @@
             <TextBox Text="{Binding MinWindowLengthRatio, UpdateSourceTrigger=PropertyChanged}"
                      Width="42" VerticalContentAlignment="Center" Padding="4,2"/>
 
-            <!-- U3.1: паритет с App — назначение -->
             <TextBlock Text="Назначение:" VerticalAlignment="Center" Margin="10,0,3,0"/>
             <TextBox x:Name="PurposeBox" Text="Office" Width="80"
                      VerticalContentAlignment="Center" Padding="4,2"/>
@@ -54,7 +55,6 @@
                       Width="80" Margin="2,0"
                       ToolTip="Где ставится одиночный прибор: в центре контура или в углу"/>
 
-            <!-- U3.1: паритет с App — скорость в решётке -->
             <TextBlock Text="v решётки:" VerticalAlignment="Center" Margin="10,0,3,0"/>
             <TextBox Text="{Binding GrilleVelocityMs, UpdateSourceTrigger=PropertyChanged}"
                      Width="36" VerticalContentAlignment="Center" Padding="4,2"
@@ -64,7 +64,6 @@
                       VerticalAlignment="Center" Margin="10,0,0,0"
                       ToolTip="Автопересчёт после правок Q/расходов (коалесинг 300 мс)"/>
             <Button Content="▶ Рассчитать" Click="Calculate_Click" FontWeight="Bold"/>
-            <!-- U3.1: паритет с App — сохранить/загрузить проект, HTML -->
             <Button Content="💾 Сохранить проект" Click="SaveProject_Click"/>
             <Button Content="📂 Загрузить проект" Click="LoadProject_Click"/>
             <Button Content="🌐 HTML" Click="ExportHtml_Click"
@@ -73,78 +72,243 @@
                     Click="Place_Click" Background="#E8F5E9" FontWeight="Bold"/>
         </WrapPanel>
 
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="2*"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+        <!-- M1.1b: CRM-каркас как в App — дерево | таблицы | свойства -->
+        <Grid Margin="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="230"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="290"/>
+            </Grid.ColumnDefinitions>
 
-            <DataGrid Grid.Row="0" x:Name="RoomsGrid"
-                      AutoGenerateColumns="False" CanUserAddRows="False"
-                      AlternatingRowBackground="#FAFAFA">
-                <DataGrid.Columns>
-                    <DataGridCheckBoxColumn Header="☑"
-                        Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}"
-                        Width="34"/>
-                    <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="45"/>
-                    <DataGridTextColumn Header="Помещение" Binding="{Binding Name}" Width="140"/>
-                    <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="90"/>
-                    <DataGridTextColumn Header="S, м²" Binding="{Binding Area, StringFormat=F1}" Width="60"/>
-                    <DataGridCheckBoxColumn Header="Угл." Binding="{Binding IsCorner}" Width="42"/>
-                    <DataGridTextColumn Header="Назначение" Binding="{Binding Purpose}" Width="90"/>
-                    <DataGridTextColumn Header="Q, Вт" Binding="{Binding HeatingW}" Width="80"/>
-                    <DataGridTextColumn Header="Приток" Binding="{Binding Supply}" Width="70"/>
-                    <DataGridTextColumn Header="Вытяжка" Binding="{Binding Exhaust}" Width="70"/>
-                    <DataGridTextColumn Header="Системы" Binding="{Binding SystemsSummary, Mode=OneWay}" IsReadOnly="True" Width="95"/>
-                    <DataGridTemplateColumn Width="82">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Content="Системы…" Padding="4,1"
-                                        Click="EditSystems_Click"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Примечание" Binding="{Binding Warning}" Width="*"/>
-                </DataGrid.Columns>
-            </DataGrid>
-
-            <DataGrid Grid.Row="1" x:Name="PlacementsGrid"
-                      AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                      AlternatingRowBackground="#FAFAFA" Margin="0,4,0,0">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="120"/>
-                    <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
-                    <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
-                    <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
-                    <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
-                    <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding CalculatedFlow, StringFormat=F1}" Width="90"/>
-                    <DataGridTextColumn Header="Высота, мм" Binding="{Binding MountHeightMm}" Width="70"/>
-                    <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="80"/>
-                    <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="80"/>
-                    <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>
-                    <!-- U3.1/M0.1: k_ef цветом по порогам, «—» когда неприменим -->
-                    <DataGridTextColumn Header="k_ef" Binding="{Binding KEfText}" Width="55">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding KefStatus}" Value="low">
-                                        <Setter Property="Foreground" Value="#E67E22"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding KefStatus}" Value="ok">
-                                        <Setter Property="Foreground" Value="#1E8E3E"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding KefStatus}" Value="high">
-                                        <Setter Property="Foreground" Value="#D93025"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
+            <!-- Дерево Системы → Уровни → Помещения -->
+            <Border Grid.Column="0" Background="#FFFFFF"
+                    BorderBrush="#D5DBE3" BorderThickness="1"
+                    CornerRadius="4" Margin="0,0,4,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Margin="8,6" FontWeight="SemiBold">Системы проекта</TextBlock>
+                    <TreeView x:Name="CrmTree" Margin="4,0,4,6" BorderThickness="0"
+                              SelectedItemChanged="CrmTree_SelectedItemChanged">
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Title}"/>
+                                    <TextBlock Text="{Binding CountText, Mode=OneWay}"
+                                               Foreground="#637381" FontSize="11" Margin="6,0,0,0"/>
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="Padding" Value="2,1"/>
+                                <Setter Property="IsExpanded" Value="True"/>
                             </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                    <!-- P2: правило количества — словарь прототипа -->
-                    <DataGridTextColumn Header="Расчёт" Binding="{Binding CalculationOption}" Width="110"/>
-                </DataGrid.Columns>
-            </DataGrid>
+                        </TreeView.ItemContainerStyle>
+                    </TreeView>
+                </DockPanel>
+            </Border>
+
+            <!-- Таблицы помещений и приборов -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="2*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DataGrid Grid.Row="0" x:Name="RoomsGrid"
+                          AutoGenerateColumns="False" CanUserAddRows="False"
+                          AlternatingRowBackground="#FAFAFA">
+                    <DataGrid.Columns>
+                        <DataGridCheckBoxColumn Header="☑"
+                            Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}"
+                            Width="34"/>
+                        <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="45"/>
+                        <DataGridTextColumn Header="Помещение" Binding="{Binding Name}" Width="140"/>
+                        <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="90"/>
+                        <DataGridTextColumn Header="S, м²" Binding="{Binding Area, StringFormat=F1}" Width="60"/>
+                        <DataGridCheckBoxColumn Header="Угл." Binding="{Binding IsCorner}" Width="42"/>
+                        <DataGridTextColumn Header="Назначение" Binding="{Binding Purpose}" Width="90"/>
+                        <DataGridTextColumn Header="Q, Вт" Binding="{Binding HeatingW}" Width="80"/>
+                        <DataGridTextColumn Header="Приток" Binding="{Binding Supply}" Width="70"/>
+                        <DataGridTextColumn Header="Вытяжка" Binding="{Binding Exhaust}" Width="70"/>
+                        <DataGridTextColumn Header="Системы" Binding="{Binding SystemsSummary, Mode=OneWay}" IsReadOnly="True" Width="95"/>
+                        <DataGridTemplateColumn Width="82">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="Системы…" Padding="4,1"
+                                            Click="EditSystems_Click"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Примечание" Binding="{Binding Warning}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <DataGrid Grid.Row="1" x:Name="PlacementsGrid"
+                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                          AlternatingRowBackground="#FAFAFA" Margin="0,4,0,0">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="120"/>
+                        <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
+                        <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
+                        <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
+                        <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
+                        <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding CalculatedFlow, StringFormat=F1}" Width="90"/>
+                        <DataGridTextColumn Header="Высота, мм" Binding="{Binding MountHeightMm}" Width="70"/>
+                        <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="80"/>
+                        <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="80"/>
+                        <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>
+                        <!-- U3.1/M0.1: k_ef цветом по порогам, «—» когда неприменим -->
+                        <DataGridTextColumn Header="k_ef" Binding="{Binding KEfText}" Width="55">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding KefStatus}" Value="low">
+                                            <Setter Property="Foreground" Value="#E67E22"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding KefStatus}" Value="ok">
+                                            <Setter Property="Foreground" Value="#1E8E3E"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding KefStatus}" Value="high">
+                                            <Setter Property="Foreground" Value="#D93025"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <!-- P2: правило количества — словарь прототипа -->
+                        <DataGridTextColumn Header="Расчёт" Binding="{Binding CalculationOption}" Width="110"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+
+            <!-- Панель свойств (M1.1b/M2.x): система и помещение -->
+            <Border Grid.Column="2" Background="#FFFFFF"
+                    BorderBrush="#D5DBE3" BorderThickness="1"
+                    CornerRadius="4" Margin="4,0,0,0">
+                <DockPanel x:Name="PropertiesHost">
+                    <TextBlock DockPanel.Dock="Top" Margin="8,6" FontWeight="SemiBold">Свойства</TextBlock>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="8,4,8,8">
+                            <TextBlock Text="{Binding SelectedNode.Title, TargetNullValue=Выберите систему слева}"
+                                       FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedSystem.TypeText}"
+                                       Margin="0,2,0,6" FontSize="11" Foreground="#637381"/>
+                            <Separator Margin="0,2"/>
+
+                            <!-- Редактор системы -->
+                            <StackPanel Visibility="{Binding SelectedSystem.ShowEditing,
+                                                    Converter={StaticResource BoolToVis}}">
+                                <TextBlock FontSize="11" Foreground="#637381">Имя системы</TextBlock>
+                                <DockPanel Margin="0,1,0,8">
+                                    <Button DockPanel.Dock="Right" Content="✓"
+                                            Command="{Binding SelectedSystem.ApplyNameCommand}"
+                                            Padding="8,2" Margin="4,0,0,0"/>
+                                    <TextBox Text="{Binding SelectedSystem.NameEditor, UpdateSourceTrigger=PropertyChanged}"
+                                             Padding="4,2" VerticalContentAlignment="Center"/>
+                                </DockPanel>
+
+                                <TextBlock FontSize="11" Foreground="#637381">Типоразмер прибора</TextBlock>
+                                <ComboBox ItemsSource="{Binding SelectedSystem.Devices}"
+                                          SelectedItem="{Binding SelectedSystem.SelectedDevice}"
+                                          DisplayMemberPath="Label" Margin="0,1,0,2"/>
+                                <TextBlock Text="{Binding SelectedSystem.DeviceInfoText}"
+                                           FontSize="10" TextWrapping="Wrap"
+                                           Foreground="#637381" Margin="0,0,0,8"/>
+
+                                <TextBlock FontSize="11" Foreground="#637381">Правило количества</TextBlock>
+                                <ComboBox ItemsSource="{Binding SelectedSystem.Rules}"
+                                          SelectedItem="{Binding SelectedSystem.Rule}" Margin="0,1,0,2"/>
+                                <StackPanel Orientation="Horizontal"
+                                            Visibility="{Binding SelectedSystem.IsFixedVisible,
+                                                         Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="N=" VerticalAlignment="Center" Margin="0,2,2,0"/>
+                                    <TextBox Width="40" Padding="4,2"
+                                             Text="{Binding SelectedSystem.FixedCount, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding SelectedSystem.FormulaText}"
+                                           FontSize="10" TextWrapping="Wrap" Margin="0,2,0,8"/>
+
+                                <TextBlock FontSize="11" Foreground="#637381">Паттерн / одиночный</TextBlock>
+                                <ComboBox ItemsSource="{Binding SelectedSystem.Patterns}"
+                                          SelectedItem="{Binding SelectedSystem.Pattern}" Margin="0,1,0,2"/>
+                                <ComboBox ItemsSource="{Binding SelectedSystem.SingleRules}"
+                                          SelectedItem="{Binding SelectedSystem.SinglePlacementRule}" Margin="0,2,0,6"/>
+
+                                <TextBlock FontSize="11" Foreground="#637381">Отступы, мм</TextBlock>
+                                <StackPanel Orientation="Horizontal" Margin="0,1,0,4">
+                                    <TextBlock Text="От стен:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <TextBox Width="52" Padding="4,2"
+                                             Text="{Binding SelectedSystem.EdgeOffsetMm, TargetNullValue=''}"/>
+                                    <TextBlock Text="От потолка:" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                                    <TextBox Width="52" Padding="4,2"
+                                             Text="{Binding SelectedSystem.CeilingOffsetMm, TargetNullValue=''}"/>
+                                </StackPanel>
+                                <oxy:PlotView Model="{Binding SelectedSystem.SchemeModel}"
+                                              Height="120" Margin="0,0,0,6"/>
+                            </StackPanel>
+
+                            <!-- Итог по системе -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/><RowDefinition/><RowDefinition/>
+                                    <RowDefinition/><RowDefinition/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Помещений" Foreground="#637381"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SelectedSystem.RoomCount}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="1" Text="Приборов" Foreground="#637381"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedSystem.DeviceCount}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="2" Text="Σ расход" Foreground="#637381"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedSystem.FlowText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="3" Text="k_ef средний" Foreground="#637381"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedSystem.KefText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="4" Text="Типоразмер" Foreground="#637381"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedSystem.ActualDeviceText}"
+                                           FontWeight="SemiBold" MaxWidth="180" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+
+                            <!-- Свойства помещения -->
+                            <StackPanel Visibility="{Binding HasSelectedRoom,
+                                                    Converter={StaticResource BoolToVis}}"
+                                        DataContext="{Binding SelectedRoom}">
+                                <Separator Margin="0,8"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Room.SystemsSummary}"
+                                               Foreground="#637381" FontSize="11" VerticalAlignment="Center"/>
+                                    <Button Content="Системы…" Padding="6,2" Margin="8,0,0,0"
+                                            Click="EditSystemsPanel_Click"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <TextBlock Text="Q, Вт:" Foreground="#637381" VerticalAlignment="Center"/>
+                                    <TextBox Width="70" Padding="4,2" Margin="4,0,0,0"
+                                             Text="{Binding Room.HeatingW, UpdateSourceTrigger=LostFocus}"/>
+                                    <TextBlock Text="t°:" Foreground="#637381" VerticalAlignment="Center" Margin="10,0,4,0"/>
+                                    <TextBox Width="50" IsReadOnly="True" Background="#F7F9FC"
+                                             Text="{Binding TemperatureText}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <TextBlock Text="Приток:" Foreground="#637381" VerticalAlignment="Center"/>
+                                    <TextBox Width="60" Padding="4,2" Margin="4,0,0,0"
+                                             Text="{Binding Room.Supply, UpdateSourceTrigger=LostFocus}"/>
+                                    <TextBlock Text="Вытяжка:" Foreground="#637381" VerticalAlignment="Center" Margin="10,0,4,0"/>
+                                    <TextBox Width="60" Padding="4,2"
+                                             Text="{Binding Room.Exhaust, UpdateSourceTrigger=LostFocus}"/>
+                                </StackPanel>
+                                <TextBlock Margin="0,8,0,0" FontSize="11" Foreground="#637381" Text="Проёмы"/>
+                                <TextBlock Text="{Binding OpeningsText}" FontSize="10"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding WindowForecastText}" FontSize="10"
+                                           TextWrapping="Wrap" Margin="0,4,0,0"
+                                           Foreground="#1B4FA8"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
         </Grid>
     </DockPanel>
 </Window>

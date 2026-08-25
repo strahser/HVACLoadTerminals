@@ -1,23 +1,22 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
-using HVACLoadTerminals.Infrastructure.Presentation;
 
-namespace HVACLoadTerminals.App.ViewModels
+namespace HVACLoadTerminals.Infrastructure.Presentation
 {
     /// <summary>
-    /// M2.3: панель свойств помещения (ветка «Помещение» дерева). Нагрузки
-    /// редактируются прямо в RoomRow — её PropertyChanged уже подключён к
-    /// живому пересчёту presenter'а; проёмы/температура — из снимка.
+    /// M2.3/M1.1b: панель свойств помещения (ветка «Помещение» дерева), общая для
+    /// обоих хостов. Нагрузки редактируются прямо в RoomRow — её PropertyChanged
+    /// уже подключён к живому пересчёту presenter'а; проёмы/температура — из снимка.
     /// </summary>
     public class RoomPropertiesViewModel : INotifyPropertyChanged
     {
-        private readonly MainViewModel _owner;
+        private readonly CrmViewModel _owner;
 
-        public RoomPropertiesViewModel(MainViewModel owner) =>
+        public RoomPropertiesViewModel(CrmViewModel owner) =>
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
 
         private SnapshotWorkspacePresenter Workspace => _owner.Workspace;

@@ -1,10 +1,11 @@
 using System.Collections.ObjectModel;
 
-namespace HVACLoadTerminals.App.ViewModels
+namespace HVACLoadTerminals.Infrastructure.Presentation
 {
     /// <summary>
-    /// M1.2: узел дерева CRM «Системы → Уровни → Помещения». Kind:
-    /// System / Level / Room. Содержит счётчик приборов и ключи фильтрации.
+    /// M1.2/M1.1b: узел дерева CRM «Системы → Уровни → Помещения». Kind:
+    /// System / Level / Room. Живёт в Infrastructure, чтобы дерево было общим
+    /// для App и ревит-стенда.
     /// </summary>
     public class CrmNode
     {

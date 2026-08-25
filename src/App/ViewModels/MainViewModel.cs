@@ -108,96 +108,20 @@ namespace HVACLoadTerminals.App.ViewModels
 
         // ---- M1.2: дерево CRM «Системы → Уровни → Помещения» ----
 
-        public ObservableCollection<CrmNode> TreeRoots { get; } = new();
+        public ObservableCollection<CrmNode> TreeRoots => Crm.TreeRoots;
 
-        private CrmNode? _selectedNode;
         public CrmNode? SelectedNode
         {
-            get => _selectedNode;
-            set
-            {
-                _selectedNode = value;
-                OnPropertyChanged(nameof(SelectedNode));
-                PlacementsView.Refresh();
-                PlotLevel();
-                UpdatePropertiesPanel();
-            }
+            get => Crm.SelectedNode;
+            set => Crm.SelectedNode = value;
         }
 
-        // ---- M2.1: панель свойств системы ----
+        // ---- M1.1b: общее ядро CRM-каркаса (дерево + панели свойств) ----
 
-        public SystemPropertiesViewModel SelectedSystem { get; }
-
-        private bool _hasSelectedSystem;
-        /// <summary>В дереве выбран узел-система (показать редактор в панели).</summary>
-        public bool HasSelectedSystem
-        {
-            get => _hasSelectedSystem;
-            private set { _hasSelectedSystem = value; OnPropertyChanged(nameof(HasSelectedSystem)); }
-        }
-
-        // ---- M2.3: панель свойств помещения ----
-
-        public RoomPropertiesViewModel SelectedRoom { get; }
-
-        private bool _hasSelectedRoom;
-        public bool HasSelectedRoom
-        {
-            get => _hasSelectedRoom;
-            private set { _hasSelectedRoom = value; OnPropertyChanged(nameof(HasSelectedRoom)); }
-        }
-
-        private void UpdatePropertiesPanel()
-        {
-            HasSelectedSystem = SelectedNode?.Kind == "System";
-            OnPropertyChanged(nameof(HasSelectedSystem));
-            SelectedSystem.Refresh();
-
-            HasSelectedRoom = SelectedNode?.Kind == "Room";
-            OnPropertyChanged(nameof(HasSelectedRoom));
-            SelectedRoom.Refresh();
-        }
-
-        /// <summary>M2.1: переименовать выбранную систему во всех комнатах.
-        /// null — успех, иначе текст ошибки.</summary>
-        public string? RenameSelectedSystem(string newName)
-        {
-            if (SelectedNode?.Kind != "System")
-                return "Система не выбрана";
-            string oldName = SelectedNode.SystemName ?? "";
-            string? error = Workspace.RenameSystem(oldName, newName);
-            if (error != null)
-                return error;
-
-            RecalcIfLive(); // при выключенном живом пересчёте — таблицы обновятся по «РАССЧИТАТЬ»
-            RebuildTree();
-            SelectSystemNode(newName);
-            StatusMessage = $"Система «{oldName}» переименована в «{newName}»";
-            return null;
-        }
-
-        private void SelectSystemNode(string name)
-        {
-            var node = TreeRoots.FirstOrDefault(n =>
-                n.Kind == "System" && n.SystemName == name);
-            if (node != null)
-                SelectedNode = node;
-        }
+        public CrmViewModel Crm { get; }
 
         /// <summary>Совпадает ли строка приборов с выбранным узлом дерева.</summary>
-        private bool MatchesSelectedNode(PlacementRow p)
-        {
-            if (SelectedNode == null || SelectedNode.Kind == "") return true;
-            return SelectedNode.Kind switch
-            {
-                "System" => p.SystemName == SelectedNode.SystemName,
-                "Level" => p.LevelName == SelectedNode.LevelName &&
-                           (SelectedNode.SystemName == null ||
-                            p.SystemName == SelectedNode.SystemName),
-                "Room" => p.RoomId == SelectedNode.RoomId,
-                _ => true
-            };
-        }
+        private bool MatchesSelectedNode(PlacementRow p) => Crm.MatchesSelectedNode(p);
 
         // ---- P5: Detail-режим — мультиселект комнат → массовые оверрайды ----
 
@@ -238,7 +162,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 Owner = System.Windows.Application.Current?.MainWindow
             };
             window.ShowDialog();
-            UpdatePropertiesPanel(); // сводка/панель могли измениться
+            Crm.RefreshPanels(); // сводка/панели могли измениться без пересчёта
         }
 
         // ---- M3.2: экспорт отчёта по уровню ----
@@ -399,8 +323,16 @@ namespace HVACLoadTerminals.App.ViewModels
 
         public MainViewModel()
         {
-            SelectedSystem = new SystemPropertiesViewModel(this);
-            SelectedRoom = new RoomPropertiesViewModel(this);
+            // M1.1b: CRM-ядро подписывается на StateChanged первым — дерево и панели
+            // обновляются до перерисовки плана/3D хостом.
+            Crm = new CrmViewModel(Workspace);
+            Crm.HostRecalcRequested += RecalcIfLive;
+            Crm.HostStatus += msg => StatusMessage = msg;
+            Crm.SelectionChanged += () =>
+            {
+                PlacementsView.Refresh();
+                PlotLevel();
+            };
 
             OpenSnapshotCommand = new RelayCommand(_ => OpenSnapshot());
             RecalcLoadsCommand = new RelayCommand(_ =>
@@ -541,12 +473,15 @@ namespace HVACLoadTerminals.App.ViewModels
                 OnPropertyChanged(nameof(RoomsView));
                 RoomsView.Refresh();
 
-                Placements.Clear();
-                foreach (var row in state.Placements)
-                    Placements.Add(row);
+                // Статусные состояния (без размещений) таблицу не стирают.
+                if (state.IsCalculation || state.Placements.Count > 0)
+                {
+                    Placements.Clear();
+                    foreach (var row in state.Placements)
+                        Placements.Add(row);
+                }
 
-                RebuildTree();
-                UpdatePropertiesPanel();
+                // Дерево и панели обновляет CrmViewModel (подписан раньше).
                 PlotLevel();
                 Raise3DChanged();
             }
@@ -571,94 +506,7 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
-        // ---------------- M1.2: дерево CRM ----------------
-
-        /// <summary>Строит «Системы → Уровни → Помещения» из текущих размещений.
-        /// Помещения без приборов попадают в ветку «Без систем» своего уровня.</summary>
-        private void RebuildTree()
-        {
-            foreach (var n in TreeRoots) n.Children.Clear();
-            TreeRoots.Clear();
-
-            var bySystem = Placements
-                .GroupBy(p => p.SystemName)
-                .OrderBy(g => g.Key == "Отопление" ? 1 : 0)
-                .ThenByDescending(g => g.Sum(p => p.CalculatedFlow))
-                .ToList();
-
-            foreach (var sys in bySystem)
-            {
-                var systemNode = new CrmNode
-                {
-                    Kind = "System",
-                    Title = sys.Key,
-                    SystemName = sys.Key,
-                    DeviceCount = sys.Count()
-                };
-                foreach (var lvl in sys.GroupBy(p => p.LevelName).OrderBy(l => l.Key, StringComparer.Ordinal))
-                {
-                    var levelNode = new CrmNode
-                    {
-                        Kind = "Level",
-                        Title = string.IsNullOrEmpty(lvl.Key) ? "(без уровня)" : lvl.Key!,
-                        SystemName = sys.Key,
-                        LevelName = lvl.Key,
-                        DeviceCount = lvl.Count()
-                    };
-                    foreach (var roomGroup in lvl.GroupBy(p => p.RoomId).OrderBy(g => g.Key, StringComparer.Ordinal))
-                    {
-                        var firstRow = roomGroup.First();
-                        levelNode.Children.Add(new CrmNode
-                        {
-                            Kind = "Room",
-                            Title = firstRow.RoomName,
-                            SystemName = sys.Key,
-                            LevelName = lvl.Key,
-                            RoomId = roomGroup.Key,
-                            DeviceCount = roomGroup.Count()
-                        });
-                    }
-                    systemNode.Children.Add(levelNode);
-                }
-                TreeRoots.Add(systemNode);
-            }
-
-            OnPropertyChanged(nameof(TreeRoots));
-
-            // Узлы пересоздаются при каждом пересчёте — восстановить выбор по ключам,
-            // иначе панель свойств и фильтр остаются на «осиротевшем» объекте.
-            if (TreeRoots.Count == 0)
-            {
-                if (SelectedNode != null)
-                    SelectedNode = null;
-                return;
-            }
-            var previous = SelectedNode;
-            if (previous == null)
-                return;
-            var restored = FindTreeNode(
-                TreeRoots, previous.Kind, previous.SystemName, previous.LevelName, previous.RoomId);
-            if (restored != null && !ReferenceEquals(restored, previous))
-                SelectedNode = restored;
-        }
-
-        private static CrmNode? FindTreeNode(
-            IEnumerable<CrmNode> nodes, string kind,
-            string? systemName, string? levelName, string? roomId)
-        {
-            foreach (var node in nodes)
-            {
-                if (node.Kind == kind &&
-                    node.SystemName == systemName &&
-                    node.LevelName == levelName &&
-                    node.RoomId == roomId)
-                    return node;
-                var deep = FindTreeNode(node.Children, kind, systemName, levelName, roomId);
-                if (deep != null)
-                    return deep;
-            }
-            return null;
-        }
+        // ---------------- M1.2: дерево CRM → CrmViewModel (M1.1b) ----------------
 
         // ---------------- M3.1: 3D-вкладка ----------------
 
