@@ -16,6 +16,9 @@ namespace HVACLoadTerminals.App
             InitializeComponent();
             DataContext = AppHost.Services.GetRequiredService<MainViewModel>();
             _vm = (MainViewModel)DataContext;
+            // Ссылка на демо-фикстуру в пустом состоянии: показать путь/причину.
+            var demo = MainViewModel.FindDemoSnapshot();
+            DemoPathText.Text = demo ?? "Демо-снимок не найден (D:\\HeatLossRevit2Data\\snapshots_raw)";
         }
 
         private void EditSystems_Click(object sender, RoutedEventArgs e)

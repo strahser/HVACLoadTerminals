@@ -347,6 +347,17 @@
                                             Помещения и нагрузки появятся автоматически.<LineBreak/>
                                             Затем F5 — расчёт расстановки.
                                         </TextBlock>
+                                        <!-- Быстрый старт: демо-фикстура HvackFinal -->
+                                        <Button Command="{Binding OpenDemoSnapshotCommand}"
+                                                Style="{StaticResource PrimaryButton}"
+                                                Padding="16,7" Margin="0,16,0,0"
+                                                HorizontalAlignment="Center"
+                                                ToolTip="Загрузить тестовый снимок HvackFinal (40 помещений)">
+                                            ▶ Загрузить демо-снимок HvackFinal
+                                        </Button>
+                                        <TextBlock x:Name="DemoPathText" FontSize="11" Margin="0,8,0,0"
+                                                   Foreground="{StaticResource TextMuted}"
+                                                   TextAlignment="Center" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                             </Grid>

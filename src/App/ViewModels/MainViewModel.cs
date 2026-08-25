@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -340,6 +341,7 @@ namespace HVACLoadTerminals.App.ViewModels
         }
 
         public ICommand OpenSnapshotCommand { get; }
+        public ICommand OpenDemoSnapshotCommand { get; }
         public ICommand RecalcLoadsCommand { get; }
         public ICommand ApplyPurposeCommand { get; }
         public ICommand IncludeLevelCommand { get; }
@@ -403,6 +405,9 @@ namespace HVACLoadTerminals.App.ViewModels
             };
 
             OpenSnapshotCommand = new RelayCommand(_ => OpenSnapshot());
+            OpenDemoSnapshotCommand = new RelayCommand(
+                _ => LoadSnapshotFile(FindDemoSnapshot()!),
+                _ => FindDemoSnapshot() != null);
             RecalcLoadsCommand = new RelayCommand(_ =>
             {
                 try
@@ -500,18 +505,49 @@ namespace HVACLoadTerminals.App.ViewModels
             };
             if (dlg.ShowDialog() != true)
                 return;
+            LoadSnapshotFile(dlg.FileName);
+        }
 
+        /// <summary>Загрузить снимок по пути (общее для диалога и демо-фикстуры).</summary>
+        private void LoadSnapshotFile(string path)
+        {
             try
             {
-                Workspace.LoadSnapshot(dlg.FileName);
-                AppLogger.Info("Snapshot loaded: " + dlg.FileName +
+                Workspace.LoadSnapshot(path);
+                AppLogger.Info("Snapshot loaded: " + path +
                                ", rooms=" + Workspace.Rooms.Count);
             }
             catch (Exception ex)
             {
                 StatusMessage = "Ошибка чтения снимка: " + ex.Message;
-                AppLogger.Error("LoadSnapshot failed: " + dlg.FileName, ex);
+                AppLogger.Error("LoadSnapshot failed: " + path, ex);
             }
+        }
+
+        /// <summary>Демо-фикстура для быстрого старта (HvackFinal из
+        /// snapshots_raw HeatLossRevit2). null — на диске не найдена.</summary>
+        public static string? FindDemoSnapshot()
+        {
+            var roots = new[]
+            {
+                @"D:\HeatLossRevit2Data\snapshots_raw",
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "HeatLossRevit2", "data", "snapshots_raw")
+            };
+            foreach (var root in roots)
+            {
+                if (!Directory.Exists(root))
+                    continue;
+                var file = Directory.EnumerateFiles(root, "HvackFinal*.json",
+                        SearchOption.AllDirectories)
+                    .OrderByDescending(f => f.Contains("_v", StringComparison.OrdinalIgnoreCase))
+                    .ThenByDescending(File.GetLastWriteTime)
+                    .FirstOrDefault();
+                if (file != null)
+                    return file;
+            }
+            return null;
         }
 
         private void ApplyPurpose(string purpose) =>
