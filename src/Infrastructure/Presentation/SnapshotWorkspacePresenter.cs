@@ -816,6 +816,56 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             return true;
         }
 
+        /// <summary>
+        /// P5 (Detail-режим): массовое применение оверрайдов к системам выбранных
+        /// комнат. Применяются только взведённые поля спеки; <paramref name="spec"/>.SystemName
+        /// сужает получателей до одной системы. Возвращает число изменённых строк.
+        /// </summary>
+        public int ApplyOverridesToRooms(
+            Func<RoomRow, bool> roomFilter, MassOverrideSpec spec)
+        {
+            if (spec == null || !spec.HasAny)
+                return 0;
+
+            int touched = 0;
+            foreach (var room in Rooms.Where(roomFilter))
+            {
+                var systems = room.Systems;
+                if (systems == null)
+                    continue;
+                bool roomChanged = false;
+                foreach (var system in systems)
+                {
+                    if (!string.IsNullOrEmpty(spec.SystemName) &&
+                        system.Name != spec.SystemName)
+                        continue;
+                    if (spec.SetDeviceType)
+                        system.DeviceTypeId =
+                            string.IsNullOrWhiteSpace(spec.DeviceTypeId)
+                                ? null : spec.DeviceTypeId;
+                    if (spec.SetRule)
+                        system.CountRuleOverride = spec.Rule;
+                    if (spec.SetFixedCount && spec.FixedCount >= 1)
+                        system.FixedCountOverride = spec.FixedCount;
+                    if (spec.SetPattern)
+                        system.PatternOverride = spec.Pattern;
+                    if (spec.SetSingleRule)
+                        system.SingleRuleOverride = spec.SingleRule;
+                    if (spec.SetEdgeOffset)
+                        system.EdgeOffsetOverrideMm = spec.EdgeOffsetMm;
+                    if (spec.SetCeilingOffset)
+                        system.CeilingOffsetOverrideMm = spec.CeilingOffsetMm;
+                    roomChanged = true;
+                    touched++;
+                }
+                if (roomChanged)
+                    room.RefreshSystemSummary();
+            }
+
+            RaiseStatusOnly($"Массовое применение: изменено {touched} систем");
+            return touched;
+        }
+
         /// <summary>M2.1: опции потолочной расстановки конкретной системы —
         /// оверрайды панели свойств, при отсутствии — глобальные тулбара.</summary>
         private CeilingPlacementOptions SystemCeilingOptions(SystemRow system)

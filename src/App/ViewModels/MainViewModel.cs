@@ -199,6 +199,50 @@ namespace HVACLoadTerminals.App.ViewModels
             };
         }
 
+        // ---- P5: Detail-режим — мультиселект комнат → массовые оверрайды ----
+
+        private IReadOnlyList<string> _selectedRoomIds = Array.Empty<string>();
+
+        /// <summary>S_ID выбранных строк таблицы помещений (Extended-селект).</summary>
+        public IReadOnlyList<string> SelectedRoomIds
+        {
+            get => _selectedRoomIds;
+            private set
+            {
+                _selectedRoomIds = value;
+                OnPropertyChanged(nameof(SelectedRoomIds));
+                OnPropertyChanged(nameof(SelectedRoomsCount));
+                OnPropertyChanged(nameof(HasSelectedRooms));
+            }
+        }
+
+        public int SelectedRoomsCount => _selectedRoomIds.Count;
+        public bool HasSelectedRooms => _selectedRoomIds.Count > 0;
+
+        /// <summary>Хост передаёт выделенные строки таблицы помещений.</summary>
+        public void SetSelectedRooms(System.Collections.IList items) =>
+            SelectedRoomIds = items != null
+                ? items.OfType<RoomRow>().Select(r => r.RoomId).ToList()
+                : (IReadOnlyList<string>)Array.Empty<string>();
+
+        private void ApplyMass()
+        {
+            if (_selectedRoomIds.Count == 0)
+            {
+                StatusMessage = "Выделите помещения в таблице (Ctrl/Shift)";
+                return;
+            }
+            var vm = new MassApplyViewModel(this);
+            var window = new MassApplyWindow(vm)
+            {
+                Owner = System.Windows.Application.Current?.MainWindow
+            };
+            window.ShowDialog();
+            UpdatePropertiesPanel(); // сводка/панель могли измениться
+        }
+
+        // ---- M3.2: экспорт отчёта по уровню ----
+
         // ---- Options (pass-through to presenter) ----
 
         public double MinLengthRatio
@@ -340,6 +384,9 @@ namespace HVACLoadTerminals.App.ViewModels
         public ICommand ExportExcelCommand { get; }
         public ICommand EditCatalogCommand { get; }
 
+        /// <summary>P5: массовое применение оверрайдов к выбранным помещениям.</summary>
+        public ICommand ApplyMassCommand { get; }
+
         private PlotModel? _plotModel;
         public PlotModel? PlotModel
         {
@@ -386,6 +433,7 @@ namespace HVACLoadTerminals.App.ViewModels
             ExportExcelCommand = new RelayCommand(_ => ExportExcel(), _ =>
                 Placements.Count > 0);
             EditCatalogCommand = new RelayCommand(_ => EditCatalog());
+            ApplyMassCommand = new RelayCommand(_ => ApplyMass(), _ => HasSelectedRooms);
 
             Workspace.ErrorSink = msg =>
             {

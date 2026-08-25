@@ -44,6 +44,12 @@ namespace HVACLoadTerminals.App
             _vm.SelectedNode = e.NewValue as CrmNode;
         }
 
+        /// <summary>P5: мультиселект строк помещений для массовых операций.</summary>
+        private void RoomsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            _vm.SetSelectedRooms(RoomsGrid.SelectedItems);
+        }
+
         /// <summary>M3.1: при входе на вкладку 3D — инициализация WebView2 и
         /// загрузка актуальной сцены.</summary>
         private void CenterTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)

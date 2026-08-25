@@ -43,4 +43,42 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public double? EdgeOffsetOverrideMm { get; set; }
         public double? CeilingOffsetOverrideMm { get; set; }
     }
+
+    /// <summary>
+    /// P5 (Detail-режим прототипа): что применять к выбранным комнатам.
+    /// Поле участвует только если соответствующий флаг <c>Set*</c> взведён
+    /// (аналог DeviceCRUDView: «add data to column» по заполненным полям).
+    /// </summary>
+    public class MassOverrideSpec
+    {
+        public bool SetDeviceType { get; set; }
+
+        /// <summary>Пин типоразмера; пустая строка = сброс на автоподбор.</summary>
+        public string? DeviceTypeId { get; set; }
+
+        public bool SetRule { get; set; }
+        public CeilingCountRule Rule { get; set; }
+
+        public bool SetFixedCount { get; set; }
+        public int FixedCount { get; set; } = 1;
+
+        public bool SetPattern { get; set; }
+        public WallPattern Pattern { get; set; }
+
+        public bool SetSingleRule { get; set; }
+        public SingleRule SingleRule { get; set; }
+
+        public bool SetEdgeOffset { get; set; }
+        public double EdgeOffsetMm { get; set; }
+
+        public bool SetCeilingOffset { get; set; }
+        public double CeilingOffsetMm { get; set; }
+
+        /// <summary>Система-получатель внутри комнат; null/пусто — все системы.</summary>
+        public string? SystemName { get; set; }
+
+        public bool HasAny => SetDeviceType || SetRule || SetFixedCount ||
+                              SetPattern || SetSingleRule ||
+                              SetEdgeOffset || SetCeilingOffset;
+    }
 }
