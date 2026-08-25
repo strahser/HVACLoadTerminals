@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using HVACLoadTerminals.App.ViewModels;
@@ -9,6 +10,9 @@ namespace HVACLoadTerminals.App
 {
     public partial class MainWindow : Window
     {
+        private const string BaseTitle =
+            "HVAC Terminals · Расстановка приборов по снимку помещений";
+
         private readonly MainViewModel _vm;
 
         public MainWindow()
@@ -19,6 +23,20 @@ namespace HVACLoadTerminals.App
             // Ссылка на демо-фикстуру в пустом состоянии: показать путь/причину.
             var demo = MainViewModel.FindDemoSnapshot();
             DemoPathText.Text = demo ?? "Демо-снимок не найден (D:\\HeatLossRevit2Data\\snapshots_raw)";
+            // UX-серия: маркер несохранённых изменений в заголовке окна.
+            _vm.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(MainViewModel.IsDirty))
+                    Title = (_vm.IsDirty ? "● " : "") + BaseTitle;
+            };
+        }
+
+        /// <summary>UX-серия: guard — не терять расстановку при закрытии окна.</summary>
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            if (!e.Cancel && !_vm.ConfirmLoseChanges("закрыть приложение"))
+                e.Cancel = true;
         }
 
         private void EditSystems_Click(object sender, RoutedEventArgs e)
@@ -27,6 +45,7 @@ namespace HVACLoadTerminals.App
             {
                 new SystemEditorWindow(row) { Owner = this }.ShowDialog();
                 _vm.Workspace.CommitRoomSystems(row); // справочник систем проекта
+                _vm.MarkDirty(); // UX-серия
             }
         }
 
@@ -39,6 +58,7 @@ namespace HVACLoadTerminals.App
                 new SystemEditorWindow(room) { Owner = this }.ShowDialog();
                 _vm.Workspace.CommitRoomSystems(room); // справочник систем проекта
                 _vm.Crm.RefreshPanels(); // сводка систем могла измениться
+                _vm.MarkDirty(); // UX-серия
             }
         }
 
@@ -70,6 +90,7 @@ namespace HVACLoadTerminals.App
             {
                 new SystemEditorWindow(row) { Owner = this }.ShowDialog();
                 _vm.Workspace.CommitRoomSystems(row);
+                _vm.MarkDirty(); // UX-серия
             }
         }
 

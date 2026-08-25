@@ -259,6 +259,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
 
@@ -267,6 +268,18 @@
                                     <Button DockPanel.Dock="Right" Content="Системы…"
                                             Padding="6,2" Click="EditSystems_Click_Grid"
                                             ToolTip="Показать системы первой выделенной комнаты"/>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                                                VerticalAlignment="Center" Margin="0,0,8,0">
+                                        <!-- UX-серия: поиск/фильтр по помещениям -->
+                                        <TextBox x:Name="RoomSearchBox" Width="170" Padding="5,3"
+                                                 VerticalContentAlignment="Center"
+                                                 Text="{Binding RoomSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 ToolTip="Поиск по номеру и названию; несколько подстрок через пробел"/>
+                                        <ComboBox ItemsSource="{Binding RoomFilterModes}"
+                                                  SelectedItem="{Binding RoomFilterMode}"
+                                                  Width="175" Margin="6,0,0,0"
+                                                  ToolTip="Фильтр по назначенным системам"/>
+                                    </StackPanel>
                                     <TextBlock VerticalAlignment="Center"
                                                FontWeight="SemiBold" Foreground="{StaticResource TextDark}">
                                         Помещения — Q, приток, вытяжка, назначение
@@ -292,7 +305,23 @@
                                             Content="☐ Видимые"/>
                                 </WrapPanel>
 
-                                <DataGrid Grid.Row="2" ItemsSource="{Binding RoomsView}"
+                                <!-- UX-серия: строка контекста — уровень, счётчики, выделение -->
+                                <DockPanel Grid.Row="2" Margin="10,0,10,4" LastChildFill="True">
+                                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                        <Button Content="✓ все" Padding="8,1"
+                                                Click="SelectAllRows_Click"
+                                                ToolTip="Выделить все видимые строки (Ctrl+A в таблице)"/>
+                                        <Button Content="☐ снять" Padding="8,1"
+                                                Click="UnselectAllRows_Click"
+                                                ToolTip="Снять выделение строк"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding RoomsContextText}"
+                                               Foreground="{StaticResource TextMuted}"
+                                               FontSize="11" VerticalAlignment="Center"
+                                               Margin="10,0,0,0"/>
+                                </DockPanel>
+
+                                <DataGrid Grid.Row="3" ItemsSource="{Binding RoomsView}"
                                           Margin="6,0,6,6" BorderThickness="1"
                                           SelectionMode="Extended" SelectionUnit="FullRow"
                                           x:Name="RoomsGrid"
@@ -324,7 +353,7 @@
                                 </DataGrid>
 
                                 <!-- Пустое состояние -->
-                                <Border Grid.RowSpan="3" Background="#FBFCFE">
+                                <Border Grid.RowSpan="4" Background="#FBFCFE">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Visibility" Value="Collapsed"/>

@@ -74,8 +74,154 @@ namespace HVACLoadTerminals.App.ViewModels
                 _selectedLevel = value;
                 OnPropertyChanged(nameof(SelectedLevel));
                 RoomsView.Refresh();
+                UpdateRoomCounts();
                 PlotLevel();
             }
+        }
+
+        // ---- UX-серия: поиск/фильтр в списке помещений ----
+
+        /// <summary>Режимы фильтра списка помещений (чистый предикат —
+        /// <see cref="RoomRowFilter"/>, общий с массовыми операциями).</summary>
+        public string[] RoomFilterModes => RoomRowFilter.Modes;
+
+        private string _roomSearchText = "";
+        /// <summary>Поиск по номеру и названию; токены через пробел (И).</summary>
+        public string RoomSearchText
+        {
+            get => _roomSearchText;
+            set
+            {
+                _roomSearchText = value ?? "";
+                OnPropertyChanged(nameof(RoomSearchText));
+                RoomsView.Refresh();
+                UpdateRoomCounts();
+            }
+        }
+
+        private string _roomFilterMode = RoomRowFilter.All;
+        public string RoomFilterMode
+        {
+            get => _roomFilterMode;
+            set
+            {
+                _roomFilterMode = value ?? RoomRowFilter.All;
+                OnPropertyChanged(nameof(RoomFilterMode));
+                RoomsView.Refresh();
+                UpdateRoomCounts();
+            }
+        }
+
+        // ---- UX-серия: строка контекста таблицы помещений ----
+
+        private int _visibleRoomsCount;
+        /// <summary>Строк, проходящих фильтр уровня/поиска/режима.</summary>
+        public int VisibleRoomsCount
+        {
+            get => _visibleRoomsCount;
+            private set
+            {
+                _visibleRoomsCount = value;
+                OnPropertyChanged(nameof(VisibleRoomsCount));
+                OnPropertyChanged(nameof(RoomsContextText));
+            }
+        }
+
+        private int _levelRoomsCount;
+        /// <summary>Всего строк на выбранном уровне.</summary>
+        public int LevelRoomsCount
+        {
+            get => _levelRoomsCount;
+            private set
+            {
+                _levelRoomsCount = value;
+                OnPropertyChanged(nameof(LevelRoomsCount));
+                OnPropertyChanged(nameof(RoomsContextText));
+            }
+        }
+
+        private void UpdateRoomCounts()
+        {
+            int level = 0, visible = 0;
+            foreach (var r in Workspace.Rooms)
+            {
+                if (!string.IsNullOrEmpty(SelectedLevel) && r.LevelName != SelectedLevel)
+                    continue;
+                level++;
+                if (RoomRowFilter.IsVisible(r, SelectedLevel, _roomSearchText, _roomFilterMode))
+                    visible++;
+            }
+            LevelRoomsCount = level;
+            VisibleRoomsCount = visible;
+        }
+
+        /// <summary>«Уровень: 1 · показано 38 из 40 · выбрано 3» для строки над гридом.</summary>
+        public string RoomsContextText =>
+            Workspace.Rooms.Count == 0
+                ? ""
+                : $"Уровень: {(SelectedLevel.Length > 0 ? SelectedLevel : "—")}" +
+                  $" · показано {VisibleRoomsCount} из {LevelRoomsCount}" +
+                  $" · выбрано {SelectedRoomsCount}";
+
+        // ---- UX-серия: guard несохранённых изменений ----
+
+        private bool _isDirty;
+        /// <summary>Проект изменён с последнего сохранения/загрузки.</summary>
+        public bool IsDirty
+        {
+            get => _isDirty;
+            private set
+            {
+                if (_isDirty == value) return;
+                _isDirty = value;
+                OnPropertyChanged(nameof(IsDirty));
+            }
+        }
+
+        public void MarkDirty() => IsDirty = true;
+        public void MarkClean() => IsDirty = false;
+
+        /// <summary>Наблюдаемые строки (для снятия подписок при перезагрузке снимка).</summary>
+        private readonly HashSet<RoomRow> _watchedRows = new HashSet<RoomRow>();
+
+        private void WatchRooms()
+        {
+            foreach (var row in Workspace.Rooms)
+            {
+                if (_watchedRows.Add(row))
+                    row.PropertyChanged += RoomEditedHandler;
+            }
+        }
+
+        private void RoomEditedHandler(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(RoomRow.HeatingW) ||
+                e.PropertyName == nameof(RoomRow.Supply) ||
+                e.PropertyName == nameof(RoomRow.Exhaust) ||
+                e.PropertyName == nameof(RoomRow.Purpose) ||
+                e.PropertyName == nameof(RoomRow.IsIncluded) ||
+                e.PropertyName == nameof(RoomRow.SystemsSummary))
+            {
+                MarkDirty();
+            }
+        }
+
+        /// <summary>true — продолжать операцию (изменений нет / сохранено /
+        /// пользователь отказался сохранять); false — отменить операцию.</summary>
+        public bool ConfirmLoseChanges(string action)
+        {
+            if (!_isDirty)
+                return true;
+            var res = System.Windows.MessageBox.Show(
+                $"Проект изменён. Сохранить изменения перед тем, как {action}?",
+                "Несохранённые изменения",
+                System.Windows.MessageBoxButton.YesNoCancel,
+                System.Windows.MessageBoxImage.Warning);
+            if (res == System.Windows.MessageBoxResult.Cancel)
+                return false;
+            if (res == System.Windows.MessageBoxResult.Yes)
+                return TrySaveProject();
+            return true;
         }
 
         /// <summary>Сигнатура набора уровней текущего документа: при смене
@@ -194,6 +340,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 : (IReadOnlyList<string>)Array.Empty<string>();
             // Требование 9: подсветка/кривые ограждений следуют за выделением.
             PlotLevel();
+            OnPropertyChanged(nameof(RoomsContextText));
         }
 
         private void ApplyMass()
@@ -210,6 +357,10 @@ namespace HVACLoadTerminals.App.ViewModels
             };
             window.ShowDialog();
             Crm.RefreshPanels(); // сводка/панели могли измениться без пересчёта
+            // UX-серия: массовая правка — грязное состояние + свежий список/счётчики.
+            MarkDirty();
+            RoomsView.Refresh();
+            UpdateRoomCounts();
         }
 
         // ---- M3.2: экспорт отчёта по уровню ----
@@ -378,6 +529,10 @@ namespace HVACLoadTerminals.App.ViewModels
                 Workspace, row => ids.Contains(row.RoomId)) { Owner = owner };
             window.ShowDialog();
             Crm.RefreshPanels();
+            // UX-серия: назначение систем — грязное состояние + свежий список/счётчики.
+            MarkDirty();
+            RoomsView.Refresh();
+            UpdateRoomCounts();
         }
 
         /// <summary>M3.2: HTML-отчёт по текущему уровню (сцена+сводка+таблица).</summary>
@@ -406,13 +561,18 @@ namespace HVACLoadTerminals.App.ViewModels
 
             OpenSnapshotCommand = new RelayCommand(_ => OpenSnapshot());
             OpenDemoSnapshotCommand = new RelayCommand(
-                _ => LoadSnapshotFile(FindDemoSnapshot()!),
+                _ =>
+                {
+                    if (ConfirmLoseChanges("загрузить демо-снимок"))
+                        LoadSnapshotFile(FindDemoSnapshot()!);
+                },
                 _ => FindDemoSnapshot() != null);
             RecalcLoadsCommand = new RelayCommand(_ =>
             {
                 try
                 {
                     Workspace.RegenerateLoads();
+                    MarkDirty(); // UX-серия: авторасчёт перезаписал Q/расходы всех строк
                     AppLogger.Info("RegenerateLoads OK, rooms=" + Workspace.Rooms.Count);
                 }
                 catch (Exception ex)
@@ -455,6 +615,13 @@ namespace HVACLoadTerminals.App.ViewModels
                 AppLogger.Error(msg);
             };
             Workspace.StateChanged += OnStateChanged;
+            // UX-серия: dirty-наблюдатели за строками (переподписка при загрузке).
+            Workspace.Rooms.CollectionChanged += (_, e) =>
+            {
+                if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                    _watchedRows.Clear();
+                WatchRooms();
+            };
 
             // U2.2: офлайн-каталог приборов (JSON рядом с приложением/в %AppData%),
             // первый запуск — seed из CatalogFactory.CreateDemo().
@@ -498,6 +665,8 @@ namespace HVACLoadTerminals.App.ViewModels
 
         private void OpenSnapshot()
         {
+            if (!ConfirmLoseChanges("открыть новый снимок"))
+                return;
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
                 Title = "Открыть снимок помещений HeatLossRevit2",
@@ -514,6 +683,7 @@ namespace HVACLoadTerminals.App.ViewModels
             try
             {
                 Workspace.LoadSnapshot(path);
+                MarkClean(); // UX-серия: только что загруженный снимок — чистый
                 AppLogger.Info("Snapshot loaded: " + path +
                                ", rooms=" + Workspace.Rooms.Count);
             }
@@ -554,7 +724,7 @@ namespace HVACLoadTerminals.App.ViewModels
             Workspace.ApplyPurpose(FilterVisible, purpose);
 
         private bool FilterVisible(RoomRow row) =>
-            row.LevelName == SelectedLevel;
+            RoomRowFilter.IsVisible(row, SelectedLevel, _roomSearchText, _roomFilterMode);
 
         /// <summary>M2.1: живой пересчёт после правки свойств (панель системы).</summary>
         public void RecalcIfLive()
@@ -591,6 +761,7 @@ namespace HVACLoadTerminals.App.ViewModels
 
                 OnPropertyChanged(nameof(RoomsView));
                 RoomsView.Refresh();
+                UpdateRoomCounts();
 
                 // Статусные состояния (без размещений) таблицу не стирают.
                 if (state.IsCalculation || state.Placements.Count > 0)
@@ -874,33 +1045,43 @@ namespace HVACLoadTerminals.App.ViewModels
         // Project / HTML
         // ------------------------------------------------------------------
 
-        private void SaveProject()
+        private void SaveProject() => TrySaveProject();
+
+        /// <summary>UX-серия: сохранение с результатом для guard'а
+        /// (false — отмена диалога или ошибка; true — проект записан).</summary>
+        private bool TrySaveProject()
         {
             if (Workspace.Rooms.Count == 0)
             {
                 StatusMessage = "Нет проекта для сохранения";
-                return;
+                return false;
             }
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
                 Filter = "Проект размещения (*.hvacproj.json)|*.hvacproj.json"
             };
             if (dlg.ShowDialog() != true)
-                return;
+                return false;
 
             try
             {
                 Workspace.SaveProject(dlg.FileName);
                 StatusMessage = $"Проект сохранён: {dlg.FileName}";
+                MarkClean();
+                return true;
             }
             catch (Exception ex)
             {
                 StatusMessage = "Ошибка сохранения: " + ex.Message;
+                AppLogger.Error("SaveProject failed: " + dlg.FileName, ex);
+                return false;
             }
         }
 
         private void LoadProject()
         {
+            if (!ConfirmLoseChanges("открыть другой проект"))
+                return;
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "Проект размещения (*.hvacproj.json)|*.hvacproj.json|Все файлы|*.*"
@@ -911,6 +1092,7 @@ namespace HVACLoadTerminals.App.ViewModels
             try
             {
                 Workspace.LoadProject(dlg.FileName); // raises StateChanged
+                MarkClean(); // UX-серия: только что загруженный проект — чистый
             }
             catch (Exception ex)
             {
