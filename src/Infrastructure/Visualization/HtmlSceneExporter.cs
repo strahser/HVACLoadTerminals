@@ -16,6 +16,17 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
         /// <summary>Builds the full HTML document. <paramref name="sceneJson"/> is injected raw (trusted).</summary>
         public static string BuildHtml(string title, string sceneJson)
         {
+            return BuildReportHtml(title, sceneJson, reportData: null);
+        }
+
+        /// <summary>
+        /// M3.2: HTML-отчёт — тот же интерактивный просмотрщик плюс опциональный
+        /// блок данных отчёта (сводка систем + таблица приборов), отрисовываемый
+        /// из <paramref name="reportData"/> (анонимный объект; null = без блока).
+        /// </summary>
+        public static string BuildReportHtml(
+            string title, string sceneJson, object? reportData)
+        {
             var json = string.IsNullOrWhiteSpace(sceneJson)
                 ? "{\"Title\":\"\",\"Rooms\":[]}"
                 : sceneJson;
@@ -26,8 +37,12 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
             var effectiveTitle = string.IsNullOrWhiteSpace(title) ? "Terminal Placement Scene" : title;
             var titleHtml = System.Net.WebUtility.HtmlEncode(effectiveTitle);
             var titleJs = JsonConvert.SerializeObject(effectiveTitle).Replace("</", "<\\/");
+            var dataJs = reportData == null
+                ? "undefined"
+                : JsonConvert.SerializeObject(reportData).Replace("</", "<\\/");
 
             return HeadTemplate.Replace("{TITLE}", titleHtml)
+                + "<script>window.REPORT_DATA = " + dataJs + ";</script>\n"
                 + safeJson
                 + TailTemplate.Replace("{TITLE_JS}", titleJs);
         }
@@ -243,7 +258,8 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
             calc: pl.CalculatedFlowM3h || 0,
             option: pl.CalculationOption || '',
             mountMm: pl.MountHeightMm || 0,
-            color: s.Color, roomId: r.RoomId
+            color: s.Color, roomId: r.RoomId,
+            system: s.SystemName || ''
           });
         });
       });
@@ -564,6 +580,7 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
     var center = new THREE.Vector3(b.cx, b.cy, 0);
 
     var levelObjects = []; // M3.1: объекты, скрываемые фильтром уровня
+    var filterables = [];  // M3.1: {obj, levelZ, system} — общий фильтр уровня и систем
 
     rooms.forEach(function (r) {
       var z = r.baseZ || 0;
@@ -583,6 +600,7 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
         slab.userData.levelZ = z;
         scene.add(slab);
         levelObjects.push(slab);
+        filterables.push({ obj: slab, levelZ: z, system: null });
       }
 
       if (r.bnd.length < 2) return;
@@ -595,6 +613,7 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
       roomLine.userData.levelZ = z;
       scene.add(roomLine);
       levelObjects.push(roomLine);
+      filterables.push({ obj: roomLine, levelZ: z, system: null });
 
       if (r.off.length >= 2) {
         var o = [];
@@ -606,6 +625,7 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
         offLine.userData.levelZ = z;
         scene.add(offLine);
         levelObjects.push(offLine);
+        filterables.push({ obj: offLine, levelZ: z, system: null });
       }
     });
 
@@ -619,6 +639,7 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
       mesh.userData.levelZ = p.z || 0;
       scene.add(mesh);
       levelObjects.push(mesh);
+      filterables.push({ obj: mesh, levelZ: p.z || 0, system: p.system || '' });
     });
 
     // ---- M3.1: селектор уровня «Все этажи / отм. …» ----
@@ -631,9 +652,54 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
     });
     levels.sort(function (a, b) { return a - b; });
 
+    // ---- M3.1: изоляция систем чекбоксами ----
+    var currentLevel = null;
+    var hiddenSystems = {};
+    function apply3DFilters() {
+      filterables.forEach(function (f) {
+        var lvlOK = (currentLevel === null) ||
+          Math.abs((f.levelZ || 0) - currentLevel) < 0.01;
+        var sysOK = (f.system === null) || !hiddenSystems[f.system];
+        f.obj.visible = lvlOK && sysOK;
+      });
+    }
+
+    var sysMap = {};
+    placementsFlat.forEach(function (p) {
+      var name = p.system || '';
+      if (!sysMap[name]) sysMap[name] = p.color || '#888';
+    });
+    var sysNames = Object.keys(sysMap).sort();
+
+    if (sysNames.length > 1) {
+      var sysBox = document.createElement('div');
+      sysBox.style.cssText = 'position:absolute;top:8px;left:8px;z-index:6;' +
+        'background:rgba(13,17,23,0.9);border:1px solid #30363d;border-radius:6px;' +
+        'padding:6px 10px;font-size:12px;color:#c9d1d9;max-height:70%;overflow-y:auto;';
+      sysNames.forEach(function (name) {
+        var row = document.createElement('label');
+        row.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;padding:1px 0;';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = true;
+        cb.addEventListener('change', function () {
+          hiddenSystems[name] = !cb.checked;
+          apply3DFilters();
+        });
+        var chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-block;width:11px;height:11px;border-radius:3px;' +
+          'background:' + sysMap[name] + ';';
+        row.appendChild(cb);
+        row.appendChild(chip);
+        row.appendChild(document.createTextNode(name + ''));
+        sysBox.appendChild(row);
+      });
+      container.appendChild(sysBox);
+    }
+
     if (levels.length > 1) {
       var sel = document.createElement('select');
-      sel.style.cssText = 'position:absolute;top:8px;left:8px;z-index:6;' +
+      sel.style.cssText = 'position:absolute;top:8px;right:8px;z-index:6;' +
         'padding:4px 6px;border-radius:4px;border:1px solid #30363d;' +
         'background:#0d1117;color:#c9d1d9;font-size:12px;';
       var optAll = document.createElement('option');
@@ -646,11 +712,8 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
         sel.appendChild(o);
       });
       sel.addEventListener('change', function () {
-        var v = sel.value === '' ? null : parseFloat(sel.value);
-        levelObjects.forEach(function (obj) {
-          obj.visible = (v === null) ||
-            Math.abs((obj.userData.levelZ || 0) - v) < 0.01;
-        });
+        currentLevel = sel.value === '' ? null : parseFloat(sel.value);
+        apply3DFilters();
       });
       container.appendChild(sel);
     }
@@ -728,6 +791,70 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
   resize();
   fitView();
   draw();
+
+  // ---------- M3.2: блок отчёта (сводка систем + таблица приборов) ----------
+  (function buildReport() {
+    var D = window.REPORT_DATA;
+    if (!D || !D.Summary && !D.Devices) return;
+
+    var toolbar = document.getElementById('toolbar');
+    if (toolbar) {
+      var hint = document.getElementById('hint');
+      var btnTable = document.createElement('button');
+      btnTable.type = 'button';
+      btnTable.textContent = 'Таблица отчёта';
+      if (hint) toolbar.insertBefore(btnTable, hint);
+      else toolbar.appendChild(btnTable);
+      btnTable.onclick = function () {
+        var ov = document.getElementById('reportOverlay');
+        if (ov) ov.style.display = (ov.style.display === 'none') ? 'flex' : 'none';
+      };
+    }
+
+    // Сводка по системам — вверху сайдбара.
+    if (D.Summary && D.Summary.length) {
+      var box = document.createElement('div');
+      box.style.cssText = 'margin-bottom:12px;border:1px solid #30363d;border-radius:6px;padding:8px;background:#0d1117;';
+      box.innerHTML = '<div class="roomHead">Сводка по системам</div>' +
+        '<table class="sumTable">' +
+        '<tr><td></td><td><b>Система</b></td><td><b>Комн.</b></td><td><b>Приб.</b></td><td><b>&Sigma; м&sup3;/ч</b></td><td><b>k_ef</b></td></tr>' +
+        D.Summary.map(function (s) {
+          return '<tr><td></td><td>' + esc(s.Name) + '</td><td>' + s.RoomCount + '</td>' +
+            '<td>' + s.DeviceCount + '</td><td>' + fmtFlow(s.TotalFlowM3h) + '</td>' +
+            '<td>' + (s.AvgKef > 0 ? Number(s.AvgKef).toFixed(2) : '&mdash;') + '</td></tr>';
+        }).join('') +
+        '</table>' +
+        (D.Formulas ? D.Formulas.filter(Boolean).map(function (f) {
+          return '<div style="color:#8b949e;font-size:11px;margin-top:4px;">' + esc(f) + '</div>';
+        }).join('') : '');
+      sidebar.insertBefore(box, sidebar.firstChild);
+    }
+
+    // Полноэкранная таблица приборов (для чтения/печати).
+    var overlay = document.createElement('div');
+    overlay.id = 'reportOverlay';
+    overlay.style.cssText = 'display:none;position:absolute;inset:0;z-index:20;' +
+      'background:#0d1117;color:#e6edf3;overflow:auto;padding:16px;';
+    var rows = (D.Devices || []).map(function (d) {
+      return '<tr><td>' + esc(d.Room) + '</td><td>' + esc(d.Level) + '</td>' +
+        '<td>' + esc(d.Family) + '</td><td>' + esc(d.TypeName) + '</td>' +
+        '<td>' + esc(d.System) + '</td><td style="text-align:right">' + fmtFlow(d.Flow) + '</td>' +
+        '<td style="text-align:right">' + (d.MountHeightMm || 0) + '</td>' +
+        '<td style="text-align:right">' + Math.round(d.X) + '</td>' +
+        '<td style="text-align:right">' + Math.round(d.Y) + '</td>' +
+        '<td>' + (d.KefText || '') + '</td><td>' + esc(d.Option || '') + '</td></tr>';
+    }).join('');
+    overlay.innerHTML =
+      '<div style="max-width:1100px;margin:0 auto;">' +
+      '<h2 style="margin-top:0;">Приборы — ' + esc(D.Level || '') +
+      ' <span class="count">' + (D.Devices || []).length + '</span></h2>' +
+      '<table class="sumTable" style="font-size:11px;white-space:nowrap;">' +
+      '<tr><th align=left>Помещение</th><th align=left>Уровень</th><th align=left>Семейство</th>' +
+      '<th align=left>Типоразмер</th><th align=left>Система</th><th>Расход</th><th>H, мм</th>' +
+      '<th>X, мм</th><th>Y, мм</th><th>k_ef</th><th align=left>Расчёт</th></tr>' + rows +
+      '</table></div>';
+    document.getElementById('main').appendChild(overlay);
+  })();
 })();
 </script>
 </body>

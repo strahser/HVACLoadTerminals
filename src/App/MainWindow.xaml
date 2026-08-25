@@ -242,6 +242,10 @@
                         ToolTip="Excel-отчёт: лист level_values (сводка по помещениям×системам) + лист Приборы">
                     ⬇ Excel
                 </Button>
+                <Button Command="{Binding ExportReportCommand}"
+                        ToolTip="HTML-отчёт по уровню: интерактивная схема + сводка систем + таблица приборов">
+                    📄 Отчёт
+                </Button>
                 <Button Command="{Binding SaveProjectCommand}" Content="💾 Сохранить проект"/>
                 <Button Command="{Binding LoadProjectCommand}" Content="📂 Загрузить проект"/>
 

@@ -387,6 +387,9 @@ namespace HVACLoadTerminals.App.ViewModels
         /// <summary>P5: массовое применение оверрайдов к выбранным помещениям.</summary>
         public ICommand ApplyMassCommand { get; }
 
+        /// <summary>M3.2: HTML-отчёт по текущему уровню (сцена+сводка+таблица).</summary>
+        public ICommand ExportReportCommand { get; }
+
         private PlotModel? _plotModel;
         public PlotModel? PlotModel
         {
@@ -434,6 +437,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 Placements.Count > 0);
             EditCatalogCommand = new RelayCommand(_ => EditCatalog());
             ApplyMassCommand = new RelayCommand(_ => ApplyMass(), _ => HasSelectedRooms);
+            ExportReportCommand = new RelayCommand(_ => ExportLevelReport(), _ =>
+                Placements.Count > 0);
 
             Workspace.ErrorSink = msg =>
             {
@@ -1030,11 +1035,106 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
+        /// <summary>M3.2: самодостаточный HTML-отчёт по уровню — интерактивная
+        /// сцена + сводка систем + таблица приборов (кнопка «Таблица отчёта»).</summary>
+        private void ExportLevelReport()
+        {
+            if (Workspace.LastRawPlacements.Count == 0 || Workspace.CurrentSnapshot == null)
+            {
+                StatusMessage = "Рассчитайте размещение перед экспортом отчёта";
+                return;
+            }
+
+            try
+            {
+                string level = SelectedLevel == "Все уровни" ? "" : SelectedLevel;
+                var results = Workspace.BuildPlacementResults(
+                    level.Length == 0 ? null : level);
+                if (results.Count == 0)
+                {
+                    StatusMessage = $"На уровне «{SelectedLevel}» нет приборов";
+                    return;
+                }
+
+                string json = PlacementSceneSerializer.ToJson(
+                    results, $"Отчёт — {SelectedLevel}");
+
+                var rows = Placements
+                    .Where(p => level.Length == 0 || p.LevelName == level)
+                    .ToList();
+                var reportData = new
+                {
+                    Level = SelectedLevel,
+                    Summary = Workspace.LastSystemSummaries.Select(s => new
+                    {
+                        s.Name,
+                        s.RoomCount,
+                        s.DeviceCount,
+                        s.TotalFlowM3h,
+                        s.AvgKef
+                    }).ToList(),
+                    Formulas = Workspace.LastSystemSummaries
+                        .Where(s => !string.IsNullOrEmpty(s.FormulaText))
+                        .Select(s => $"{s.Name}: {s.FormulaText}")
+                        .ToList(),
+                    Devices = rows.Select(p => new
+                    {
+                        Room = p.RoomName,
+                        p.LevelName,
+                        p.Family,
+                        p.TypeName,
+                        System = p.SystemName,
+                        Flow = p.CalculatedFlow,
+                        p.MountHeightMm,
+                        p.X,
+                        p.Y,
+                        KefText = p.KEfText,
+                        Option = p.CalculationOption
+                    }).ToList()
+                };
+
+                string snapshotName = System.IO.Path.GetFileNameWithoutExtension(
+                    string.IsNullOrEmpty(Workspace.SnapshotPath)
+                        ? "placement"
+                        : Workspace.SnapshotPath);
+                string fileLevel = level.Length == 0
+                    ? "все_уровни"
+                    : MakeSafeFileName(level);
+                var dlg = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Экспорт HTML-отчёта уровня",
+                    Filter = "HTML-отчёт (*.html)|*.html|Все файлы|*.*",
+                    FileName = $"{snapshotName}_{fileLevel}_отчёт.html"
+                };
+                if (dlg.ShowDialog() != true)
+                    return;
+
+                string html = HtmlSceneExporter.BuildReportHtml(
+                    $"Отчёт — {SelectedLevel}", json, reportData);
+                System.IO.File.WriteAllText(dlg.FileName, html,
+                    new System.Text.UTF8Encoding(false));
+
+                StatusMessage = $"Отчёт сохранён: {dlg.FileName} ({rows.Count} приборов)";
+                AppLogger.Info("Level report exported: " + dlg.FileName);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка экспорта отчёта: " + ex.Message;
+                AppLogger.Error("ExportLevelReport failed", ex);
+            }
+        }
+
+        private static string MakeSafeFileName(string name)
+        {
+            foreach (char c in System.IO.Path.GetInvalidFileNameChars())
+                name = name.Replace(c, '_');
+            return name.Replace(' ', '_');
+        }
+
         /// <summary>P6: выгрузка результатов в Excel (листы «level_values» и
         /// «Приборы») — аналог вкладки Downloads прототипа.</summary>
         private void ExportExcel()
-        {
-            if (Placements.Count == 0)
+        {            if (Placements.Count == 0)
             {
                 StatusMessage = "Рассчитайте размещение перед экспортом в Excel";
                 return;

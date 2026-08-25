@@ -1122,11 +1122,18 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// </summary>
         public List<PlacementResult> BuildPlacementResults()
         {
+            return BuildPlacementResults(null);
+        }
+
+        /// <summary>M3.2: сцена, ограниченная уровнем (null/пусто — все уровни).</summary>
+        public List<PlacementResult> BuildPlacementResults(string? levelName)
+        {
             var snapshot = _snapshot ?? throw new InvalidOperationException(
                 "Снимок не загружен — HTML-сцена не может быть построена");
             if (LastRawPlacements.Count == 0)
                 throw new InvalidOperationException("Нет расчёта — HTML-сцена пуста");
 
+            bool filterByLevel = !string.IsNullOrEmpty(levelName);
             var roomsById = new Dictionary<string, SnapshotRoom>();
             foreach (var room in snapshot.Rooms)
                 roomsById[room.Id] = room;
@@ -1135,6 +1142,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 .Select(g =>
                 {
                     if (!roomsById.TryGetValue(g.Key, out var room))
+                        return null;
+                    if (filterByLevel &&
+                        !string.Equals(room.LevelName, levelName, StringComparison.Ordinal))
                         return null;
                     var polygon = room.ToPolygon();
                     if (polygon == null)
