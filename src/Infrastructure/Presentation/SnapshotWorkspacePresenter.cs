@@ -344,6 +344,92 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     Type = HVACSystemType.Exhaust,
                     FlowM3h = Math.Round(row.Exhaust, 1)
                 });
+            SyncRoomToCatalog(row, "auto");
+        }
+
+        // ------------------------------------------------------------------
+        // ui-crm-redesign A: глобальный справочник систем проекта + ссылки
+        // ------------------------------------------------------------------
+
+        private readonly List<ProjectSystem> _projectSystems = new();
+
+        /// <summary>Справочник систем проекта (П1, В1, К1…): настройки общие,
+        /// комнаты ссылаются через RoomSystemLink.</summary>
+        public IReadOnlyList<ProjectSystem> ProjectSystems => _projectSystems;
+
+        private ProjectSystem GetOrCreateProjectSystem(string name, HVACSystemType type)
+        {
+            var existing = _projectSystems.FirstOrDefault(p =>
+                string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
+                return existing;
+            var created = new ProjectSystem { Name = name, Type = type };
+            _projectSystems.Add(created);
+            return created;
+        }
+
+        /// <summary>Синхронизировать список систем комнаты со справочником
+        /// проекта: создать отсутствующие ProjectSystem/ссылки (аудит), обновить
+        /// пер-комнатные расход/включённость, убрать ссылки на удалённые системы.
+        /// Существующие ссылки сохраняют свой аудит.</summary>
+        public void SyncRoomToCatalog(RoomRow row, string assignedBy = "manual")
+        {
+            if (row?.Systems == null)
+                return;
+            var links = row.SystemLinks ??= new List<RoomSystemLink>();
+            var seenIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var s in row.Systems)
+            {
+                bool created = false;
+                var ps = _projectSystems.FirstOrDefault(p =>
+                    string.Equals(p.Name, s.Name, StringComparison.OrdinalIgnoreCase));
+                if (ps == null)
+                {
+                    ps = new ProjectSystem { Name = s.Name, Type = s.Type };
+                    _projectSystems.Add(ps);
+                    created = true;
+                }
+                ps.Type = s.Type;
+                seenIds.Add(ps.Id);
+
+                var link = links.FirstOrDefault(l => l.SystemId == ps.Id);
+                if (link == null)
+                {
+                    link = new RoomSystemLink
+                    {
+                        RoomId = row.RoomId,
+                        SystemId = ps.Id,
+                        AssignedBy = created ? assignedBy : "manual",
+                        AssignedAtUtc = DateTime.UtcNow
+                    };
+                    links.Add(link);
+                }
+                link.FlowM3h = s.FlowM3h;
+                link.IsIncluded = s.IsIncluded;
+            }
+            links.RemoveAll(l => !seenIds.Contains(l.SystemId));
+        }
+
+        /// <summary>Хост вызовет после закрытия редактора систем комнаты:
+        /// комната могла добавить/удалить/переименовать системы.</summary>
+        public void CommitRoomSystems(RoomRow row) =>
+            SyncRoomToCatalog(row, "manual");
+
+        /// <summary>Оверрайды первой найденной строки системы → в справочник
+        /// (справочник — авторитетный источник для новых комнат и модалок).</summary>
+        private void SyncCatalogOverrides(string name)
+        {
+            var first = FindSystem(name).FirstOrDefault().System;
+            if (first == null)
+                return;
+            var ps = GetOrCreateProjectSystem(first.Name, first.Type);
+            ps.DeviceTypeId = first.DeviceTypeId;
+            ps.CountRuleOverride = first.CountRuleOverride;
+            ps.FixedCountOverride = first.FixedCountOverride;
+            ps.PatternOverride = first.PatternOverride;
+            ps.SingleRuleOverride = first.SingleRuleOverride;
+            ps.EdgeOffsetOverrideMm = first.EdgeOffsetOverrideMm;
+            ps.CeilingOffsetOverrideMm = first.CeilingOffsetOverrideMm;
         }
 
         /// <summary>Ошибки списка систем комнаты: пустое имя, дубликат имени,
@@ -573,6 +659,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 SnapshotPath = _snapshotPath,
                 Rooms = Rooms.ToList(),
                 Placements = _lastPlacementRows,
+                ProjectSystems = _projectSystems.ToList(),
                 SupplyPattern = SupplyPattern,
                 ExhaustPattern = ExhaustPattern,
                 SingleRule = SingleDeviceRule,
@@ -630,6 +717,27 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             HookLiveRecalc();
             RefreshSystemSummaries();
 
+            // ui-crm-redesign A: восстановить справочник систем; в старых файлах
+            // (без ProjectSystems) он собирается из inline Systems с аудитом
+            // «migrated», после чего комнаты получают ссылки.
+            _projectSystems.Clear();
+            if (dto.ProjectSystems != null)
+                _projectSystems.AddRange(dto.ProjectSystems);
+            bool legacy = dto.ProjectSystems == null;
+            foreach (var room in Rooms)
+                SyncRoomToCatalog(room, legacy ? "migrated" : "auto");
+            if (legacy)
+            {
+                // В старом формате оверрайды хранились в строках комнат
+                // (одинаковые по системе) — переносим их в справочник.
+                foreach (var name in Rooms
+                             .SelectMany(r => r.Systems ?? new List<SystemRow>())
+                             .Select(s => s.Name)
+                             .Distinct(StringComparer.Ordinal)
+                             .ToList())
+                    SyncCatalogOverrides(name);
+            }
+
             var state = new WorkspaceState
             {
                 Rooms = Rooms.ToList(),
@@ -647,12 +755,16 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             public List<RoomRow>? Rooms { get; set; }
             public List<PlacementRow>? Placements { get; set; }
 
+            // ui-crm-redesign A: справочник систем проекта. null в старых
+            // файлах → миграция из inline Systems комнат.
+            public List<ProjectSystem>? ProjectSystems { get; set; }
+
             // U2.1: mass placement patterns (nullable → legacy files keep defaults)
             public WallPattern? SupplyPattern { get; set; }
             public WallPattern? ExhaustPattern { get; set; }
             public SingleRule? SingleRule { get; set; }
 
-            // U2.2: путь/версия каталога приборов
+            // U2.2: путь/версию каталога приборов
             public string? CatalogPath { get; set; }
             public int? CatalogVersion { get; set; }
         }
@@ -745,12 +857,20 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
             foreach (var (_, system) in FindSystem(oldName))
                 system.Name = newName;
+            var catalogEntry = _projectSystems.FirstOrDefault(p =>
+                string.Equals(p.Name, oldName, StringComparison.OrdinalIgnoreCase));
+            if (catalogEntry != null)
+                catalogEntry.Name = newName;
             foreach (var room in Rooms)
+            {
                 room.RefreshSystemSummary();
+                SyncRoomToCatalog(room);
+            }
             return null;
         }
 
-        /// <summary>Применить мутацию ко всем строкам системы и поднять статус.</summary>
+        /// <summary>Применить мутацию ко всем строкам системы, отразить в
+        /// справочнике проекта и поднять статус.</summary>
         private void ApplyToSystem(string name, Action<SystemRow> mutate, string label)
         {
             int n = 0;
@@ -759,6 +879,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 mutate(system);
                 n++;
             }
+            SyncCatalogOverrides(name);
             RaiseStatusOnly($"Система «{name}»: {label} обновлено в {n} помещениях");
         }
 
@@ -828,6 +949,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 return 0;
 
             int touched = 0;
+            var affectedSystems = new HashSet<string>(StringComparer.Ordinal);
             foreach (var room in Rooms.Where(roomFilter))
             {
                 var systems = room.Systems;
@@ -857,10 +979,13 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         system.CeilingOffsetOverrideMm = spec.CeilingOffsetMm;
                     roomChanged = true;
                     touched++;
+                    affectedSystems.Add(system.Name);
                 }
                 if (roomChanged)
                     room.RefreshSystemSummary();
             }
+            foreach (var name in affectedSystems)
+                SyncCatalogOverrides(name);
 
             RaiseStatusOnly($"Массовое применение: изменено {touched} систем");
             return touched;

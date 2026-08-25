@@ -57,6 +57,11 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
         public List<SystemRow> Systems { get; set; } = new List<SystemRow>();
 
+        /// <summary>ui-crm-redesign A: ссылки на глобальные системы проекта
+        /// (ProjectSystems презентера). Рабочим набором остаётся Systems —
+        /// ссылки синхронизируются презентером при загрузке/сохранении/правках.</summary>
+        public List<RoomSystemLink> SystemLinks { get; set; } = new List<RoomSystemLink>();
+
         /// <summary>S1.2: сводка «П1+П2 | В1» по включённым системам комнаты.</summary>
         public string SystemsSummary
         {

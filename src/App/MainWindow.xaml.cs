@@ -21,7 +21,10 @@ namespace HVACLoadTerminals.App
         private void EditSystems_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is RoomRow row)
+            {
                 new SystemEditorWindow(row) { Owner = this }.ShowDialog();
+                _vm.Workspace.CommitRoomSystems(row); // справочник систем проекта
+            }
         }
 
         /// <summary>M2.3: «Системы…» из панели свойств помещения.</summary>
@@ -31,6 +34,7 @@ namespace HVACLoadTerminals.App
             if (room != null)
             {
                 new SystemEditorWindow(room) { Owner = this }.ShowDialog();
+                _vm.Workspace.CommitRoomSystems(room); // справочник систем проекта
                 _vm.Crm.RefreshPanels(); // сводка систем могла измениться
             }
         }

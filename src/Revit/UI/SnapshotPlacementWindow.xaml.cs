@@ -108,7 +108,10 @@ namespace HVACLoadTerminals.Revit.UI
         private void EditSystems_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is RoomRow row)
+            {
                 new SystemEditorWindow(row) { Owner = this }.ShowDialog();
+                _presenter.CommitRoomSystems(row); // справочник систем проекта
+            }
         }
 
         /// <summary>M2.3: «Системы…» из панели свойств помещения.</summary>
@@ -118,6 +121,7 @@ namespace HVACLoadTerminals.Revit.UI
             if (room != null)
             {
                 new SystemEditorWindow(room) { Owner = this }.ShowDialog();
+                _presenter.CommitRoomSystems(room); // справочник систем проекта
                 _crm.RefreshPanels();
             }
         }
