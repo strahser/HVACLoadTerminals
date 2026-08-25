@@ -44,6 +44,10 @@ namespace HVACLoadTerminals.Core.Tests
             "d2", "Диффузор", "D-300", "", 200, "Air Flow",
             HVACSystemType.Supply, serviceAreaM2: 10);
 
+        private static TerminalDevice ExhaustGrille() => new(
+            "g1", "Решётка", "ЖАТ", "", 150, "Air Flow",
+            HVACSystemType.Exhaust);
+
         private static SnapshotRoom Room(string id, string number) => new()
         {
             Id = id,
@@ -69,7 +73,7 @@ namespace HVACLoadTerminals.Core.Tests
                 Newtonsoft.Json.JsonConvert.SerializeObject(snapshot));
 
             var catalog = new JsonCatalogRepository(_catalogPath);
-            catalog.SaveAll(new[] { DiffuserBig(), DiffuserSmall() });
+            catalog.SaveAll(new[] { DiffuserBig(), DiffuserSmall(), ExhaustGrille() });
 
             var presenter = new SnapshotWorkspacePresenter();
             presenter.CatalogRepository = catalog;
@@ -231,6 +235,8 @@ namespace HVACLoadTerminals.Core.Tests
             p.SetSystemFixedCount("П1", 4);
             p.SetSystemPattern("П1", WallPattern.LongSide);
             p.SetSystemSingleRule("П1", SingleRule.Corner);
+            p.SetSystemEdgeOffset("П1", 750);
+            p.SetSystemCeilingOffset("П1", 250);
             p.SaveProject(_projectPath);
 
             var restored = new SnapshotWorkspacePresenter();
@@ -242,6 +248,90 @@ namespace HVACLoadTerminals.Core.Tests
             Assert.Equal(4, system.FixedCountOverride);
             Assert.Equal(WallPattern.LongSide, system.PatternOverride);
             Assert.Equal(SingleRule.Corner, system.SingleRuleOverride);
+            Assert.Equal(750, system.EdgeOffsetOverrideMm);
+            Assert.Equal(250, system.CeilingOffsetOverrideMm);
+        }
+
+        // ---------------- M2.2: оверрайды отступов ----------------
+
+        private static TerminalDevice DiffuserWithOffsets() => new(
+            "d3", "Диффузор", "D-600", "", 500, "Air Flow",
+            HVACSystemType.Supply, wallOffsetMm: 300, ceilingOffsetMm: 150);
+
+        [Fact]
+        public void Ceiling_Service_Edge_Override_Beats_Device_WallOffset()
+        {
+            var rect = new Polygon2D(new List<Point2D>
+            {
+                new(0, 0), new(LengthUnitConverter.MmToUnits(9000), 0),
+                new(LengthUnitConverter.MmToUnits(9000), LengthUnitConverter.MmToUnits(9000)),
+                new(0, LengthUnitConverter.MmToUnits(9000))
+            });
+            var device = DiffuserWithOffsets();
+
+            // Угол офсет-контура (SingleRule.Corner) сдвигается вместе с отступом.
+            var baseRun = new CeilingPlacementService().PlaceForRoom(
+                "r", rect, 100, 81, HVACSystemType.Supply, new[] { device },
+                options: new CeilingPlacementOptions { SingleRule = SingleRule.Corner });
+            var overrideRun = new CeilingPlacementService().PlaceForRoom(
+                "r", rect, 100, 81, HVACSystemType.Supply, new[] { device },
+                options: new CeilingPlacementOptions
+                {
+                    SingleRule = SingleRule.Corner,
+                    EdgeOffsetOverrideMm = 1500
+                });
+
+            var basePoint = baseRun.Placements.Single().Position;
+            var overriddenPoint = overrideRun.Placements.Single().Position;
+            double shiftMm = Math.Abs(basePoint.X - overriddenPoint.X) *
+                             LengthUnitConverter.UnitsToMm(1);
+            Assert.True(shiftMm > 1100,
+                $"угол контура должен сместиться на ~1200 мм, факт {shiftMm:F0} мм");
+        }
+
+        [Fact]
+        public void Ceiling_Service_CeilingOverride_Drives_MountHeight()
+        {
+            var rect = new Polygon2D(new List<Point2D>
+            {
+                new(0, 0), new(LengthUnitConverter.MmToUnits(8000), 0),
+                new(LengthUnitConverter.MmToUnits(8000), LengthUnitConverter.MmToUnits(8000)),
+                new(0, LengthUnitConverter.MmToUnits(8000))
+            });
+            var device = DiffuserWithOffsets(); // ceiling_offset 150
+
+            var res = new CeilingPlacementService().PlaceForRoom(
+                "r", rect, 100, 64, HVACSystemType.Supply, new[] { device },
+                options: new CeilingPlacementOptions
+                {
+                    RoomHeightMm = 3300,
+                    CeilingOffsetOverrideMm = 400
+                });
+
+            Assert.All(res.Placements, p => Assert.Equal(2900, p.MountHeightMm));
+        }
+
+        [Fact]
+        public void Presenter_Passes_Offset_Overrides_And_Room_Height_To_Engine()
+        {
+            var p = CreatePresenter();
+            p.Rooms.First().Systems.Add(
+                new SystemRow { Name = "В1", Type = HVACSystemType.Exhaust, FlowM3h = 100 });
+            p.SetSystemEdgeOffset("В1", 1200);
+            p.SetSystemCeilingOffset("В1", 300);
+
+            p.Calculate();
+
+            var exhaust = p.LastRawPlacements.Where(x => x.SystemName == "В1").ToList();
+            Assert.NotEmpty(exhaust);
+            // Заглубление без высоты помещения → 0 (нет отрицательных высот).
+            Assert.All(exhaust, x => Assert.Equal(0, x.MountHeightMm));
+            // Валидация: отрицательный отступ не пишется.
+            var before = p.Rooms.SelectMany(r => r.Systems)
+                .First(s => s.Name == "В1").EdgeOffsetOverrideMm;
+            p.SetSystemEdgeOffset("В1", -50);
+            Assert.Equal(before, p.Rooms.SelectMany(r => r.Systems)
+                .First(s => s.Name == "В1").EdgeOffsetOverrideMm);
         }
     }
 }

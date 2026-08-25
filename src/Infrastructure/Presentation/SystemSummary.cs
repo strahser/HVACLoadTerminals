@@ -38,5 +38,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public int FixedCount { get; set; }
         public WallPattern Pattern { get; set; }
         public SingleRule SingleRule { get; set; }
+
+        /// <summary>M2.2: оверрайды отступов (мм); null = по типоразмеру/умолчанию.</summary>
+        public double? EdgeOffsetOverrideMm { get; set; }
+        public double? CeilingOffsetOverrideMm { get; set; }
     }
 }

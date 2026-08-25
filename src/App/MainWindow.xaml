@@ -396,6 +396,31 @@
                                     <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Одиночный прибор</TextBlock>
                                     <ComboBox ItemsSource="{Binding SelectedSystem.SingleRules}"
                                               SelectedItem="{Binding SelectedSystem.SinglePlacementRule}" Margin="0,1,0,8"/>
+
+                                    <!-- M2.2: отступы размещения -->
+                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Отступы размещения, мм</TextBlock>
+                                    <Grid Margin="0,1,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="60"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="От стен:" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
+                                        <TextBox Grid.Column="1" Padding="4,2"
+                                                 Text="{Binding SelectedSystem.EdgeOffsetMm, TargetNullValue=''}"
+                                                 ToolTip="Смещение зоны размещения от стен внутрь помещения (buffer(-x)). Пусто — по типоразмеру/500 мм"/>
+                                        <TextBlock Grid.Column="2" Text="От потолка:" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextMuted}" Margin="8,0,4,0"/>
+                                        <TextBox Grid.Column="3" Padding="4,2"
+                                                 Text="{Binding SelectedSystem.CeilingOffsetMm, TargetNullValue=''}"
+                                                 ToolTip="Заглубление прибора от чистого потолка; высота установки = H потолка − offset. Пусто — по типоразмеру"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding SelectedSystem.EdgeOffsetText}"
+                                               FontSize="10" Foreground="{StaticResource TextMuted}" Margin="0,0,0,4"/>
+                                    <oxy:PlotView Model="{Binding SelectedSystem.SchemeModel}"
+                                                  Height="140" Margin="0,0,0,8"/>
                                 </StackPanel>
 
                                 <!-- Итог по системе -->

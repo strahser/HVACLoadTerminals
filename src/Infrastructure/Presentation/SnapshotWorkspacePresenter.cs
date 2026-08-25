@@ -456,6 +456,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
                 // S2.1: расстановка по КАЖДОЙ именованной системе комнаты;
                 // EnsureDefaultSystems уже построил П1/В1 для пустых списков.
+                double roomHeightMm = snapRoom.UpperLimitOffset > 0
+                    ? LengthUnitConverter.UnitsToMm(snapRoom.UpperLimitOffset)
+                    : 0; // M2.2: высота помещения для расчёта отметки установки
                 foreach (var system in row.Systems ?? new List<SystemRow>())
                 {
                     if (!system.IsIncluded || system.FlowM3h <= 0)
@@ -463,6 +466,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     // M2.1: опции панели свойств системы (оверрайды → глобальные),
                     // каталог сужается до закреплённого типоразмера, если задан.
                     var options = SystemCeilingOptions(system);
+                    options.RoomHeightMm = roomHeightMm;
                     var systemCatalog = CatalogForSystem(catalog, system);
                     if (system.Type == HVACSystemType.Supply)
                     {
@@ -695,7 +699,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 CountRule = first.CountRuleOverride ?? (supply ? SupplyRule : ExhaustRule),
                 FixedCount = first.FixedCountOverride ?? FixedSupplyCount,
                 Pattern = first.PatternOverride ?? (supply ? SupplyPattern : ExhaustPattern),
-                SingleRule = first.SingleRuleOverride ?? SingleDeviceRule
+                SingleRule = first.SingleRuleOverride ?? SingleDeviceRule,
+                EdgeOffsetOverrideMm = first.EdgeOffsetOverrideMm,
+                CeilingOffsetOverrideMm = first.CeilingOffsetOverrideMm
             };
         }
 
@@ -767,6 +773,35 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public void SetSystemSingleRule(string name, SingleRule rule) =>
             ApplyToSystem(name, s => s.SingleRuleOverride = rule, "правило одиночного прибора");
 
+        /// <summary>M2.2: отступ зоны размещения от стен, мм; null — сброс на каталог.</summary>
+        public void SetSystemEdgeOffset(string name, double? edgeOffsetMm)
+        {
+            if (!IsValidOffset(edgeOffsetMm, "Отступ от стен")) return;
+            ApplyToSystem(name, s => s.EdgeOffsetOverrideMm = edgeOffsetMm,
+                edgeOffsetMm is null ? "отступ от стен сброшен" : $"отступ от стен {edgeOffsetMm:F0} мм");
+        }
+
+        /// <summary>M2.2: заглубление от потолка, мм; null — сброс на типоразмер.</summary>
+        public void SetSystemCeilingOffset(string name, double? ceilingOffsetMm)
+        {
+            if (!IsValidOffset(ceilingOffsetMm, "Заглубление от потолка")) return;
+            ApplyToSystem(name, s => s.CeilingOffsetOverrideMm = ceilingOffsetMm,
+                ceilingOffsetMm is null
+                    ? "заглубление от потолка сброшено"
+                    : $"заглубление от потолка {ceilingOffsetMm:F0} мм");
+        }
+
+        private bool IsValidOffset(double? mm, string label)
+        {
+            if (mm is double v && (double.IsNaN(v) || v < 0 || v > 100_000))
+            {
+                ErrorSink?.Invoke($"{label} должно быть в диапазоне 0–100000 мм " +
+                                  $"(получено {v:F0}) — значение не изменено");
+                return false;
+            }
+            return true;
+        }
+
         /// <summary>M2.1: опции потолочной расстановки конкретной системы —
         /// оверрайды панели свойств, при отсутствии — глобальные тулбара.</summary>
         private CeilingPlacementOptions SystemCeilingOptions(SystemRow system)
@@ -777,7 +812,11 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 CountRule = system.CountRuleOverride ?? (supply ? SupplyRule : ExhaustRule),
                 FixedCount = Math.Max(1, system.FixedCountOverride ?? FixedSupplyCount),
                 Pattern = system.PatternOverride ?? (supply ? SupplyPattern : ExhaustPattern),
-                SingleRule = system.SingleRuleOverride ?? SingleDeviceRule
+                SingleRule = system.SingleRuleOverride ?? SingleDeviceRule,
+
+                // M2.2: отступы системы — высший приоритет движка.
+                EdgeOffsetOverrideMm = system.EdgeOffsetOverrideMm,
+                CeilingOffsetOverrideMm = system.CeilingOffsetOverrideMm
             };
         }
 

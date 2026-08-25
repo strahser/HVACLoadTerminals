@@ -133,6 +133,16 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// <summary>Правило одиночного прибора; null — глобальный SingleDeviceRule.</summary>
         public SingleRule? SingleRuleOverride { get; set; }
 
+        // ---- M2.2: оверрайды отступов системы (мм); null = по типоразмеру/умолчанию ----
+
+        /// <summary>Отступ зоны размещения от стен, мм — buffer(-x) офсет-контура
+        /// (аналог wall_offset прототипа); перекрывает отступ типоразмера.</summary>
+        public double? EdgeOffsetOverrideMm { get; set; }
+
+        /// <summary>Заглубление от чистого потолка, мм — высота установки =
+        /// H потолка − offset (аналог ceiling_offset прототипа).</summary>
+        public double? CeilingOffsetOverrideMm { get; set; }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

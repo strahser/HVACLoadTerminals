@@ -80,6 +80,16 @@ namespace HVACLoadTerminals.Core.Services
 
         /// <summary>Margin from the row ends, mm (analog StartOffsetMm).</summary>
         public double StartOffsetMm { get; set; } = 0;
+
+        // ---- M2.2: оверрайды отступов системы (панель свойств); null = по каталогу ----
+
+        /// <summary>Отступ зоны размещения от стен, мм — высший приоритет
+        /// (выше отступа типоразмера). null = типоразмер → общий WallClearanceMm.</summary>
+        public double? EdgeOffsetOverrideMm { get; set; }
+
+        /// <summary>Заглубление от чистого потолка, мм — вместо CeilingOffsetMm
+        /// типоразмера при расчёте высоты установки. null = по типоразмеру.</summary>
+        public double? CeilingOffsetOverrideMm { get; set; }
     }
 
     /// <summary>Placements plus human-readable warnings for one room.</summary>
@@ -174,18 +184,20 @@ namespace HVACLoadTerminals.Core.Services
                     : CalculationOptionLabels.MinByFlow
             };
 
-            // P3/M0.2: высота установки = потолок − потолочный offset типоразмера.
+            // P3/M0.2: высота установки = потолок − потолочный offset типоразмера;
+            // M2.2: оверрайд заглубления системы сильнее типоразмера.
+            double ceilingOffsetMm = options.CeilingOffsetOverrideMm ?? device.CeilingOffsetMm;
             double mountHeightMm = 0;
-            if (options.RoomHeightMm > 0 || device.CeilingOffsetMm > 0)
+            if (options.RoomHeightMm > 0 || ceilingOffsetMm > 0)
             {
-                mountHeightMm = Math.Max(0, options.RoomHeightMm - device.CeilingOffsetMm);
+                mountHeightMm = Math.Max(0, options.RoomHeightMm - ceilingOffsetMm);
             }
 
             // --- geometry: inward offset, then grid ---
-            // P1: отступ типоразмера (wall_offset прототипа) приоритетнее общего.
-            double clearanceMm = device.WallOffsetMm > 0
-                ? device.WallOffsetMm
-                : options.WallClearanceMm;
+            // P1: отступ типоразмера (wall_offset прототипа) приоритетнее общего;
+            // M2.2: оверрайд отступа системы — выше обоих.
+            double clearanceMm = options.EdgeOffsetOverrideMm
+                ?? (device.WallOffsetMm > 0 ? device.WallOffsetMm : options.WallClearanceMm);
             double clearanceFt = LengthUnitConverter.MmToUnits(clearanceMm);
             var offset = _offsetService.OffsetInward(boundary, clearanceFt);
             if (offset == null || offset.Count < 3)

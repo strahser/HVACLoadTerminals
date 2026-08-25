@@ -71,6 +71,9 @@ namespace HVACLoadTerminals.App.ViewModels
         public ObservableCollection<DeviceOption> Devices { get; } =
             new ObservableCollection<DeviceOption>();
 
+        private double? _edgeOffsetMm;
+        private double? _ceilingOffsetMm;
+
         private DeviceOption? _selectedDevice;
         public DeviceOption? SelectedDevice
         {
@@ -140,6 +143,61 @@ namespace HVACLoadTerminals.App.ViewModels
         }
 
         public bool IsFixedVisible => Rule == CeilingCountRule.Fixed;
+
+        // ---- M2.2: отступы размещения ----
+
+        /// <summary>Отступ зоны размещения от стен, мм; null = по типоразмеру.</summary>
+        public double? EdgeOffsetMm
+        {
+            get => _edgeOffsetMm;
+            set
+            {
+                if (value == _edgeOffsetMm)
+                    return;
+                _edgeOffsetMm = value;
+                OnPropertyChanged(nameof(EdgeOffsetMm));
+                if (!_loading && SystemName != null)
+                {
+                    Workspace.SetSystemEdgeOffset(SystemName, value);
+                    _owner.RecalcIfLive();
+                }
+            }
+        }
+
+        /// <summary>Заглубление от чистого потолка, мм; null = по типоразмеру.</summary>
+        public double? CeilingOffsetMm
+        {
+            get => _ceilingOffsetMm;
+            set
+            {
+                if (value == _ceilingOffsetMm)
+                    return;
+                _ceilingOffsetMm = value;
+                OnPropertyChanged(nameof(CeilingOffsetMm));
+                if (!_loading && SystemName != null)
+                {
+                    Workspace.SetSystemCeilingOffset(SystemName, value);
+                    _owner.RecalcIfLive();
+                }
+            }
+        }
+
+        private string _edgeOffsetText = "";
+        /// <summary>Чего касается «отступ от стен» для этой системы (типоразмер/умолчание).</summary>
+        public string EdgeOffsetText
+        {
+            get => _edgeOffsetText;
+            private set { _edgeOffsetText = value; OnPropertyChanged(nameof(EdgeOffsetText)); }
+        }
+
+        private OxyPlot.PlotModel? _schemeModel;
+        /// <summary>M2.2: мини-схема — контур комнаты-примера, пунктиром офсетный
+        /// полигон, точками приборы системы.</summary>
+        public OxyPlot.PlotModel? SchemeModel
+        {
+            get => _schemeModel;
+            private set { _schemeModel = value; OnPropertyChanged(nameof(SchemeModel)); }
+        }
 
         // ---- паттерны ----
 
@@ -258,8 +316,11 @@ namespace HVACLoadTerminals.App.ViewModels
                     FixedCount = options.FixedCount;
                     Pattern = options.Pattern;
                     SinglePlacementRule = options.SingleRule;
+                    EdgeOffsetMm = options.EdgeOffsetOverrideMm;
+                    CeilingOffsetMm = options.CeilingOffsetOverrideMm;
                     RebuildDevices(options.Type, options.DeviceTypeId);
                     UpdateDeviceInfoText();
+                    BuildSchemePlot(options);
                 }
 
                 RefreshSummary();
@@ -277,6 +338,107 @@ namespace HVACLoadTerminals.App.ViewModels
             string? error = _owner.RenameSelectedSystem(NameEditor);
             if (error != null)
                 _owner.StatusMessage = "Переименование: " + error;
+        }
+
+        /// <summary>M2.2: мини-схема комнаты-примера — контур, пунктир офсетного
+        /// полигона, точки приборов системы. Комната — наибольшая по площади.</summary>
+        private void BuildSchemePlot(SystemOptionsView options)
+        {
+            try
+            {
+                var snapshot = Workspace.CurrentSnapshot;
+                var sampleRoomRow = Workspace.Rooms
+                    .Where(r => r.Systems != null &&
+                                r.Systems.Any(s => s.Name == SystemName))
+                    .OrderByDescending(r => r.Area)
+                    .FirstOrDefault();
+                var snapRoom = sampleRoomRow == null || snapshot == null
+                    ? null
+                    : snapshot.Rooms.FirstOrDefault(r => r.Id == sampleRoomRow.RoomId);
+                var contour = snapRoom?.ToPolygon();
+
+                double deviceEdgeMm = FindPinnedDevice(options.DeviceTypeId)?.WallOffsetMm ?? 0;
+                double effectiveEdgeMm = options.EdgeOffsetOverrideMm
+                    ?? (deviceEdgeMm > 0 ? deviceEdgeMm : 500);
+                EdgeOffsetText = options.EdgeOffsetOverrideMm is null
+                    ? $"пусто = {(deviceEdgeMm > 0
+                        ? $"по типоразмеру {effectiveEdgeMm:F0} мм"
+                        : $"по умолчанию {effectiveEdgeMm:F0} мм")}"
+                    : "задано системой — перекрывает типоразмер";
+
+                var model = new OxyPlot.PlotModel
+                {
+                    Background = OxyPlot.OxyColors.White,
+                    PlotAreaBorderThickness = new OxyPlot.OxyThickness(0),
+                    Padding = new OxyPlot.OxyThickness(4)
+                };
+                model.Axes.Add(new OxyPlot.Axes.LinearAxis
+                {
+                    Position = OxyPlot.Axes.AxisPosition.Bottom, IsAxisVisible = false
+                });
+                model.Axes.Add(new OxyPlot.Axes.LinearAxis
+                {
+                    Position = OxyPlot.Axes.AxisPosition.Left, IsAxisVisible = false
+                });
+
+                if (contour == null)
+                {
+                    SchemeModel = model;
+                    return;
+                }
+
+                // Контур помещения.
+                var contourLine = new OxyPlot.Series.LineSeries
+                {
+                    Color = OxyPlot.OxyColors.LightSlateGray,
+                    StrokeThickness = 1.5
+                };
+                foreach (var v in contour.Vertices)
+                    contourLine.Points.Add(new OxyPlot.DataPoint(
+                        LengthUnitConverter.UnitsToMm(v.X), LengthUnitConverter.UnitsToMm(v.Y)));
+                contourLine.Points.Add(contourLine.Points[0]);
+                model.Series.Add(contourLine);
+
+                // Пунктир: офсетный полигон (buffer(-edge)).
+                var offsetVertices = new PolygonOffsetService()
+                    .OffsetInward(contour, LengthUnitConverter.MmToUnits(effectiveEdgeMm));
+                if (offsetVertices is { Count: >= 3 })
+                {
+                    var offsetLine = new OxyPlot.Series.LineSeries
+                    {
+                        Color = OxyPlot.OxyColor.FromRgb(0x2D, 0x6C, 0xDF),
+                        StrokeThickness = 1.5,
+                        LineStyle = OxyPlot.LineStyle.Dash
+                    };
+                    foreach (var v in offsetVertices)
+                        offsetLine.Points.Add(new OxyPlot.DataPoint(
+                            LengthUnitConverter.UnitsToMm(v.X), LengthUnitConverter.UnitsToMm(v.Y)));
+                    offsetLine.Points.Add(offsetLine.Points[0]);
+                    model.Series.Add(offsetLine);
+                }
+
+                // Точки приборов системы в этой комнате (последний расчёт).
+                var scatter = new OxyPlot.Series.ScatterSeries
+                {
+                    MarkerType = OxyPlot.MarkerType.Circle,
+                    MarkerSize = 4,
+                    MarkerFill = OxyPlot.OxyColors.Orange,
+                    MarkerStroke = OxyPlot.OxyColors.Black
+                };
+                foreach (var p in Workspace.LastRawPlacements.Where(x =>
+                             x.SystemName == SystemName && x.RoomId == snapRoom!.Id))
+                    scatter.Points.Add(new OxyPlot.Series.ScatterPoint(
+                        LengthUnitConverter.UnitsToMm(p.Position.X),
+                        LengthUnitConverter.UnitsToMm(p.Position.Y)));
+                model.Series.Add(scatter);
+
+                SchemeModel = model;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Мини-схема отступов не построена", ex);
+                SchemeModel = null;
+            }
         }
 
         private void RebuildDevices(HVACSystemType type, string? pinnedId)
