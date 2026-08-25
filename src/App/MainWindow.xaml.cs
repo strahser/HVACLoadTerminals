@@ -26,6 +26,17 @@ namespace HVACLoadTerminals.App
                 new SystemEditorWindow(row) { Owner = this }.ShowDialog();
         }
 
+        /// <summary>M2.3: «Системы…» из панели свойств помещения.</summary>
+        private void EditSystemsPanel_Click(object sender, RoutedEventArgs e)
+        {
+            var room = _vm.SelectedRoom.Room;
+            if (room != null)
+            {
+                new SystemEditorWindow(room) { Owner = this }.ShowDialog();
+                _vm.SelectedRoom.Refresh(); // сводка систем могла измениться
+            }
+        }
+
         /// <summary>M1.2: выбор узла дерева — фильтр таблицы и плана.</summary>
         private void CrmTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {

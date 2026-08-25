@@ -684,6 +684,20 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 .Where(s => s.Name == name)
                 .Select(s => (Room: r, System: s)));
 
+        /// <summary>M2.3: проёмы комнаты из снимка (для панели свойств помещения).</summary>
+        public IReadOnlyList<SnapshotOpening> GetRoomOpenings(string roomId)
+        {
+            var result = new List<SnapshotOpening>();
+            foreach (var o in _snapshot?.Openings ?? Enumerable.Empty<SnapshotOpening>())
+                if (o.SpaceId == roomId)
+                    result.Add(o);
+            return result;
+        }
+
+        /// <summary>M2.3: комната снимка по Id (температура/высота для панели).</summary>
+        public SnapshotRoom? FindSnapshotRoom(string roomId) =>
+            _snapshot?.Rooms.FirstOrDefault(r => r.Id == roomId);
+
         /// <summary>Эффективные опции системы (оверрайд либо глобальные значения
         /// тулбара); null — система не найдена ни в одной комнате (например «Отопление»).</summary>
         public SystemOptionsView? GetSystemOptions(string name)

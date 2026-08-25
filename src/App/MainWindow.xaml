@@ -450,6 +450,78 @@
                                                ToolTip="{Binding SelectedSystem.ActualDeviceText}"/>
                                 </Grid>
 
+                                <!-- M2.3: свойства помещения -->
+                                <StackPanel Visibility="{Binding HasSelectedRoom,
+                                                        Converter={StaticResource BoolToVis}}"
+                                            DataContext="{Binding SelectedRoom}">
+                                    <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,6"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Room.SystemsSummary}"
+                                                   Foreground="{StaticResource TextMuted}" FontSize="11"
+                                                   VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="Системы…" Padding="6,2"
+                                                Click="EditSystemsPanel_Click"/>
+                                    </Grid>
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="70"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition/>
+                                            <RowDefinition/>
+                                            <RowDefinition/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="Q, Вт:" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextMuted}"/>
+                                        <TextBox Grid.Column="1" Padding="4,2"
+                                                 Text="{Binding Room.HeatingW, UpdateSourceTrigger=LostFocus}"/>
+                                        <TextBlock Grid.Column="2" Text="t°:" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextMuted}" Margin="8,0,4,0"/>
+                                        <TextBox Grid.Column="3" IsReadOnly="True"
+                                                 Text="{Binding TemperatureText}" Background="#F7F9FC"/>
+                                        <TextBlock Grid.Row="1" Text="Приток:" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextMuted}"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1" Padding="4,2"
+                                                 Text="{Binding Room.Supply, UpdateSourceTrigger=LostFocus}"/>
+                                        <TextBlock Grid.Row="2" Text="Вытяжка:" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextMuted}"/>
+                                        <TextBox Grid.Row="2" Grid.Column="1" Padding="4,2"
+                                                 Text="{Binding Room.Exhaust, UpdateSourceTrigger=LostFocus}"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Назначение:"
+                                                   VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"
+                                                   Margin="8,0,4,0"/>
+                                        <TextBox Grid.Row="1" Grid.Column="3" Padding="4,2"
+                                                 Text="{Binding Room.Purpose, UpdateSourceTrigger=LostFocus}"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="2" Text="Площадь:"
+                                                   VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"
+                                                   Margin="8,0,4,0"/>
+                                        <TextBox Grid.Row="2" Grid.Column="3" IsReadOnly="True" Background="#F7F9FC"
+                                                 Text="{Binding Room.Area, StringFormat=F1}"/>
+                                    </Grid>
+                                    <TextBlock Margin="0,10,0,0" FontSize="11"
+                                               Foreground="{StaticResource TextMuted}"
+                                               Text="Проёмы (из снимка)"/>
+                                    <TextBlock Text="{Binding OpeningsText}" FontSize="11"
+                                               LineHeight="15" TextWrapping="Wrap"
+                                               Foreground="{StaticResource TextDark}"/>
+                                    <TextBlock Text="{Binding WindowForecastText}" FontSize="11"
+                                               LineHeight="15" TextWrapping="Wrap" Margin="0,4,0,0"
+                                               Foreground="{StaticResource PrimaryDarkBrush}"/>
+                                    <TextBlock Margin="0,10,0,0" FontSize="11"
+                                               Foreground="{StaticResource TextMuted}"
+                                               Text="Примечание расчёта"/>
+                                    <TextBlock Text="{Binding Room.Warning}" FontSize="11"
+                                               LineHeight="15" TextWrapping="Wrap"
+                                               Foreground="{StaticResource TextDark}"/>
+                                </StackPanel>
+
                                 <!-- Подсказка для не-системных узлов -->
                                 <TextBlock Margin="0,10,0,0" FontSize="11" LineHeight="16"
                                            Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"

@@ -136,11 +136,26 @@ namespace HVACLoadTerminals.App.ViewModels
             private set { _hasSelectedSystem = value; OnPropertyChanged(nameof(HasSelectedSystem)); }
         }
 
+        // ---- M2.3: панель свойств помещения ----
+
+        public RoomPropertiesViewModel SelectedRoom { get; }
+
+        private bool _hasSelectedRoom;
+        public bool HasSelectedRoom
+        {
+            get => _hasSelectedRoom;
+            private set { _hasSelectedRoom = value; OnPropertyChanged(nameof(HasSelectedRoom)); }
+        }
+
         private void UpdatePropertiesPanel()
         {
             HasSelectedSystem = SelectedNode?.Kind == "System";
             OnPropertyChanged(nameof(HasSelectedSystem));
             SelectedSystem.Refresh();
+
+            HasSelectedRoom = SelectedNode?.Kind == "Room";
+            OnPropertyChanged(nameof(HasSelectedRoom));
+            SelectedRoom.Refresh();
         }
 
         /// <summary>M2.1: переименовать выбранную систему во всех комнатах.
@@ -335,6 +350,7 @@ namespace HVACLoadTerminals.App.ViewModels
         public MainViewModel()
         {
             SelectedSystem = new SystemPropertiesViewModel(this);
+            SelectedRoom = new RoomPropertiesViewModel(this);
 
             OpenSnapshotCommand = new RelayCommand(_ => OpenSnapshot());
             RecalcLoadsCommand = new RelayCommand(_ =>
