@@ -365,4 +365,4 @@ FodyWeavers.xsd
 # Конвейер dev-pipeline: локальные прогоны и рантайм-состояние (не артефакты)
 LocalTestOutput/
 Tasks/Конвейер/
-.opencode/sessions/
+.opencode/sessions/# Production-ᡮન ����� ⮫쪮 �� ��᪥ (����୨�� �� � ���) 
