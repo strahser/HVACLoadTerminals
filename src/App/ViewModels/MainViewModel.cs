@@ -120,7 +120,53 @@ namespace HVACLoadTerminals.App.ViewModels
                 OnPropertyChanged(nameof(SelectedNode));
                 PlacementsView.Refresh();
                 PlotLevel();
+                UpdatePropertiesPanel();
             }
+        }
+
+        // ---- M2.1: панель свойств системы ----
+
+        public SystemPropertiesViewModel SelectedSystem { get; }
+
+        private bool _hasSelectedSystem;
+        /// <summary>В дереве выбран узел-система (показать редактор в панели).</summary>
+        public bool HasSelectedSystem
+        {
+            get => _hasSelectedSystem;
+            private set { _hasSelectedSystem = value; OnPropertyChanged(nameof(HasSelectedSystem)); }
+        }
+
+        private void UpdatePropertiesPanel()
+        {
+            HasSelectedSystem = SelectedNode?.Kind == "System";
+            OnPropertyChanged(nameof(HasSelectedSystem));
+            SelectedSystem.Refresh();
+        }
+
+        /// <summary>M2.1: переименовать выбранную систему во всех комнатах.
+        /// null — успех, иначе текст ошибки.</summary>
+        public string? RenameSelectedSystem(string newName)
+        {
+            if (SelectedNode?.Kind != "System")
+                return "Система не выбрана";
+            string oldName = SelectedNode.SystemName ?? "";
+            string? error = Workspace.RenameSystem(oldName, newName);
+            if (error != null)
+                return error;
+
+            RecalcIfLive(); // при выключенном живом пересчёте — таблицы обновятся по «РАССЧИТАТЬ»
+            RebuildTree();
+            SelectSystemNode(newName);
+            StatusMessage = $"Система «{oldName}» переименована в «{newName}»";
+            return null;
+        }
+
+        private void SelectSystemNode(string name)
+        {
+            var node = TreeRoots.FirstOrDefault(n =>
+                n.Kind == "System" && n.SystemName == name);
+            if (node != null)
+                SelectedNode = node;
         }
 
         /// <summary>Совпадает ли строка приборов с выбранным узлом дерева.</summary>
@@ -288,6 +334,8 @@ namespace HVACLoadTerminals.App.ViewModels
 
         public MainViewModel()
         {
+            SelectedSystem = new SystemPropertiesViewModel(this);
+
             OpenSnapshotCommand = new RelayCommand(_ => OpenSnapshot());
             RecalcLoadsCommand = new RelayCommand(_ =>
             {
@@ -399,7 +447,8 @@ namespace HVACLoadTerminals.App.ViewModels
         private bool FilterVisible(RoomRow row) =>
             SelectedLevel == "Все уровни" || row.LevelName == SelectedLevel;
 
-        private void RecalcIfLive()
+        /// <summary>M2.1: живой пересчёт после правки свойств (панель системы).</summary>
+        public void RecalcIfLive()
         {
             if (LiveRecalc && Workspace.Rooms.Count > 0)
                 CalculateSafe(); // U3.1: единый путь с логом таймингов для живого пересчёта
@@ -428,6 +477,7 @@ namespace HVACLoadTerminals.App.ViewModels
                     Placements.Add(row);
 
                 RebuildTree();
+                UpdatePropertiesPanel();
                 PlotLevel();
                 Raise3DChanged();
             }
@@ -505,9 +555,40 @@ namespace HVACLoadTerminals.App.ViewModels
             }
 
             OnPropertyChanged(nameof(TreeRoots));
-            if (SelectedNode != null &&
-                TreeRoots.Count == 0)
-                SelectedNode = null;
+
+            // Узлы пересоздаются при каждом пересчёте — восстановить выбор по ключам,
+            // иначе панель свойств и фильтр остаются на «осиротевшем» объекте.
+            if (TreeRoots.Count == 0)
+            {
+                if (SelectedNode != null)
+                    SelectedNode = null;
+                return;
+            }
+            var previous = SelectedNode;
+            if (previous == null)
+                return;
+            var restored = FindTreeNode(
+                TreeRoots, previous.Kind, previous.SystemName, previous.LevelName, previous.RoomId);
+            if (restored != null && !ReferenceEquals(restored, previous))
+                SelectedNode = restored;
+        }
+
+        private static CrmNode? FindTreeNode(
+            IEnumerable<CrmNode> nodes, string kind,
+            string? systemName, string? levelName, string? roomId)
+        {
+            foreach (var node in nodes)
+            {
+                if (node.Kind == kind &&
+                    node.SystemName == systemName &&
+                    node.LevelName == levelName &&
+                    node.RoomId == roomId)
+                    return node;
+                var deep = FindTreeNode(node.Children, kind, systemName, levelName, roomId);
+                if (deep != null)
+                    return deep;
+            }
+            return null;
         }
 
         // ---------------- M3.1: 3D-вкладка ----------------

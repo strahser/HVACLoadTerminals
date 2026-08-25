@@ -328,33 +328,118 @@
                     </TabControl>
                 </Border>
 
-                <!-- Свойства выбранного узла (M2: редактирование) -->
+                <!-- Свойства выбранного узла (M2.1: редактирование системы) -->
                 <Border Grid.Column="2" Background="{StaticResource PanelBg}"
                         BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                         CornerRadius="6" Margin="4,0,0,0">
-                    <DockPanel DataContext="{Binding SelectedNode}">
+                    <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Margin="10,8" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextDark}">Свойства</TextBlock>
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel Margin="10,4,10,8">
-                                <TextBlock Text="{Binding Title, TargetNullValue=—}"
+                                <TextBlock Text="{Binding SelectedNode.Title, TargetNullValue=Выберите систему слева}"
                                            FontSize="15" FontWeight="SemiBold"
                                            Foreground="{StaticResource TextDark}" TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding Kind, TargetNullValue=—}" Margin="0,2,0,8"
-                                           Foreground="{StaticResource TextMuted}" FontSize="11"/>
+                                <TextBlock Text="{Binding SelectedSystem.TypeText}"
+                                           Margin="0,2,0,8" FontSize="11"
+                                           Foreground="{StaticResource TextMuted}"/>
                                 <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,4"/>
-                                <Grid Margin="0,6">
+
+                                <!-- M2.1: редактор свойств системы (не отопление) -->
+                                <StackPanel Visibility="{Binding SelectedSystem.ShowEditing,
+                                                        Converter={StaticResource BoolToVis}}">
+                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Имя системы</TextBlock>
+                                    <DockPanel Margin="0,1,0,10">
+                                        <Button DockPanel.Dock="Right" Content="✓"
+                                                Command="{Binding SelectedSystem.ApplyNameCommand}"
+                                                ToolTip="Переименовать систему во всех помещениях"
+                                                Padding="8,3" Margin="4,0,0,0"/>
+                                        <TextBox Text="{Binding SelectedSystem.NameEditor, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="5,3" VerticalContentAlignment="Center"/>
+                                    </DockPanel>
+
+                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Типоразмер прибора</TextBlock>
+                                    <ComboBox ItemsSource="{Binding SelectedSystem.Devices}"
+                                              SelectedItem="{Binding SelectedSystem.SelectedDevice}"
+                                              DisplayMemberPath="Label" Margin="0,1,0,2"/>
+                                    <TextBlock Text="{Binding SelectedSystem.DeviceInfoText}"
+                                               FontSize="11" LineHeight="15" TextWrapping="Wrap"
+                                               Foreground="{StaticResource TextMuted}" Margin="0,0,0,10"/>
+
+                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Правило количества</TextBlock>
+                                    <Grid Margin="0,1,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox ItemsSource="{Binding SelectedSystem.Rules}"
+                                                  SelectedItem="{Binding SelectedSystem.Rule}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Visibility="{Binding SelectedSystem.IsFixedVisible,
+                                                                 Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="N=" VerticalAlignment="Center" Margin="8,0,2,0"
+                                                       Foreground="{StaticResource TextMuted}"/>
+                                            <TextBox Width="42" Padding="4,2"
+                                                     Text="{Binding SelectedSystem.FixedCount, UpdateSourceTrigger=PropertyChanged}"
+                                                     ToolTip="Фиксированное число приборов в помещении"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <!-- N-калькулятор: почему такое количество приборов -->
+                                    <TextBlock Text="{Binding SelectedSystem.FormulaText}"
+                                               FontSize="11" LineHeight="15" TextWrapping="Wrap"
+                                               Foreground="{StaticResource TextDark}" Margin="0,0,0,10"/>
+
+                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Паттерн расстановки</TextBlock>
+                                    <ComboBox ItemsSource="{Binding SelectedSystem.Patterns}"
+                                              SelectedItem="{Binding SelectedSystem.Pattern}" Margin="0,1,0,6"/>
+                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Одиночный прибор</TextBlock>
+                                    <ComboBox ItemsSource="{Binding SelectedSystem.SingleRules}"
+                                              SelectedItem="{Binding SelectedSystem.SinglePlacementRule}" Margin="0,1,0,8"/>
+                                </StackPanel>
+
+                                <!-- Итог по системе -->
+                                <Grid Margin="0,2,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Приборов в выделении" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding DeviceCount}"
-                                               FontWeight="SemiBold"/>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Помещений" Foreground="{StaticResource TextMuted}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding SelectedSystem.RoomCount}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="1" Text="Приборов" Foreground="{StaticResource TextMuted}"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedSystem.DeviceCount}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="2" Text="Σ расход" Foreground="{StaticResource TextMuted}"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedSystem.FlowText}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="3" Text="k_ef средний" Foreground="{StaticResource TextMuted}"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedSystem.KefText}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="4" Text="Типоразмер" Foreground="{StaticResource TextMuted}"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedSystem.ActualDeviceText}"
+                                               FontWeight="SemiBold" MaxWidth="190" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding SelectedSystem.ActualDeviceText}"/>
                                 </Grid>
+
+                                <!-- Подсказка для не-системных узлов -->
                                 <TextBlock Margin="0,10,0,0" FontSize="11" LineHeight="16"
                                            Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
-                                           Text="Выберите узел слева: фильтр таблицы и плана. Редактирование параметров системы/помещения — следующий этап (карточка M2)."/>
+                                           Text="Выберите узел слева: фильтр таблицы и плана. Правка свойств системы (типоразмер, правило количества, паттерны) — на ветках систем.">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasSelectedSystem}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </StackPanel>
                         </ScrollViewer>
                     </DockPanel>

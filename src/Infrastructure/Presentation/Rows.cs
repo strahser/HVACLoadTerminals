@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using HVACLoadTerminals.Core.Models;
+using HVACLoadTerminals.Core.Services;
 
 namespace HVACLoadTerminals.Infrastructure.Presentation
 {
@@ -112,6 +113,25 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             get => _isIncluded;
             set { _isIncluded = value; OnPropertyChanged(nameof(IsIncluded)); }
         }
+
+        // ---- M2.1: настройки системы из панели свойств. null = «как на тулбаре»
+        // (глобальные опции presenter'а); значения пишутся во ВСЕ комнаты системы.
+
+        /// <summary>Закреплённый типоразмер прибора (TerminalDevice.Id);
+        /// null — автоподбор по каталогу.</summary>
+        public string? DeviceTypeId { get; set; }
+
+        /// <summary>Правило количества; null — глобальное правило тулбара.</summary>
+        public CeilingCountRule? CountRuleOverride { get; set; }
+
+        /// <summary>N для правила Fixed; null — глобальный FixedSupplyCount.</summary>
+        public int? FixedCountOverride { get; set; }
+
+        /// <summary>Паттерн массовой расстановки; null — глобальный по типу системы.</summary>
+        public WallPattern? PatternOverride { get; set; }
+
+        /// <summary>Правило одиночного прибора; null — глобальный SingleDeviceRule.</summary>
+        public SingleRule? SingleRuleOverride { get; set; }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) =>

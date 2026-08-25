@@ -220,6 +220,11 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public IReadOnlyList<DevicePlacement> LastRawPlacements { get; private set; }
             = Array.Empty<DevicePlacement>();
 
+        /// <summary>M2.1: сводные по системам последнего расчёта/загрузки проекта
+        /// (панель свойств системы).</summary>
+        public IReadOnlyList<SystemSummary> LastSystemSummaries { get; private set; }
+            = Array.Empty<SystemSummary>();
+
         public event Action<WorkspaceState>? StateChanged;
 
         /// <summary>Host-provided sink for non-fatal errors (status bar + log).</summary>
@@ -455,18 +460,15 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 {
                     if (!system.IsIncluded || system.FlowM3h <= 0)
                         continue;
+                    // M2.1: опции панели свойств системы (оверрайды → глобальные),
+                    // каталог сужается до закреплённого типоразмера, если задан.
+                    var options = SystemCeilingOptions(system);
+                    var systemCatalog = CatalogForSystem(catalog, system);
                     if (system.Type == HVACSystemType.Supply)
                     {
                         var res = _ceilingService.PlaceForRoom(
                             row.RoomId, polygon, system.FlowM3h, roomAreaM2,
-                            HVACSystemType.Supply, catalog, system.Name,
-                            new CeilingPlacementOptions
-                            {
-                                CountRule = SupplyRule,
-                                FixedCount = FixedSupplyCount,
-                                Pattern = SupplyPattern,
-                                SingleRule = SingleDeviceRule
-                            });
+                            HVACSystemType.Supply, systemCatalog, system.Name, options);
                         placements.AddRange(res.Placements);
                         StoreKef(kefByKey, res, system.FlowM3h);
                         AddPatternEdge(patternEdges, res, snapRoom, system.Name);
@@ -476,13 +478,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     {
                         var res = _ceilingService.PlaceForRoom(
                             row.RoomId, polygon, system.FlowM3h, roomAreaM2,
-                            HVACSystemType.Exhaust, catalog, system.Name,
-                            new CeilingPlacementOptions
-                            {
-                                CountRule = ExhaustRule,
-                                Pattern = ExhaustPattern,
-                                SingleRule = SingleDeviceRule
-                            });
+                            HVACSystemType.Exhaust, systemCatalog, system.Name, options);
                         placements.AddRange(res.Placements);
                         StoreKef(kefByKey, res, system.FlowM3h);
                         AddPatternEdge(patternEdges, res, snapRoom, system.Name);
@@ -628,6 +624,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             foreach (var row in dto.Rooms ?? new List<RoomRow>())
                 Rooms.Add(row);
             HookLiveRecalc();
+            RefreshSystemSummaries();
 
             var state = new WorkspaceState
             {
@@ -673,6 +670,244 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             });
         }
 
+        // ------------------------------------------------------------------
+        // M2.1: панель свойств системы — опции, мутаторы, сводные
+        // ------------------------------------------------------------------
+
+        /// <summary>Строки (комната, система) с данным именем системы.</summary>
+        private IEnumerable<(RoomRow Room, SystemRow System)> FindSystem(string name) =>
+            Rooms.SelectMany(r => (r.Systems ?? new List<SystemRow>())
+                .Where(s => s.Name == name)
+                .Select(s => (Room: r, System: s)));
+
+        /// <summary>Эффективные опции системы (оверрайд либо глобальные значения
+        /// тулбара); null — система не найдена ни в одной комнате (например «Отопление»).</summary>
+        public SystemOptionsView? GetSystemOptions(string name)
+        {
+            var first = FindSystem(name).FirstOrDefault().System;
+            if (first == null)
+                return null;
+            bool supply = first.Type == HVACSystemType.Supply;
+            return new SystemOptionsView
+            {
+                Type = first.Type,
+                DeviceTypeId = first.DeviceTypeId,
+                CountRule = first.CountRuleOverride ?? (supply ? SupplyRule : ExhaustRule),
+                FixedCount = first.FixedCountOverride ?? FixedSupplyCount,
+                Pattern = first.PatternOverride ?? (supply ? SupplyPattern : ExhaustPattern),
+                SingleRule = first.SingleRuleOverride ?? SingleDeviceRule
+            };
+        }
+
+        /// <summary>Переименовать систему во всех комнатах. null — успех, иначе
+        /// текст ошибки (пустое имя; система не найдена; дубликат имени в комнате).</summary>
+        public string? RenameSystem(string oldName, string newName)
+        {
+            newName = (newName ?? "").Trim();
+            if (newName.Length == 0)
+                return "Имя системы не может быть пустым";
+            if (oldName == newName)
+                return null;
+
+            int touched = 0;
+            foreach (var room in Rooms)
+            {
+                var systems = room.Systems;
+                if (systems == null || !systems.Any(s => s.Name == oldName))
+                    continue;
+                if (systems.Any(s => s.Name != oldName &&
+                                     string.Equals(s.Name, newName, StringComparison.OrdinalIgnoreCase)))
+                    return $"В комнате «{room.Number}. {room.Name}» уже есть система «{newName}»";
+                touched++;
+            }
+            if (touched == 0)
+                return $"Система «{oldName}» не найдена";
+
+            foreach (var (_, system) in FindSystem(oldName))
+                system.Name = newName;
+            foreach (var room in Rooms)
+                room.RefreshSystemSummary();
+            return null;
+        }
+
+        /// <summary>Применить мутацию ко всем строкам системы и поднять статус.</summary>
+        private void ApplyToSystem(string name, Action<SystemRow> mutate, string label)
+        {
+            int n = 0;
+            foreach (var (_, system) in FindSystem(name))
+            {
+                mutate(system);
+                n++;
+            }
+            RaiseStatusOnly($"Система «{name}»: {label} обновлено в {n} помещениях");
+        }
+
+        public void SetSystemDeviceTypeId(string name, string? deviceTypeId) =>
+            ApplyToSystem(name,
+                s => s.DeviceTypeId = string.IsNullOrWhiteSpace(deviceTypeId) ? null : deviceTypeId,
+                "типоразмер прибора");
+
+        public void SetSystemCountRule(string name, CeilingCountRule rule) =>
+            ApplyToSystem(name, s => s.CountRuleOverride = rule, "правило количества");
+
+        public void SetSystemFixedCount(string name, int count)
+        {
+            if (count < 1)
+            {
+                ErrorSink?.Invoke($"N для правила Fixed должно быть ≥ 1 " +
+                                  $"(получено {count}) — значение не изменено");
+                return;
+            }
+            ApplyToSystem(name, s => s.FixedCountOverride = count, $"N = {count}");
+        }
+
+        public void SetSystemPattern(string name, WallPattern pattern) =>
+            ApplyToSystem(name, s => s.PatternOverride = pattern, "паттерн расстановки");
+
+        public void SetSystemSingleRule(string name, SingleRule rule) =>
+            ApplyToSystem(name, s => s.SingleRuleOverride = rule, "правило одиночного прибора");
+
+        /// <summary>M2.1: опции потолочной расстановки конкретной системы —
+        /// оверрайды панели свойств, при отсутствии — глобальные тулбара.</summary>
+        private CeilingPlacementOptions SystemCeilingOptions(SystemRow system)
+        {
+            bool supply = system.Type == HVACSystemType.Supply;
+            return new CeilingPlacementOptions
+            {
+                CountRule = system.CountRuleOverride ?? (supply ? SupplyRule : ExhaustRule),
+                FixedCount = Math.Max(1, system.FixedCountOverride ?? FixedSupplyCount),
+                Pattern = system.PatternOverride ?? (supply ? SupplyPattern : ExhaustPattern),
+                SingleRule = system.SingleRuleOverride ?? SingleDeviceRule
+            };
+        }
+
+        /// <summary>M2.1: каталог, суженный до закреплённого за системой типоразмера;
+        /// неизвестный Id → предупреждение и полный каталог (автоподбор).</summary>
+        private IReadOnlyList<TerminalDevice> CatalogForSystem(
+            IReadOnlyList<TerminalDevice> catalog, SystemRow system)
+        {
+            string? pinnedId = system.DeviceTypeId;
+            if (string.IsNullOrWhiteSpace(pinnedId))
+                return catalog;
+            var pinned = catalog.FirstOrDefault(d =>
+                d.Id == pinnedId && d.SystemType == system.Type);
+            if (pinned == null)
+            {
+                ErrorSink?.Invoke($"Система «{system.Name}»: закреплённый типоразмер " +
+                                  $"{pinnedId} не найден в каталоге — используется автоподбор");
+                return catalog;
+            }
+            return new[] { pinned };
+        }
+
+        /// <summary>M2.1: пересобрать сводные по системам из строк последнего
+        /// расчёта/загрузки проекта (без side-effects на ErrorSink).</summary>
+        private void RefreshSystemSummaries()
+        {
+            var rows = _lastPlacementRows;
+            if (rows.Count == 0)
+            {
+                LastSystemSummaries = Array.Empty<SystemSummary>();
+                return;
+            }
+
+            var catalog = LookupCatalogQuiet();
+            var roomsById = new Dictionary<string, SnapshotRoom>();
+            foreach (var room in _snapshot?.Rooms ?? Enumerable.Empty<SnapshotRoom>())
+                roomsById[room.Id] = room;
+
+            var result = new List<SystemSummary>();
+            foreach (var g in rows.GroupBy(r => r.SystemName))
+            {
+                var first = g.First();
+                var device = FindCatalogDevice(catalog, first.Family, first.TypeName);
+                var kefs = g.Where(x => x.KEf > 0).Select(x => x.KEf).ToList();
+
+                // Пример формулы — комната-лидер по числу приборов.
+                var sample = g.GroupBy(x => x.RoomId)
+                    .OrderByDescending(rg => rg.Count()).First();
+                int n = sample.Count();
+                double roomFlow = sample.Sum(x => x.CalculatedFlow);
+                double roomAreaM2 = roomsById.TryGetValue(sample.Key, out var room)
+                    ? room.Area : 0;
+
+                result.Add(new SystemSummary
+                {
+                    Name = g.Key,
+                    Type = device?.SystemType ?? InferSystemTypeByName(g.Key),
+                    RoomCount = g.Select(x => x.RoomId).Distinct().Count(),
+                    DeviceCount = g.Count(),
+                    TotalFlowM3h = g.Sum(x => x.CalculatedFlow),
+                    AvgKef = kefs.Count > 0 ? kefs.Average() : 0,
+                    TypeName = device == null
+                        ? first.TypeName
+                        : $"{first.Family} · {first.TypeName}",
+                    FormulaText = BuildFormulaText(
+                        first.CalculationOption, device, roomAreaM2, roomFlow, n)
+                });
+            }
+            LastSystemSummaries = result;
+        }
+
+        private static HVACSystemType InferSystemTypeByName(string summaryName) =>
+            summaryName == "Отопление"
+                ? HVACSystemType.Heating
+                : summaryName.StartsWith("В", StringComparison.OrdinalIgnoreCase)
+                    ? HVACSystemType.Exhaust
+                    : HVACSystemType.Supply;
+
+        /// <summary>Тихое чтение каталога для сводных: без ErrorSink/fallback-статусов.</summary>
+        private IReadOnlyList<TerminalDevice> LookupCatalogQuiet()
+        {
+            if (LastUsedCatalog is IReadOnlyList<TerminalDevice> used && used.Count > 0)
+                return used;
+            try
+            {
+                var devices = CatalogRepository?.GetAllDevices();
+                if (devices is { Count: > 0 })
+                    return devices;
+            }
+            catch
+            {
+                // сводные остаются без формул по параметрам прибора — не критично
+            }
+            return Array.Empty<TerminalDevice>();
+        }
+
+        private static TerminalDevice? FindCatalogDevice(
+            IReadOnlyList<TerminalDevice> catalog, string family, string typeName) =>
+            catalog.FirstOrDefault(d =>
+                d.FamilyName == family &&
+                (d.TypeName == typeName ||
+                 (d.TypeName ?? "").Equals(typeName, StringComparison.OrdinalIgnoreCase)));
+
+        /// <summary>Пояснение «почему такое N» по метке расчёта (словарь прототипа),
+        /// на примере одной комнаты: расход комнаты, параметры типоразмера, итог N.</summary>
+        private static string BuildFormulaText(
+            string optionLabel, TerminalDevice? device,
+            double roomAreaM2, double roomFlowM3h, int n)
+        {
+            switch (optionLabel)
+            {
+                case CalculationOptionLabels.Area:
+                    return device != null && device.ServiceAreaM2 > 0 && roomAreaM2 > 0
+                        ? $"N = ⌈S {roomAreaM2:F1} / {device.ServiceAreaM2:F0} м²⌉ = {n}"
+                        : "N = ⌈S помещения / S обслуживания⌉";
+                case CalculationOptionLabels.MinByFlow:
+                    return device != null && device.MaxFlowRate > 0 && roomFlowM3h > 0
+                        ? $"N = ⌈Q {roomFlowM3h:F0} / {device.MaxFlowRate:F0} м³/ч⌉ = {n}"
+                        : "N = ⌈Q системы / Q прибора⌉";
+                case CalculationOptionLabels.FixedN:
+                    return $"N = задано вручную = {n}";
+                case CalculationOptionLabels.Length:
+                    return device != null && device.DirectiveLengthMm > 0
+                        ? $"N = ⌈L участка / {device.DirectiveLengthMm:F0} мм⌉ = {n}"
+                        : "N = ⌈L участка / L директивная⌉";
+                default:
+                    return "";
+            }
+        }
+
         private static void StoreKef(
             Dictionary<string, double> sink,
             CeilingPlacementResult res,
@@ -694,6 +929,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         {
             var rows = ToRows(placements, kefByKey);
             _lastPlacementRows = rows;
+            RefreshSystemSummaries();
             return new WorkspaceState
             {
                 Rooms = Rooms.ToList(),
