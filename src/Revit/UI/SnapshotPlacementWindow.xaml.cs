@@ -80,7 +80,7 @@ namespace HVACLoadTerminals.Revit.UI
         {
             if (PlacementsGrid?.ItemsSource == null)
                 return;
-            var view = System.ComponentModel.CollectionViewSource
+            var view = System.Windows.Data.CollectionViewSource
                 .GetDefaultView(PlacementsGrid.ItemsSource);
             view.Filter = o => o is PlacementRow p && _crm.MatchesSelectedNode(p);
         }
