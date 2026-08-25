@@ -3,50 +3,79 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:core="clr-namespace:HVACLoadTerminals.Core.Models;assembly=HVACLoadTerminals.Core"
         Title="Системы помещения"
-        Width="560" Height="420"
+        Width="560" Height="430"
         WindowStartupLocation="CenterOwner"
-        Background="#0d1117">
+        Background="#F4F6F9"
+        TextElement.Foreground="#24292f">
     <Window.Resources>
         <x:Array x:Key="SystemTypes" Type="{x:Type core:HVACSystemType}">
             <core:HVACSystemType>Supply</core:HVACSystemType>
             <core:HVACSystemType>Exhaust</core:HVACSystemType>
+            <core:HVACSystemType>FanCoil</core:HVACSystemType>
+            <core:HVACSystemType>Cooling</core:HVACSystemType>
+            <core:HVACSystemType>Heating</core:HVACSystemType>
         </x:Array>
         <Style TargetType="Button">
-            <Setter Property="Padding" Value="10,4"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="MinWidth" Value="88"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
         </Style>
         <Style TargetType="DataGrid">
-            <Setter Property="Background" Value="#161b22"/>
-            <Setter Property="Foreground" Value="#e6edf3"/>
-            <Setter Property="BorderBrush" Value="#30363d"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#24292f"/>
+            <Setter Property="BorderBrush" Value="#d0d7de"/>
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="CanUserAddRows" Value="False"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
         </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#eaeef2"/>
+            <Setter Property="Foreground" Value="#57606a"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="BorderBrush" Value="#d0d7de"/>
+        </Style>
     </Window.Resources>
-    <DockPanel Margin="10">
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
-            <Button x:Name="AddSupplyBtn" Click="AddSupply_Click">＋ Приток</Button>
-            <Button x:Name="AddExhaustBtn" Click="AddExhaust_Click">＋ Вытяжка</Button>
-            <Button x:Name="RemoveBtn" Click="Remove_Click">− Удалить</Button>
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Инструменты -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button x:Name="AddSupplyBtn" Click="AddSupply_Click" MinWidth="0">＋ Приток</Button>
+            <Button x:Name="AddExhaustBtn" Click="AddExhaust_Click" MinWidth="0">＋ Вытяжка</Button>
+            <Button x:Name="RemoveBtn" Click="Remove_Click" MinWidth="0">− Удалить</Button>
         </StackPanel>
-        <DataGrid x:Name="Grid" DockPanel.Dock="Top" Height="220"
-                  ItemsSource="{Binding Systems}">
+
+        <!-- Таблица систем -->
+        <DataGrid x:Name="Grid" Grid.Row="1" ItemsSource="{Binding Systems}" RowHeight="26">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Имя" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                <DataGridTextColumn Header="Имя" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
                 <DataGridComboBoxColumn Header="Тип"
                                         SelectedItemBinding="{Binding Type}"
                                         ItemsSource="{StaticResource SystemTypes}"
-                                        Width="110"/>
+                                        Width="120"/>
                 <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding FlowM3h, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
                 <DataGridCheckBoxColumn Header="Включено" Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
             </DataGrid.Columns>
         </DataGrid>
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
-            <Button Content="ОК" Click="Ok_Click" FontWeight="SemiBold" Padding="18,4"/>
+
+        <!-- Баланс -->
+        <Border Grid.Row="2" BorderBrush="#d0d7de" BorderThickness="0,1,0,0"
+                Margin="0,10,0,0" Padding="0,8,0,0">
+            <TextBlock x:Name="BalanceText" Foreground="#57606a"/>
+        </Border>
+
+        <!-- Кнопки справа снизу -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right"
+                    Margin="0,12,0,0">
+            <Button Content="ОК" Click="Ok_Click" FontWeight="SemiBold"
+                    Background="#2D6CDF" Foreground="White" BorderBrush="#1B4FA8"/>
             <Button Content="Отмена" Click="Cancel_Click"/>
-            <TextBlock x:Name="BalanceText" VerticalAlignment="Center" Margin="16,0,0,0"
-                       Foreground="#9aa4ad"/>
         </StackPanel>
-    </DockPanel>
+    </Grid>
 </Window>

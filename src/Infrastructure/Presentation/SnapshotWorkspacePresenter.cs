@@ -371,8 +371,12 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// <summary>Синхронизировать список систем комнаты со справочником
         /// проекта: создать отсутствующие ProjectSystem/ссылки (аудит), обновить
         /// пер-комнатные расход/включённость, убрать ссылки на удалённые системы.
-        /// Существующие ссылки сохраняют свой аудит.</summary>
-        public void SyncRoomToCatalog(RoomRow row, string assignedBy = "manual")
+        /// Существующие ссылки сохраняют свой аудит (кроме случая, когда
+        /// <paramref name="markExistingManual"/> выключен — массовое назначение).
+        /// </summary>
+        public void SyncRoomToCatalog(
+            RoomRow row, string assignedBy = "manual",
+            bool markExistingManual = true)
         {
             if (row?.Systems == null)
                 return;
@@ -399,7 +403,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     {
                         RoomId = row.RoomId,
                         SystemId = ps.Id,
-                        AssignedBy = created ? assignedBy : "manual",
+                        AssignedBy = created ? assignedBy
+                            : markExistingManual ? "manual" : assignedBy,
                         AssignedAtUtc = DateTime.UtcNow
                     };
                     links.Add(link);
@@ -414,6 +419,78 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// комната могла добавить/удалить/переименовать системы.</summary>
         public void CommitRoomSystems(RoomRow row) =>
             SyncRoomToCatalog(row, "manual");
+
+        /// <summary>Каталог типоразмеров для модалок назначения (с фолбэком).</summary>
+        public IReadOnlyList<TerminalDevice> GetCatalog() => ResolveCatalog();
+
+        /// <summary>
+        /// ui-crm-redesign B: назначить глобальную систему проекта выбранным
+        /// помещениям. Создаёт/находит ProjectSystem, пишет в него опции
+        /// установки и добавляет строку системы каждой комнате (аудит «mass»).
+        /// Отопление — только метаданные справочника: расстановка отопления
+        /// считается от нагрузки Q отдельным движком. Возвращает (назначено,
+        /// пропущено — уже есть система с таким именем).
+        /// </summary>
+        public (int Assigned, int Skipped) AssignSystemToRooms(
+            Func<RoomRow, bool> roomFilter, AssignSystemSpec spec)
+        {
+            if (spec == null)
+                return (0, 0);
+            string name = (spec.Name ?? "").Trim();
+            if (name.Length == 0)
+            {
+                ErrorSink?.Invoke("Назначение системы: имя не может быть пустым");
+                return (0, 0);
+            }
+            bool needsFlow = spec.SystemType != HVACSystemType.Heating;
+            if (needsFlow && spec.FlowM3hPerRoom <= 0)
+            {
+                ErrorSink?.Invoke($"Назначение «{name}»: расход должен быть > 0 м³/ч");
+                return (0, 0);
+            }
+
+            var ps = GetOrCreateProjectSystem(name, spec.SystemType);
+            ps.DeviceTypeId = spec.DeviceTypeId;
+            ps.CountRuleOverride = spec.CountRuleOverride;
+            ps.FixedCountOverride = spec.FixedCountOverride;
+            ps.PatternOverride = spec.PatternOverride;
+            ps.SingleRuleOverride = spec.SingleRuleOverride;
+
+            int assigned = 0, skipped = 0;
+            foreach (var room in Rooms.Where(roomFilter))
+            {
+                var systems = room.Systems ??= new List<SystemRow>();
+                if (systems.Any(s =>
+                        string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    skipped++;
+                    continue;
+                }
+                if (spec.ReplaceSameType)
+                    systems.RemoveAll(s => s.Type == spec.SystemType);
+                systems.Add(new SystemRow
+                {
+                    Name = name,
+                    Type = spec.SystemType,
+                    FlowM3h = needsFlow ? Math.Round(spec.FlowM3hPerRoom, 1) : 0,
+                    IsIncluded = true,
+                    DeviceTypeId = ps.DeviceTypeId,
+                    CountRuleOverride = ps.CountRuleOverride,
+                    FixedCountOverride = ps.FixedCountOverride,
+                    PatternOverride = ps.PatternOverride,
+                    SingleRuleOverride = ps.SingleRuleOverride,
+                    EdgeOffsetOverrideMm = ps.EdgeOffsetOverrideMm,
+                    CeilingOffsetOverrideMm = ps.CeilingOffsetOverrideMm
+                });
+                SyncRoomToCatalog(room, "mass", markExistingManual: false);
+                room.RefreshSystemSummary();
+                assigned++;
+            }
+
+            RaiseStatusOnly($"Система «{name}»: назначена {assigned} помещ., " +
+                            $"пропущено {skipped}");
+            return (assigned, skipped);
+        }
 
         /// <summary>Оверрайды первой найденной строки системы → в справочник
         /// (справочник — авторитетный источник для новых комнат и модалок).</summary>
@@ -446,7 +523,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     errors.Add($"{label}: система с пустым именем");
                 else if (!seen.Add(name))
                     errors.Add($"{label}: дубликат имени системы «{name}»");
-                if (s.FlowM3h <= 0)
+                if (s.FlowM3h <= 0 && s.Type != HVACSystemType.Heating)
                     errors.Add($"{label}: расход системы «{name}» должен быть > 0 " +
                                $"(сейчас {s.FlowM3h:F1})");
             }
@@ -587,6 +664,19 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                                     : $"{size.Grilles.Count} решётки по " +
                                       $"{size.Grilles[0].LengthMm:F0}×{size.Grilles[0].HeightMm:F0}"));
                         }
+                    }
+                    else if (system.Type == HVACSystemType.FanCoil ||
+                             system.Type == HVACSystemType.Cooling)
+                    {
+                        // ui-crm-redesign B: кондиционирование (фанкойлы) —
+                        // потолочная расстановка как у вентиляции.
+                        var res = _ceilingService.PlaceForRoom(
+                            row.RoomId, polygon, system.FlowM3h, roomAreaM2,
+                            system.Type, systemCatalog, system.Name, options);
+                        placements.AddRange(res.Placements);
+                        StoreKef(kefByKey, res, system.FlowM3h);
+                        AddPatternEdge(patternEdges, res, snapRoom, system.Name);
+                        roomWarnings.AddRange(res.Warnings);
                     }
                 }
 

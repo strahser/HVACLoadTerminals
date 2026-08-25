@@ -108,8 +108,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 $"Вытяжка: {exhaust:F0} из {_estimateExhaust:F0} м³/ч";
             BalanceText.Foreground = new System.Windows.Media.SolidColorBrush(
                 supplyOff || exhaustOff
-                    ? System.Windows.Media.Color.FromRgb(0xf0, 0x67, 0x36)
-                    : System.Windows.Media.Color.FromRgb(0x9a, 0xa4, 0xad));
+                    ? System.Windows.Media.Color.FromRgb(0xcf, 0x22, 0x2e)
+                    : System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6a));
         }
 
         private double IncludedSum(HVACSystemType type) =>

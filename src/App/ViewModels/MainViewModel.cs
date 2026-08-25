@@ -328,6 +328,25 @@ namespace HVACLoadTerminals.App.ViewModels
         /// <summary>P5: массовое применение оверрайдов к выбранным помещениям.</summary>
         public ICommand ApplyMassCommand { get; }
 
+        /// <summary>ui-crm-redesign B: назначение глобальной системы проекта
+        /// выделенным помещениям.</summary>
+        public ICommand AssignSystemCommand { get; }
+
+        private void OpenAssignSystem()
+        {
+            if (_selectedRoomIds.Count == 0)
+            {
+                StatusMessage = "Выделите помещения в таблице (Ctrl/Shift)";
+                return;
+            }
+            var ids = new HashSet<string>(_selectedRoomIds);
+            var owner = System.Windows.Application.Current?.MainWindow;
+            var window = new AssignSystemWindow(
+                Workspace, row => ids.Contains(row.RoomId)) { Owner = owner };
+            window.ShowDialog();
+            Crm.RefreshPanels();
+        }
+
         /// <summary>M3.2: HTML-отчёт по текущему уровню (сцена+сводка+таблица).</summary>
         public ICommand ExportReportCommand { get; }
 
@@ -387,6 +406,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 Placements.Count > 0);
             EditCatalogCommand = new RelayCommand(_ => EditCatalog());
             ApplyMassCommand = new RelayCommand(_ => ApplyMass(), _ => HasSelectedRooms);
+            AssignSystemCommand = new RelayCommand(_ => OpenAssignSystem(), _ => HasSelectedRooms);
             ExportReportCommand = new RelayCommand(_ => ExportLevelReport(), _ =>
                 Placements.Count > 0);
 

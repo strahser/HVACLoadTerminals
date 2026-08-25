@@ -77,8 +77,33 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// <summary>Система-получатель внутри комнат; null/пусто — все системы.</summary>
         public string? SystemName { get; set; }
 
-        public bool HasAny => SetDeviceType || SetRule || SetFixedCount ||
-                              SetPattern || SetSingleRule ||
-                              SetEdgeOffset || SetCeilingOffset;
-    }
+    public bool HasAny => SetDeviceType || SetRule || SetFixedCount ||
+                          SetPattern || SetSingleRule ||
+                          SetEdgeOffset || SetCeilingOffset;
+}
+
+/// <summary>
+/// ui-crm-redesign B: назначение глобальной системы проекта выбранным
+/// помещениям (тип, название, прибор с производителем, опции установки).
+/// </summary>
+public class AssignSystemSpec
+{
+    public HVACSystemType SystemType { get; set; } = HVACSystemType.Supply;
+
+    public string Name { get; set; } = "";
+
+    /// <summary>Закреплённый типоразмер (TerminalDevice.Id); null — автоподбор.</summary>
+    public string? DeviceTypeId { get; set; }
+
+    /// <summary>Расход системы в каждом помещении, м³/ч (&gt;0; для отопления не нужен).</summary>
+    public double FlowM3hPerRoom { get; set; }
+
+    public CeilingCountRule? CountRuleOverride { get; set; }
+    public int? FixedCountOverride { get; set; }
+    public WallPattern? PatternOverride { get; set; }
+    public SingleRule? SingleRuleOverride { get; set; }
+
+    /// <summary>Снять существующие системы того же типа перед назначением.</summary>
+    public bool ReplaceSameType { get; set; }
+}
 }
