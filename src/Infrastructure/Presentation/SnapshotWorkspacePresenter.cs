@@ -197,7 +197,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// <summary>Auto-recalculate after load edits — debounced by
         /// <see cref="LiveRecalcDebounceMs"/> after the LAST edit (U3.1: раньше
         /// комментарий «debounced» был лживым — пересчёт шёл на каждый символ).</summary>
-        public bool LiveRecalc { get; set; } = true;
+        /// <summary>Этап C (требование 5): пересчёт по кнопке — живой режим
+        /// выключен по умолчанию, включается осознанно (Сервис▸Живой пересчёт).</summary>
+        public bool LiveRecalc { get; set; } = false;
 
         /// <summary>U3.1: пауза коалесинга правок перед живым пересчётом, мс.</summary>
         public int LiveRecalcDebounceMs { get; set; } = 300;

@@ -51,5 +51,37 @@ namespace HVACLoadTerminals.App
         {
             _vm.SetSelectedRooms(RoomsGrid.SelectedItems);
         }
+
+        // ---- Этап C: пункты меню, требующие доступа к гриду/окну ----
+
+        private void SelectAllRows_Click(object sender, RoutedEventArgs e) =>
+            RoomsGrid?.SelectAll();
+
+        private void UnselectAllRows_Click(object sender, RoutedEventArgs e) =>
+            RoomsGrid?.UnselectAll();
+
+        /// <summary>«Системы…» для первой выделенной комнаты (строка контекста).</summary>
+        private void EditSystems_Click_Grid(object sender, RoutedEventArgs e)
+        {
+            if (RoomsGrid?.SelectedItem is RoomRow row)
+            {
+                new SystemEditorWindow(row) { Owner = this }.ShowDialog();
+                _vm.Workspace.CommitRoomSystems(row);
+            }
+        }
+
+        private void Exit_Click(object sender, RoutedEventArgs e) => Close();
+
+        private void Help_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show(
+                "1. Файл → Открыть снимок… — JSON из snapshots_raw HeatLossRevit2.\n" +
+                "2. Нагрузки подставятся автоматически; правьте Q/расходы в таблице.\n" +
+                "3. Выделите помещения (Ctrl/Shift) → Правка → Назначить систему…\n" +
+                "4. F5 / «▶ РАССЧИТАТЬ» — расстановка на плане выбранного уровня.\n" +
+                "5. Вид — дерево систем, панель свойств, кривые ограждений.\n" +
+                "6. Экспорт — отчёт уровня, Excel, задание JSON. Проект — Ctrl+S.",
+                "Справка — HVAC Terminals", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 }

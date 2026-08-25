@@ -60,10 +60,11 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
-        public ObservableCollection<string> Levels { get; } =
-            new ObservableCollection<string> { "Все уровни" };
+        public ObservableCollection<string> Levels { get; } = new();
 
-        private string _selectedLevel = "Все уровни";
+        // ui-crm-redesign C: опция «Все уровни» удалена (этажи сливались);
+        // план всегда показывает ровно один уровень, при загрузке — первый.
+        private string _selectedLevel = "";
         public string SelectedLevel
         {
             get => _selectedLevel;
@@ -77,8 +78,7 @@ namespace HVACLoadTerminals.App.ViewModels
         }
 
         /// <summary>Сигнатура набора уровней текущего документа: при смене
-        /// документа план автоматически переключается на первый уровень
-        /// (вид «Все уровни» сливает этажи и остаётся ручной опцией).</summary>
+        /// документа план автоматически переключается на первый уровень.</summary>
         private string _levelsSignature = "";
 
         /// <summary>M1.2: выбор уровня/комнаты в дереве переводит план
@@ -92,6 +92,31 @@ namespace HVACLoadTerminals.App.ViewModels
             if (level.Length > 0 && SelectedLevel != level && Levels.Contains(level))
                 SelectedLevel = level;
         }
+
+        /// <summary>Требование 9: кривые ограждений (стены/окна) рисуются
+        /// только у помещений, выделенных в списке. По умолчанию включено.</summary>
+        public bool ShowEnclosureCurves
+        {
+            get => _showEnclosureCurves;
+            set { _showEnclosureCurves = value; OnPropertyChanged(nameof(ShowEnclosureCurves)); PlotLevel(); }
+        }
+        private bool _showEnclosureCurves = true;
+
+        /// <summary>Этап C: дерево систем скрыто по умолчанию (минимализм).</summary>
+        public bool ShowTreePanel
+        {
+            get => _showTreePanel;
+            set { _showTreePanel = value; OnPropertyChanged(nameof(ShowTreePanel)); }
+        }
+        private bool _showTreePanel;
+
+        /// <summary>Этап C: панель свойств скрыта по умолчанию (минимализм).</summary>
+        public bool ShowPropsPanel
+        {
+            get => _showPropsPanel;
+            set { _showPropsPanel = value; OnPropertyChanged(nameof(ShowPropsPanel)); }
+        }
+        private bool _showPropsPanel;
 
         // ---- P4: раскраска плана и подписи комнат ----
 
@@ -161,10 +186,14 @@ namespace HVACLoadTerminals.App.ViewModels
         public bool HasSelectedRooms => _selectedRoomIds.Count > 0;
 
         /// <summary>Хост передаёт выделенные строки таблицы помещений.</summary>
-        public void SetSelectedRooms(System.Collections.IList items) =>
+        public void SetSelectedRooms(System.Collections.IList items)
+        {
             SelectedRoomIds = items != null
                 ? items.OfType<RoomRow>().Select(r => r.RoomId).ToList()
                 : (IReadOnlyList<string>)Array.Empty<string>();
+            // Требование 9: подсветка/кривые ограждений следуют за выделением.
+            PlotLevel();
+        }
 
         private void ApplyMass()
         {
@@ -314,6 +343,8 @@ namespace HVACLoadTerminals.App.ViewModels
         public ICommand RecalcLoadsCommand { get; }
         public ICommand ApplyPurposeCommand { get; }
         public ICommand IncludeLevelCommand { get; }
+        public ICommand IncludeVisibleCommand { get; }
+        public ICommand ExcludeVisibleCommand { get; }
         public ICommand IncludeOnlyVisibleCommand { get; }
         public ICommand CalculateCommand { get; }
         public ICommand SaveProjectCommand { get; }
@@ -389,11 +420,14 @@ namespace HVACLoadTerminals.App.ViewModels
                 Workspace.ApplyPurpose(FilterVisible, p as string ?? ""));
             IncludeLevelCommand = new RelayCommand(_ =>
             {
-                if (SelectedLevel == "Все уровни")
-                    Workspace.SetIncluded(_ => true, true);
-                else
-                    Workspace.IncludeLevel(SelectedLevel);
+                if (SelectedLevel.Length == 0)
+                    return;
+                Workspace.IncludeLevel(SelectedLevel);
             });
+            IncludeVisibleCommand = new RelayCommand(_ =>
+                Workspace.SetIncluded(FilterVisible, true));
+            ExcludeVisibleCommand = new RelayCommand(_ =>
+                Workspace.SetIncluded(FilterVisible, false));
             IncludeOnlyVisibleCommand = new RelayCommand(_ =>
                 Workspace.IncludeOnlyVisible(FilterVisible));
             CalculateCommand = new RelayCommand(_ => CalculateSafe());
@@ -484,7 +518,7 @@ namespace HVACLoadTerminals.App.ViewModels
             Workspace.ApplyPurpose(FilterVisible, purpose);
 
         private bool FilterVisible(RoomRow row) =>
-            SelectedLevel == "Все уровни" || row.LevelName == SelectedLevel;
+            row.LevelName == SelectedLevel;
 
         /// <summary>M2.1: живой пересчёт после правки свойств (панель системы).</summary>
         public void RecalcIfLive()
@@ -500,8 +534,9 @@ namespace HVACLoadTerminals.App.ViewModels
                 StatusMessage = state.Status;
                 HasRooms = Workspace.Rooms.Count > 0;
 
-                var levels = new[] { "Все уровни" }
-                    .Concat(state.Levels).Distinct().ToList();
+                var levels = state.Levels
+                    .Where(l => !string.IsNullOrEmpty(l))
+                    .Distinct().ToList();
                 string signature = string.Join("\n", levels);
                 bool newDocument = signature != _levelsSignature;
                 _levelsSignature = signature;
@@ -510,13 +545,12 @@ namespace HVACLoadTerminals.App.ViewModels
                     Levels.Add(l);
                 if (newDocument)
                 {
-                    // Новый снимок/проект: по умолчанию первый реальный уровень —
-                    // «Все уровни» сливает этажи в одну кашу.
-                    SelectedLevel = levels.Count > 1 ? levels[1] : "Все уровни";
+                    // Новый снимок/проект: первый уровень по умолчанию.
+                    SelectedLevel = levels.Count > 0 ? levels[0] : "";
                 }
                 else if (!Levels.Contains(SelectedLevel))
                 {
-                    SelectedLevel = "Все уровни";
+                    SelectedLevel = levels.Count > 0 ? levels[0] : "";
                 }
 
                 OnPropertyChanged(nameof(RoomsView));
@@ -583,24 +617,81 @@ namespace HVACLoadTerminals.App.ViewModels
             // U3.1: план в тех же единицах, что таблица размещений — мм.
             double mmPerFoot = LengthUnitConverter.MmPerFoot;
 
-            bool allLevels = SelectedLevel == "Все уровни";
+            // Этап C: план всегда одного уровня (опция «Все уровни» удалена).
+            var selectedIds = new HashSet<string>(_selectedRoomIds);
             foreach (var room in snapshot.Rooms)
             {
-                if (!allLevels && room.LevelName != SelectedLevel)
+                if (room.LevelName != SelectedLevel)
                     continue;
                 var polygon = room.ToPolygon();
                 if (polygon == null)
                     continue;
+                bool isSelected = selectedIds.Contains(room.Id ?? "");
                 var line = new LineSeries
                 {
-                    Color = OxyColors.LightSlateGray,
-                    StrokeThickness = 1,
+                    Color = isSelected ? OxyColors.DodgerBlue : OxyColors.LightSlateGray,
+                    StrokeThickness = isSelected ? 4 : 1,
                     Title = $"{room.Number}. {room.Name}"
                 };
                 foreach (var v in polygon.Vertices)
                     line.Points.Add(new DataPoint(v.X * mmPerFoot, v.Y * mmPerFoot));
                 line.Points.Add(line.Points[0]);
                 model.Series.Add(line);
+            }
+
+            // Требование 9: кривые ограждений — только у выделенных помещений.
+            // Стены из снимка (LocationCurve, футы); наружные толще и темнее,
+            // окна/витражи — оранжевыми отрезками по хост-стене.
+            if (ShowEnclosureCurves && selectedIds.Count > 0)
+            {
+                var wallsByRoom = snapshot.Walls
+                    .Where(w => w?.SpaceId != null && selectedIds.Contains(w.SpaceId))
+                    .ToList();
+                foreach (var wall in wallsByRoom)
+                {
+                    var lc = wall.LocationCurve;
+                    bool external = wall.ResolvedExternal || wall.IsExternal || wall.ArIsExternal;
+                    var wallLine = new LineSeries
+                    {
+                        Color = external ? OxyColor.FromRgb(55, 71, 79)
+                                         : OxyColor.FromRgb(176, 190, 197),
+                        StrokeThickness = external ? 5 : 2.5,
+                        Title = external ? "Наружная стена" : "Внутренняя стена"
+                    };
+                    wallLine.Points.Add(new DataPoint(lc.StartX * mmPerFoot, lc.StartY * mmPerFoot));
+                    wallLine.Points.Add(new DataPoint(lc.EndX * mmPerFoot, lc.EndY * mmPerFoot));
+                    model.Series.Add(wallLine);
+                }
+
+                var openingsByHost = snapshot.Openings
+                    .Where(o => o != null &&
+                                o.EnclosureType is "Окно" or "Витраж")
+                    .ToLookup(o => o.HostWallId);
+                foreach (var wall in wallsByRoom)
+                {
+                    foreach (var opening in openingsByHost[wall.Id])
+                    {
+                        var lc = wall.LocationCurve;
+                        double dx = lc.EndX - lc.StartX, dy = lc.EndY - lc.StartY;
+                        double len = Math.Sqrt(dx * dx + dy * dy);
+                        if (len <= 0)
+                            continue;
+                        double half = Math.Min(opening.Width, len) / 2 / len;
+                        double mx = (lc.StartX + lc.EndX) / 2;
+                        double my = (lc.StartY + lc.EndY) / 2;
+                        var winLine = new LineSeries
+                        {
+                            Color = OxyColors.OrangeRed,
+                            StrokeThickness = 6,
+                            Title = "Окно"
+                        };
+                        winLine.Points.Add(new DataPoint(
+                            (mx - dx * half) * mmPerFoot, (my - dy * half) * mmPerFoot));
+                        winLine.Points.Add(new DataPoint(
+                            (mx + dx * half) * mmPerFoot, (my + dy * half) * mmPerFoot));
+                        model.Series.Add(winLine);
+                    }
+                }
             }
 
             var colorBySystem = new Dictionary<string, OxyColor>
@@ -614,7 +705,7 @@ namespace HVACLoadTerminals.App.ViewModels
             // (цвет = цвет системы; толще контура комнаты).
             foreach (var edge in Workspace.LastPatternEdges)
             {
-                if (!allLevels && edge.LevelName != SelectedLevel)
+                if (edge.LevelName != SelectedLevel)
                     continue;
                 var sideLine = new LineSeries
                 {
@@ -629,9 +720,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 model.Series.Add(sideLine);
             }
 
-            var rows = allLevels
-                ? Placements.ToList()
-                : Placements.Where(p => p.LevelName == SelectedLevel).ToList();
+            var rows = Placements
+                .Where(p => p.LevelName == SelectedLevel).ToList();
 
             if (SelectedColorMode == "По системам")
             {
@@ -713,7 +803,7 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 foreach (var room in snapshot.Rooms)
                 {
-                    if (!allLevels && room.LevelName != SelectedLevel)
+                    if (room.LevelName != SelectedLevel)
                         continue;
                     var polygon = room.ToPolygon();
                     if (polygon == null)
@@ -917,7 +1007,7 @@ namespace HVACLoadTerminals.App.ViewModels
 
             try
             {
-                string level = SelectedLevel == "Все уровни" ? "" : SelectedLevel;
+                string level = SelectedLevel;
                 var results = Workspace.BuildPlacementResults(
                     level.Length == 0 ? null : level);
                 if (results.Count == 0)

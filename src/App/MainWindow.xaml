@@ -12,6 +12,12 @@
         WindowStartupLocation="CenterScreen"
         Background="#F4F6F9">
 
+    <Window.InputBindings>
+        <KeyBinding Modifiers="Control" Key="O" Command="{Binding OpenSnapshotCommand}"/>
+        <KeyBinding Modifiers="Control" Key="S" Command="{Binding SaveProjectCommand}"/>
+        <KeyBinding Key="F5" Command="{Binding CalculateCommand}"/>
+    </Window.InputBindings>
+
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
@@ -119,200 +125,296 @@
     </Window.Resources>
 
     <DockPanel>
+        <!-- ============ МЕНЮ (этап C: все мета-операции здесь) ============ -->
+        <Menu DockPanel.Dock="Top" Background="#FFFFFF" Padding="4,2"
+              BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+            <MenuItem Header="_Файл">
+                <MenuItem Header="Открыть снимок…  (Ctrl+O)" Command="{Binding OpenSnapshotCommand}"/>
+                <MenuItem Header="Загрузить проект…" Command="{Binding LoadProjectCommand}"/>
+                <MenuItem Header="Сохранить проект…  (Ctrl+S)" Command="{Binding SaveProjectCommand}"/>
+                <Separator/>
+                <MenuItem Header="Выход" Click="Exit_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Правка">
+                <MenuItem Header="Рассчитать  (F5)" FontWeight="SemiBold"
+                          Command="{Binding CalculateCommand}"/>
+                <Separator/>
+                <MenuItem Header="➕ Назначить систему выбранным…" Command="{Binding AssignSystemCommand}"
+                          ToolTip="Тип, название, прибор и опции установки — для выделенных помещений"/>
+                <MenuItem Header="⚙ К выбранным (оверрайды)…" Command="{Binding ApplyMassCommand}"/>
+                <MenuItem Header="Применить назначение к уровню" Command="{Binding ApplyPurposeCommand}"
+                          CommandParameter="Office"/>
+                <Separator/>
+                <MenuItem Header="☑ Включить помещения уровня" Command="{Binding IncludeLevelCommand}"/>
+                <MenuItem Header="☑ Включить видимые" Command="{Binding IncludeVisibleCommand}"/>
+                <MenuItem Header="☐ Исключить видимые" Command="{Binding ExcludeVisibleCommand}"/>
+                <Separator/>
+                <MenuItem Header="Выделить все строки" Click="SelectAllRows_Click"/>
+                <MenuItem Header="Снять выделение строк" Click="UnselectAllRows_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Вид">
+                <MenuItem Header="Дерево систем" IsCheckable="True"
+                          IsChecked="{Binding ShowTreePanel}"/>
+                <MenuItem Header="Панель свойств" IsCheckable="True"
+                          IsChecked="{Binding ShowPropsPanel}"/>
+                <Separator/>
+                <MenuItem Header="Кривые ограждений (выбранные)" IsCheckable="True"
+                          IsChecked="{Binding ShowEnclosureCurves}"
+                          ToolTip="Стены/окна рисуются только у помещений, выделенных в списке"/>
+                <MenuItem Header="Подписи комнат на плане" IsCheckable="True"
+                          IsChecked="{Binding ShowRoomLabels}"/>
+            </MenuItem>
+            <MenuItem Header="_Экспорт">
+                <MenuItem Header="📄 Отчёт уровня (HTML)" Command="{Binding ExportReportCommand}"/>
+                <MenuItem Header="🌐 HTML-сцена" Command="{Binding ExportHtmlCommand}"/>
+                <MenuItem Header="⬇ Задание JSON" Command="{Binding ExportTaskCommand}"/>
+                <MenuItem Header="⬇ Excel (level_values + Приборы)" Command="{Binding ExportExcelCommand}"/>
+            </MenuItem>
+            <MenuItem Header="_Сервис">
+                <MenuItem Header="🗂 Каталог приборов…" Command="{Binding EditCatalogCommand}"/>
+                <MenuItem Header="↻ Вернуть авторасчёт нагрузок" Command="{Binding RecalcLoadsCommand}"/>
+                <MenuItem Header="Живой пересчёт" IsCheckable="True"
+                          IsChecked="{Binding LiveRecalc}"
+                          ToolTip="Пересчитывать автоматически при правке полей (по умолчанию выключен — расчёт по F5/кнопке)"/>
+                <Separator/>
+                <MenuItem Header="Справка" Click="Help_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- ============ ЗАГОЛОВОК ============ -->
+        <Border DockPanel.Dock="Top" Background="#1F2A44" Padding="14,5">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="HVAC Terminals" FontSize="15" FontWeight="Bold"
+                           Foreground="White"/>
+                <TextBlock Text="  ·  расстановка приборов по снимку помещений"
+                           FontSize="12" Foreground="#AEBBD4"
+                           VerticalAlignment="Bottom" Margin="4,0,0,1"/>
+            </StackPanel>
+        </Border>
+
         <!-- ============ СТАТУСНАЯ СТРОКА ============ -->
         <StatusBar DockPanel.Dock="Bottom" Background="#EAEFF6">
             <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextDark}"/>
         </StatusBar>
 
-        <!-- ============ ЗАГОЛОВОК ============ -->
-        <Border DockPanel.Dock="Top" Background="#1F2A44" Padding="14,8">
-            <DockPanel>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="HVAC Terminals" FontSize="18" FontWeight="Bold"
-                               Foreground="White"/>
-                    <TextBlock Text="  ·  расстановка приборов по снимку помещений"
-                               FontSize="13" Foreground="#AEBBD4"
-                               VerticalAlignment="Bottom" Margin="4,0,0,2"/>
-                </StackPanel>
-                <Expander DockPanel.Dock="Right" Header="Как пользоваться?"
-                          Foreground="White" ExpandDirection="Down" Width="360"
-                          HorizontalAlignment="Right" Background="#26334F" Padding="6">
-                    <TextBlock Foreground="#D9E1F2" FontSize="12" LineHeight="18" TextWrapping="Wrap">
-                        <Run>1. «Открыть снимок…» — выбрать JSON из</Run>
-                        <Run FontStyle="Italic">%AppData%\HeatLossRevit2\data\snapshots_raw\</Run><LineBreak/>
-                        <Run>2. Нагрузки подставятся автоматически (100 Вт/м², кратности).</Run>
-                        <LineBreak/>
-                        <Run>3. При необходимости правьте Q / расходы прямо в таблице —</Run>
-                        <Run>при включённом «Живом пересчёте» план обновится сам.</Run><LineBreak/>
-                        <Run>4. Настройте режимы и нажмите «РАССЧИТАТЬ».</Run><LineBreak/>
-                        <Run>5. Проверьте план и таблицу; k_ef &lt; 0.6 — прибор недогружен,</Run>
-                        <Run>&gt; 0.9 — перегружен.</Run><LineBreak/>
-                        <Run>6. «HTML» — отчёт в браузере; «Проект» — сохранить/продолжить;</Run>
-                        <Run>в Revit кнопка «Стенд расстановки» пишет в модель.</Run>
-                    </TextBlock>
-                </Expander>
-            </DockPanel>
-        </Border>
+        <!-- ============ РАБОЧАЯ ОБЛАСТЬ (этап C: минимализм) ============ -->
+        <Grid Margin="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- ============ ПАНЕЛЬ ИНСТРУМЕНТОВ ============ -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource PanelBg}"
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
-                Padding="8,6">
-            <WrapPanel VerticalAlignment="Center">
-                <!-- Шаг 1: данные -->
-                <Button Command="{Binding OpenSnapshotCommand}" FontWeight="SemiBold">
-                    ① Открыть снимок…
-                </Button>
-                <Button Command="{Binding RecalcLoadsCommand}"
-                        ToolTip="Вернуть нагрузки к авторасчёту (100 Вт/м², кратности)">
-                    ↻ Нагрузки
-                </Button>
+            <!-- Дерево систем (скрыто по умолчанию — Вид▸Дерево систем) -->
+            <Border Grid.Column="0" Width="250" Background="{StaticResource PanelBg}"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Margin="0,0,4,0"
+                    Visibility="{Binding ShowTreePanel, Converter={StaticResource BoolToVis}}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Margin="10,8" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextDark}">Системы проекта</TextBlock>
+                    <TreeView ItemsSource="{Binding TreeRoots}"
+                              SelectedItemChanged="CrmTree_SelectedItemChanged"
+                              Margin="4,0,4,6" BorderThickness="0">
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Title}"/>
+                                    <TextBlock Text="{Binding CountText, Mode=OneWay}"
+                                               Foreground="{StaticResource TextMuted}"
+                                               FontSize="11" Margin="6,0,0,0"/>
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="Padding" Value="2,1"/>
+                                <Setter Property="IsExpanded" Value="True"/>
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                    </TreeView>
+                </DockPanel>
+            </Border>
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Left"
+                          VerticalAlignment="Stretch" Background="Transparent"
+                          Visibility="{Binding ShowTreePanel, Converter={StaticResource BoolToVis}}"/>
 
-                <Rectangle Width="1" Height="24" Fill="{StaticResource BorderBrush}" Margin="8,0"/>
+            <!-- Центр: сверху список помещений (+приборы табом), снизу план -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1.35*"/>
+                </Grid.RowDefinitions>
 
-                <!-- Правила -->
-                <TextBlock Style="{StaticResource StepLabel}">Назначение:</TextBlock>
-                <TextBox x:Name="PurposeBox" Style="{StaticResource InputBox}" Width="90"
-                         Text="Office"/>
-                <Button Command="{Binding ApplyPurposeCommand}"
-                        CommandParameter="{Binding Text, ElementName=PurposeBox}">
-                    Применить к уровню
-                </Button>
-                <Button Command="{Binding IncludeLevelCommand}"
-                        ToolTip="Отметить «Включено» у всех помещений выбранного уровня">
-                    ☑ Включить уровень
-                </Button>
-                <Button Command="{Binding IncludeOnlyVisibleCommand}"
-                        ToolTip="Оставить включёнными только помещения, видимые в таблице">
-                    ☐ Только видимые
-                </Button>
-                <Button Command="{Binding ApplyMassCommand}"
-                        ToolTip="Detail-режим: применить типоразмер/правило/паттерн/отступы к выделенным помещениям (Ctrl/Shift)">
-                    ⚙ К выбранным…
-                </Button>
-                <Button Command="{Binding AssignSystemCommand}"
-                        ToolTip="Назначить глобальную систему проекта выделенным помещениям: тип, название, прибор, опции установки">
-                    ➕ Назначить систему…
-                </Button>
+                <!-- Верх: табы Помещения | Приборы -->
+                <TabControl Grid.Row="0" BorderThickness="0" Background="Transparent">
+                    <TabItem Header="Помещения">
+                        <Border Background="{StaticResource PanelBg}"
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                CornerRadius="6">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
 
-                <Rectangle Width="1" Height="24" Fill="{StaticResource BorderBrush}" Margin="8,0"/>
+                                <!-- Контекстная строка таблицы помещений -->
+                                <DockPanel Grid.Row="0" Margin="10,8,10,4">
+                                    <Button DockPanel.Dock="Right" Content="Системы…"
+                                            Padding="6,2" Click="EditSystems_Click_Grid"
+                                            ToolTip="Показать системы первой выделенной комнаты"/>
+                                    <TextBlock VerticalAlignment="Center"
+                                               FontWeight="SemiBold" Foreground="{StaticResource TextDark}">
+                                        Помещения — Q, приток, вытяжка, назначение
+                                    </TextBlock>
+                                </DockPanel>
 
-                <TextBlock Style="{StaticResource StepLabel}">Доля от окна:</TextBlock>
-                <TextBox Text="{Binding MinLengthRatio, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource InputBox}" Width="44"/>
-                <TextBlock Style="{StaticResource StepLabel}">Приток:</TextBlock>
-                <ComboBox ItemsSource="{Binding CountRules}" SelectedItem="{Binding SupplyRule}"
-                          Width="105" Margin="2,0"/>
-                <ComboBox ItemsSource="{Binding WallPatterns}" SelectedItem="{Binding SupplyPattern}"
-                          Width="92" Margin="2,0"
-                          ToolTip="Паттерн массовой расстановки притока: сетка по потолку / вдоль длинной стороны / вдоль короткой / явная сторона"/>
-                <TextBlock Style="{StaticResource StepLabel}" Text="N="/>
-                <TextBox Text="{Binding FixedSupplyCount, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource InputBox}" Width="36"/>
-                <TextBlock Style="{StaticResource StepLabel}">Вытяжка:</TextBlock>
-                <ComboBox ItemsSource="{Binding CountRules}" SelectedItem="{Binding ExhaustRule}"
-                          Width="105" Margin="2,0"/>
-                <ComboBox ItemsSource="{Binding WallPatterns}" SelectedItem="{Binding ExhaustPattern}"
-                          Width="92" Margin="2,0"
-                          ToolTip="Паттерн массовой расстановки вытяжки: сетка по потолку / вдоль длинной стороны / вдоль короткой / явная сторона"/>
-                <TextBlock Style="{StaticResource StepLabel}">1 прибор:</TextBlock>
-                <ComboBox ItemsSource="{Binding SingleRules}" SelectedItem="{Binding SingleDeviceRule}"
-                          Width="80" Margin="2,0"
-                          ToolTip="Где ставится одиночный прибор: в центре контура или в углу"/>
-                <TextBlock Style="{StaticResource StepLabel}">v решётки:</TextBlock>
-                <TextBox Text="{Binding GrilleVelocityMs, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource InputBox}" Width="40"/>
-                <CheckBox Content="Живой пересчёт" IsChecked="{Binding LiveRecalc}"
-                          VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                <!-- Назначение/включение: контекст уровня -->
+                                <WrapPanel Grid.Row="1" Margin="10,0,10,6">
+                                    <TextBlock Style="{StaticResource StepLabel}" Margin="0,0,3,0">Назначение:</TextBlock>
+                                    <TextBox x:Name="PurposeBox" Style="{StaticResource InputBox}" Width="90"
+                                             Text="Office"/>
+                                    <Button Command="{Binding ApplyPurposeCommand}"
+                                            CommandParameter="{Binding Text, ElementName=PurposeBox}"
+                                            Content="Применить"/>
+                                    <Button Command="{Binding IncludeLevelCommand}"
+                                            ToolTip="Отметить «Включено» у всех помещений выбранного уровня"
+                                            Content="☑ Уровень"/>
+                                    <Button Command="{Binding IncludeVisibleCommand}"
+                                            ToolTip="Включить помещения, видимые в таблице"
+                                            Content="☑ Видимые"/>
+                                    <Button Command="{Binding ExcludeVisibleCommand}"
+                                            ToolTip="Исключить помещения, видимые в таблице"
+                                            Content="☐ Видимые"/>
+                                </WrapPanel>
 
-                <Rectangle Width="1" Height="24" Fill="{StaticResource BorderBrush}" Margin="8,0"/>
+                                <DataGrid Grid.Row="2" ItemsSource="{Binding RoomsView}"
+                                          Margin="6,0,6,6" BorderThickness="1"
+                                          SelectionMode="Extended" SelectionUnit="FullRow"
+                                          x:Name="RoomsGrid"
+                                          SelectionChanged="RoomsGrid_SelectionChanged">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Header="☑"
+                                            Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}"
+                                            Width="34"/>
+                                        <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="45"/>
+                                        <DataGridTextColumn Header="Помещение" Binding="{Binding Name}" Width="140"/>
+                                        <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
+                                        <DataGridTextColumn Header="S, м²" Binding="{Binding Area, StringFormat=F1}" Width="60"/>
+                                        <DataGridCheckBoxColumn Header="Угл." Binding="{Binding IsCorner}" Width="45"/>
+                                        <DataGridTextColumn Header="Назначение" Binding="{Binding Purpose}" Width="95"/>
+                                        <DataGridTextColumn Header="Q, Вт" Binding="{Binding HeatingW}" Width="85"/>
+                                        <DataGridTextColumn Header="Приток, м³/ч" Binding="{Binding Supply}" Width="85"/>
+                                        <DataGridTextColumn Header="Вытяжка, м³/ч" Binding="{Binding Exhaust}" Width="90"/>
+                                        <DataGridTextColumn Header="Системы" Binding="{Binding SystemsSummary, Mode=OneWay}" IsReadOnly="True" Width="95"/>
+                                        <DataGridTemplateColumn Width="82">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="Системы…" Padding="4,1"
+                                                            Click="EditSystems_Click"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="Примечание" Binding="{Binding Warning}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
 
-                <!-- Шаг 4: расчёт и вывод -->
-                <Button Style="{StaticResource PrimaryButton}" Padding="16,6"
-                        Command="{Binding CalculateCommand}"
-                        ToolTip="Разместить отопление под окнами, приток сеткой по площади, вытяжку по расходу">
-                    ▶ РАССЧИТАТЬ
-                </Button>
-                <Button Command="{Binding ExportHtmlCommand}"
-                        ToolTip="Самодостаточный HTML со схемой и таблицей">
-                    🌐 HTML
-                </Button>
-                <Button Command="{Binding ExportTaskCommand}"
-                        ToolTip="JSON в схеме прототипа (S_ID/system_name/instance_points, мм)">
-                    ⬇ Задание JSON
-                </Button>
-                <Button Command="{Binding ExportExcelCommand}" Margin="3"
-                        ToolTip="Excel-отчёт: лист level_values (сводка по помещениям×системам) + лист Приборы">
-                    ⬇ Excel
-                </Button>
-                <Button Command="{Binding ExportReportCommand}"
-                        ToolTip="HTML-отчёт по уровню: интерактивная схема + сводка систем + таблица приборов">
-                    📄 Отчёт
-                </Button>
-                <Button Command="{Binding SaveProjectCommand}" Content="💾 Сохранить проект"/>
-                <Button Command="{Binding LoadProjectCommand}" Content="📂 Загрузить проект"/>
-
-                <Rectangle Width="1" Height="24" Fill="{StaticResource BorderBrush}" Margin="8,0"/>
-
-                <!-- U2.2: офлайн-каталог приборов -->
-                <Button Command="{Binding EditCatalogCommand}"
-                        ToolTip="Редактировать каталог приборов (JSON, офлайн): типоразмеры, расходы, мощности, габариты">
-                    🗂 Каталог приборов…
-                </Button>
-            </WrapPanel>
-        </Border>
-
-        <!-- ============ РАБОЧАЯ ОБЛАСТЬ (M1.1 CRM-каркас) ============ -->
-        <Grid Margin="8">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="2*"/>
-                <RowDefinition Height="1.3*"/>
-            </Grid.RowDefinitions>
-
-            <!-- Верхний ряд: дерево / табы 2D+3D / свойства -->
-            <Grid Grid.Row="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="260"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="300"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Дерево Системы → Уровни → Помещения -->
-                <Border Grid.Column="0" Background="{StaticResource PanelBg}"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                        CornerRadius="6" Margin="0,0,4,0">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Margin="10,8" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextDark}">Системы проекта</TextBlock>
-                        <TreeView ItemsSource="{Binding TreeRoots}"
-                                  SelectedItemChanged="CrmTree_SelectedItemChanged"
-                                  Margin="4,0,4,6" BorderThickness="0">
-                            <TreeView.ItemTemplate>
-                                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Title}"/>
-                                        <TextBlock Text="{Binding CountText, Mode=OneWay}"
+                                <!-- Пустое состояние -->
+                                <Border Grid.RowSpan="3" Background="#FBFCFE">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasRooms}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="Нет данных" FontSize="22" FontWeight="Bold"
                                                    Foreground="{StaticResource TextMuted}"
-                                                   FontSize="11" Margin="6,0,0,0"/>
+                                                   HorizontalAlignment="Center"/>
+                                        <TextBlock TextAlignment="Center" Margin="0,10,0,0"
+                                                   Foreground="{StaticResource TextMuted}" LineHeight="20">
+                                            Меню «Файл» → «Открыть снимок…» (Ctrl+O) — JSON из<LineBreak/>
+                                            <Run FontStyle="Italic">HeatLossRevit2 snapshots_raw</Run><LineBreak/>
+                                            <LineBreak/>
+                                            Помещения и нагрузки появятся автоматически.<LineBreak/>
+                                            Затем F5 — расчёт расстановки.
+                                        </TextBlock>
                                     </StackPanel>
-                                </HierarchicalDataTemplate>
-                            </TreeView.ItemTemplate>
-                            <TreeView.ItemContainerStyle>
-                                <Style TargetType="TreeViewItem">
-                                    <Setter Property="Padding" Value="2,1"/>
-                                    <Setter Property="IsExpanded" Value="True"/>
-                                </Style>
-                            </TreeView.ItemContainerStyle>
-                        </TreeView>
-                    </DockPanel>
-                </Border>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </TabItem>
 
-                <!-- Центр: план 2D (фильтр по уровню) -->
-                <Border Grid.Column="1" Background="{StaticResource PanelBg}"
+                    <!-- Приборы, фильтруются деревом CRM -->
+                    <TabItem Header="Приборы">
+                        <Border Background="{StaticResource PanelBg}"
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                CornerRadius="6" Padding="6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Margin="4,4,4,6" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDark}">
+                                    Размещённые приборы (k_ef: &lt;0.6 недогруз · 0.6–0.9 норма · &gt;0.9 перегруз)
+                                </TextBlock>
+                                <DataGrid ItemsSource="{Binding PlacementsView}" BorderThickness="1">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="120"/>
+                                        <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
+                                        <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
+                                        <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
+                                        <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
+                                        <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding CalculatedFlow, StringFormat=F1}" Width="90"/>
+                                        <DataGridTextColumn Header="Высота, мм" Binding="{Binding MountHeightMm}" Width="70"/>
+                                        <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="80"/>
+                                        <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="80"/>
+                                        <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>
+                                        <DataGridTextColumn Header="k_ef" Binding="{Binding KEfText}" Width="55">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding KefStatus}" Value="low">
+                                                            <Setter Property="Foreground" Value="#E67E22"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding KefStatus}" Value="ok">
+                                                            <Setter Property="Foreground" Value="#1E8E3E"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding KefStatus}" Value="high">
+                                                            <Setter Property="Foreground" Value="#D93025"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="Расчёт" Binding="{Binding CalculationOption}" Width="110"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </DockPanel>
+                        </Border>
+                    </TabItem>
+                </TabControl>
+
+                <GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch"
+                              VerticalAlignment="Center" Background="Transparent"/>
+
+                <!-- Низ: ПЛАН уровня -->
+                <Border Grid.Row="2" Background="{StaticResource PanelBg}"
                         BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                         CornerRadius="6">
                     <DockPanel Margin="4">
                         <DockPanel DockPanel.Dock="Top" Margin="2,2,2,6">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}"
+                                    Padding="16,5" Command="{Binding CalculateCommand}"
+                                    ToolTip="Разместить отопление под окнами, приток/вытяжку/фанкойлы по системам (F5)">
+                                ▶ РАССЧИТАТЬ
+                            </Button>
                             <TextBlock Text="Уровень:" VerticalAlignment="Center" Margin="0,0,4,0"
                                        Foreground="{StaticResource TextMuted}"/>
                             <ComboBox ItemsSource="{Binding Levels}"
@@ -325,356 +427,248 @@
                                       SelectedItem="{Binding SelectedColorMode}"
                                       Width="120" VerticalContentAlignment="Center"
                                       HorizontalAlignment="Left"/>
-                            <CheckBox Content="Подписи комнат" IsChecked="{Binding ShowRoomLabels}"
+                            <CheckBox Content="Подписи" IsChecked="{Binding ShowRoomLabels}"
                                       VerticalAlignment="Center" Margin="12,0,0,0"
                                       HorizontalAlignment="Left"/>
+                            <CheckBox Content="Кривые ограждений" IsChecked="{Binding ShowEnclosureCurves}"
+                                      VerticalAlignment="Center" Margin="12,0,0,0"
+                                      ToolTip="Стены и окна выбранных помещений на плане"/>
                         </DockPanel>
+
+                        <!-- Экспертные параметры расстановки (свёрнуты) -->
+                        <Expander DockPanel.Dock="Top" Header="⚙ Параметры расстановки"
+                                  IsExpanded="False" Margin="2,0,2,4"
+                                  Foreground="{StaticResource TextMuted}">
+                            <WrapPanel VerticalAlignment="Center" Margin="6,2,0,4">
+                                <TextBlock Style="{StaticResource StepLabel}" Margin="0,0,3,0">Доля от окна:</TextBlock>
+                                <TextBox Text="{Binding MinLengthRatio, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource InputBox}" Width="44"/>
+                                <TextBlock Style="{StaticResource StepLabel}">Приток:</TextBlock>
+                                <ComboBox ItemsSource="{Binding CountRules}" SelectedItem="{Binding SupplyRule}"
+                                          Width="105" Margin="2,0"/>
+                                <ComboBox ItemsSource="{Binding WallPatterns}" SelectedItem="{Binding SupplyPattern}"
+                                          Width="92" Margin="2,0"/>
+                                <TextBlock Style="{StaticResource StepLabel}" Text="N="/>
+                                <TextBox Text="{Binding FixedSupplyCount, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource InputBox}" Width="36"/>
+                                <TextBlock Style="{StaticResource StepLabel}">Вытяжка:</TextBlock>
+                                <ComboBox ItemsSource="{Binding CountRules}" SelectedItem="{Binding ExhaustRule}"
+                                          Width="105" Margin="2,0"/>
+                                <ComboBox ItemsSource="{Binding WallPatterns}" SelectedItem="{Binding ExhaustPattern}"
+                                          Width="92" Margin="2,0"/>
+                                <TextBlock Style="{StaticResource StepLabel}">1 прибор:</TextBlock>
+                                <ComboBox ItemsSource="{Binding SingleRules}" SelectedItem="{Binding SingleDeviceRule}"
+                                          Width="80" Margin="2,0"/>
+                                <TextBlock Style="{StaticResource StepLabel}">v решётки:</TextBlock>
+                                <TextBox Text="{Binding GrilleVelocityMs, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource InputBox}" Width="40"/>
+                            </WrapPanel>
+                        </Expander>
+
                         <oxy:PlotView Model="{Binding PlotModel}"/>
                     </DockPanel>
                 </Border>
+            </Grid>
 
-                <!-- Свойства выбранного узла (M2.1: редактирование системы) -->
-                <Border Grid.Column="2" Background="{StaticResource PanelBg}"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                        CornerRadius="6" Margin="4,0,0,0">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Margin="10,8" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextDark}">Свойства</TextBlock>
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel Margin="10,4,10,8">
-                                <TextBlock Text="{Binding Crm.SelectedNode.Title, TargetNullValue=Выберите систему слева}"
-                                           FontSize="15" FontWeight="SemiBold"
-                                           Foreground="{StaticResource TextDark}" TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding SelectedSystem.TypeText}"
-                                           Margin="0,2,0,8" FontSize="11"
-                                           Foreground="{StaticResource TextMuted}"/>
-                                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,4"/>
+            <!-- Свойства (скрыто по умолчанию — Вид▸Панель свойств) -->
+            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Right"
+                          VerticalAlignment="Stretch" Background="Transparent"
+                          Visibility="{Binding ShowPropsPanel, Converter={StaticResource BoolToVis}}"/>
+            <Border Grid.Column="4" Width="300" Background="{StaticResource PanelBg}"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Margin="4,0,0,0"
+                    Visibility="{Binding ShowPropsPanel, Converter={StaticResource BoolToVis}}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Margin="10,8" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextDark}">Свойства</TextBlock>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10,4,10,8">
+                            <TextBlock Text="{Binding Crm.SelectedNode.Title, TargetNullValue=Выберите узел дерева (Вид▸Дерево систем)}"
+                                       FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextDark}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedSystem.TypeText}"
+                                       Margin="0,2,0,8" FontSize="11"
+                                       Foreground="{StaticResource TextMuted}"/>
+                            <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,4"/>
 
-                                <!-- M2.1: редактор свойств системы (не отопление) -->
-                                <StackPanel Visibility="{Binding Crm.SelectedSystem.ShowEditing,
-                                                        Converter={StaticResource BoolToVis}}">
-                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Имя системы</TextBlock>
-                                    <DockPanel Margin="0,1,0,10">
-                                        <Button DockPanel.Dock="Right" Content="✓"
-                                                Command="{Binding Crm.SelectedSystem.ApplyNameCommand}"
-                                                ToolTip="Переименовать систему во всех помещениях"
-                                                Padding="8,3" Margin="4,0,0,0"/>
-                                        <TextBox Text="{Binding Crm.SelectedSystem.NameEditor, UpdateSourceTrigger=PropertyChanged}"
-                                                 Padding="5,3" VerticalContentAlignment="Center"/>
-                                    </DockPanel>
+                            <ContentControl Focusable="False">
+                                <ContentControl.Style>
+                                    <Style TargetType="ContentControl"/>
+                                </ContentControl.Style>
+                            </ContentControl>
 
-                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Типоразмер прибора</TextBlock>
-                                    <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Devices}"
-                                              SelectedItem="{Binding Crm.SelectedSystem.SelectedDevice}"
-                                              DisplayMemberPath="Label" Margin="0,1,0,2"/>
-                                    <TextBlock Text="{Binding Crm.SelectedSystem.DeviceInfoText}"
-                                               FontSize="11" LineHeight="15" TextWrapping="Wrap"
-                                               Foreground="{StaticResource TextMuted}" Margin="0,0,0,10"/>
+                            <!-- M2.1: редактор свойств системы -->
+                            <StackPanel Visibility="{Binding Crm.SelectedSystem.ShowEditing,
+                                                    Converter={StaticResource BoolToVis}}">
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Имя системы</TextBlock>
+                                <DockPanel Margin="0,1,0,10">
+                                    <Button DockPanel.Dock="Right" Content="✓"
+                                            Command="{Binding Crm.SelectedSystem.ApplyNameCommand}"
+                                            ToolTip="Переименовать систему во всех помещениях"
+                                            Padding="8,3" Margin="4,0,0,0"/>
+                                    <TextBox Text="{Binding Crm.SelectedSystem.NameEditor, UpdateSourceTrigger=PropertyChanged}"
+                                             Padding="5,3" VerticalContentAlignment="Center"/>
+                                </DockPanel>
 
-                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Правило количества</TextBlock>
-                                    <Grid Margin="0,1,0,2">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Rules}"
-                                                  SelectedItem="{Binding Crm.SelectedSystem.Rule}"/>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                                    VerticalAlignment="Center"
-                                                    Visibility="{Binding Crm.SelectedSystem.IsFixedVisible,
-                                                                 Converter={StaticResource BoolToVis}}">
-                                            <TextBlock Text="N=" VerticalAlignment="Center" Margin="8,0,2,0"
-                                                       Foreground="{StaticResource TextMuted}"/>
-                                            <TextBox Width="42" Padding="4,2"
-                                                     Text="{Binding Crm.SelectedSystem.FixedCount, UpdateSourceTrigger=PropertyChanged}"
-                                                     ToolTip="Фиксированное число приборов в помещении"/>
-                                        </StackPanel>
-                                    </Grid>
-                                    <!-- N-калькулятор: почему такое количество приборов -->
-                                    <TextBlock Text="{Binding Crm.SelectedSystem.FormulaText}"
-                                               FontSize="11" LineHeight="15" TextWrapping="Wrap"
-                                               Foreground="{StaticResource TextDark}" Margin="0,0,0,10"/>
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Типоразмер прибора</TextBlock>
+                                <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Devices}"
+                                          SelectedItem="{Binding Crm.SelectedSystem.SelectedDevice}"
+                                          DisplayMemberPath="Label" Margin="0,1,0,2"/>
+                                <TextBlock Text="{Binding Crm.SelectedSystem.DeviceInfoText}"
+                                           FontSize="11" LineHeight="15" TextWrapping="Wrap"
+                                           Foreground="{StaticResource TextMuted}" Margin="0,0,0,10"/>
 
-                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Паттерн расстановки</TextBlock>
-                                    <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Patterns}"
-                                              SelectedItem="{Binding Crm.SelectedSystem.Pattern}" Margin="0,1,0,6"/>
-                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Одиночный прибор</TextBlock>
-                                    <ComboBox ItemsSource="{Binding Crm.SelectedSystem.SingleRules}"
-                                              SelectedItem="{Binding Crm.SelectedSystem.SinglePlacementRule}" Margin="0,1,0,8"/>
-
-                                    <!-- M2.2: отступы размещения -->
-                                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Отступы размещения, мм</TextBlock>
-                                    <Grid Margin="0,1,0,2">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="60"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="60"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="От стен:" VerticalAlignment="Center"
-                                                   Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
-                                        <TextBox Grid.Column="1" Padding="4,2"
-                                                 Text="{Binding Crm.SelectedSystem.EdgeOffsetMm, TargetNullValue=''}"
-                                                 ToolTip="Смещение зоны размещения от стен внутрь помещения (buffer(-x)). Пусто — по типоразмеру/500 мм"/>
-                                        <TextBlock Grid.Column="2" Text="От потолка:" VerticalAlignment="Center"
-                                                   Foreground="{StaticResource TextMuted}" Margin="8,0,4,0"/>
-                                        <TextBox Grid.Column="3" Padding="4,2"
-                                                 Text="{Binding Crm.SelectedSystem.CeilingOffsetMm, TargetNullValue=''}"
-                                                 ToolTip="Заглубление прибора от чистого потолка; высота установки = H потолка − offset. Пусто — по типоразмеру"/>
-                                    </Grid>
-                                    <TextBlock Text="{Binding Crm.SelectedSystem.EdgeOffsetText}"
-                                               FontSize="10" Foreground="{StaticResource TextMuted}" Margin="0,0,0,4"/>
-                                    <oxy:PlotView Model="{Binding Crm.SelectedSystem.SchemeModel}"
-                                                  Height="140" Margin="0,0,0,8"/>
-                                </StackPanel>
-
-                                <!-- Итог по системе -->
-                                <Grid Margin="0,2,0,0">
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Правило количества</TextBlock>
+                                <Grid Margin="0,1,0,2">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Rules}"
+                                              SelectedItem="{Binding Crm.SelectedSystem.Rule}"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Visibility="{Binding Crm.SelectedSystem.IsFixedVisible,
+                                                             Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="N=" VerticalAlignment="Center" Margin="8,0,2,0"
+                                                   Foreground="{StaticResource TextMuted}"/>
+                                        <TextBox Width="42" Padding="4,2"
+                                                 Text="{Binding Crm.SelectedSystem.FixedCount, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="{Binding Crm.SelectedSystem.FormulaText}"
+                                           FontSize="11" LineHeight="15" TextWrapping="Wrap"
+                                           Foreground="{StaticResource TextDark}" Margin="0,0,0,10"/>
+
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Паттерн расстановки</TextBlock>
+                                <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Patterns}"
+                                          SelectedItem="{Binding Crm.SelectedSystem.Pattern}" Margin="0,1,0,6"/>
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Одиночный прибор</TextBlock>
+                                <ComboBox ItemsSource="{Binding Crm.SelectedSystem.SingleRules}"
+                                          SelectedItem="{Binding Crm.SelectedSystem.SinglePlacementRule}" Margin="0,1,0,8"/>
+
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Отступы размещения, мм</TextBlock>
+                                <Grid Margin="0,1,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="От стен:" VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
+                                    <TextBox Grid.Column="1" Padding="4,2"
+                                             Text="{Binding Crm.SelectedSystem.EdgeOffsetMm, TargetNullValue=''}"/>
+                                    <TextBlock Grid.Column="2" Text="От потолка:" VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextMuted}" Margin="8,0,4,0"/>
+                                    <TextBox Grid.Column="3" Padding="4,2"
+                                             Text="{Binding Crm.SelectedSystem.CeilingOffsetMm, TargetNullValue=''}"/>
+                                </Grid>
+                                <oxy:PlotView Model="{Binding Crm.SelectedSystem.SchemeModel}"
+                                              Height="130" Margin="0,0,0,8"/>
+                            </StackPanel>
+
+                            <!-- Итог по системе -->
+                            <Grid Margin="0,2,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Помещений" Foreground="{StaticResource TextMuted}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Crm.SelectedSystem.RoomCount}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="1" Text="Приборов" Foreground="{StaticResource TextMuted}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Crm.SelectedSystem.DeviceCount}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="2" Text="Σ расход" Foreground="{StaticResource TextMuted}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Crm.SelectedSystem.FlowText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="3" Text="k_ef средний" Foreground="{StaticResource TextMuted}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Crm.SelectedSystem.KefText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="4" Text="Типоразмер" Foreground="{StaticResource TextMuted}"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Crm.SelectedSystem.ActualDeviceText}"
+                                           FontWeight="SemiBold" MaxWidth="190" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+
+                            <!-- M2.3: свойства помещения -->
+                            <StackPanel Visibility="{Binding Crm.HasSelectedRoom,
+                                                    Converter={StaticResource BoolToVis}}"
+                                        DataContext="{Binding Crm.SelectedRoom}">
+                                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,6"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Room.SystemsSummary}"
+                                               Foreground="{StaticResource TextMuted}" FontSize="11"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="Системы…" Padding="6,2"
+                                            Click="EditSystemsPanel_Click"/>
+                                </Grid>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="70"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
                                         <RowDefinition/>
                                         <RowDefinition/>
                                         <RowDefinition/>
-                                        <RowDefinition/>
-                                        <RowDefinition/>
                                     </Grid.RowDefinitions>
-                                    <TextBlock Text="Помещений" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding Crm.SelectedSystem.RoomCount}" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Row="1" Text="Приборов" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Crm.SelectedSystem.DeviceCount}" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Row="2" Text="Σ расход" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Crm.SelectedSystem.FlowText}" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Row="3" Text="k_ef средний" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Crm.SelectedSystem.KefText}" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Row="4" Text="Типоразмер" Foreground="{StaticResource TextMuted}"/>
-                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Crm.SelectedSystem.ActualDeviceText}"
-                                               FontWeight="SemiBold" MaxWidth="190" TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding Crm.SelectedSystem.ActualDeviceText}"/>
+                                    <TextBlock Text="Q, Вт:" VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextMuted}"/>
+                                    <TextBox Grid.Column="1" Padding="4,2"
+                                             Text="{Binding Room.HeatingW, UpdateSourceTrigger=LostFocus}"/>
+                                    <TextBlock Grid.Column="2" Text="t°:" VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextMuted}" Margin="8,0,4,0"/>
+                                    <TextBox Grid.Column="3" IsReadOnly="True"
+                                             Text="{Binding TemperatureText, Mode=OneWay}" Background="#F7F9FC"/>
+                                    <TextBlock Grid.Row="1" Text="Приток:" VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextMuted}"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Padding="4,2"
+                                             Text="{Binding Room.Supply, UpdateSourceTrigger=LostFocus}"/>
+                                    <TextBlock Grid.Row="2" Text="Вытяжка:" VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextMuted}"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Padding="4,2"
+                                             Text="{Binding Room.Exhaust, UpdateSourceTrigger=LostFocus}"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Назначение:"
+                                               VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"
+                                               Margin="8,0,4,0"/>
+                                    <TextBox Grid.Row="1" Grid.Column="3" Padding="4,2"
+                                             Text="{Binding Room.Purpose, UpdateSourceTrigger=LostFocus}"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Площадь:"
+                                               VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"
+                                               Margin="8,0,4,0"/>
+                                    <TextBox Grid.Row="2" Grid.Column="3" IsReadOnly="True" Background="#F7F9FC"
+                                             Text="{Binding Room.Area, Mode=OneWay, StringFormat=F1}"/>
                                 </Grid>
-
-                                <!-- M2.3: свойства помещения -->
-                                <StackPanel Visibility="{Binding Crm.HasSelectedRoom,
-                                                        Converter={StaticResource BoolToVis}}"
-                                            DataContext="{Binding Crm.SelectedRoom}">
-                                    <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,6"/>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Room.SystemsSummary}"
-                                                   Foreground="{StaticResource TextMuted}" FontSize="11"
-                                                   VerticalAlignment="Center"/>
-                                        <Button Grid.Column="1" Content="Системы…" Padding="6,2"
-                                                Click="EditSystemsPanel_Click"/>
-                                    </Grid>
-                                    <Grid Margin="0,8,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="60"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="70"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition/>
-                                            <RowDefinition/>
-                                            <RowDefinition/>
-                                        </Grid.RowDefinitions>
-                                        <TextBlock Text="Q, Вт:" VerticalAlignment="Center"
-                                                   Foreground="{StaticResource TextMuted}"/>
-                                        <TextBox Grid.Column="1" Padding="4,2"
-                                                 Text="{Binding Room.HeatingW, UpdateSourceTrigger=LostFocus}"/>
-                                        <TextBlock Grid.Column="2" Text="t°:" VerticalAlignment="Center"
-                                                   Foreground="{StaticResource TextMuted}" Margin="8,0,4,0"/>
-                                        <TextBox Grid.Column="3" IsReadOnly="True"
-                                                 Text="{Binding TemperatureText, Mode=OneWay}" Background="#F7F9FC"/>
-                                        <TextBlock Grid.Row="1" Text="Приток:" VerticalAlignment="Center"
-                                                   Foreground="{StaticResource TextMuted}"/>
-                                        <TextBox Grid.Row="1" Grid.Column="1" Padding="4,2"
-                                                 Text="{Binding Room.Supply, UpdateSourceTrigger=LostFocus}"/>
-                                        <TextBlock Grid.Row="2" Text="Вытяжка:" VerticalAlignment="Center"
-                                                   Foreground="{StaticResource TextMuted}"/>
-                                        <TextBox Grid.Row="2" Grid.Column="1" Padding="4,2"
-                                                 Text="{Binding Room.Exhaust, UpdateSourceTrigger=LostFocus}"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Назначение:"
-                                                   VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"
-                                                   Margin="8,0,4,0"/>
-                                        <TextBox Grid.Row="1" Grid.Column="3" Padding="4,2"
-                                                 Text="{Binding Room.Purpose, UpdateSourceTrigger=LostFocus}"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="2" Text="Площадь:"
-                                                   VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"
-                                                   Margin="8,0,4,0"/>
-                                        <TextBox Grid.Row="2" Grid.Column="3" IsReadOnly="True" Background="#F7F9FC"
-                                                 Text="{Binding Room.Area, Mode=OneWay, StringFormat=F1}"/>
-                                    </Grid>
-                                    <TextBlock Margin="0,10,0,0" FontSize="11"
-                                               Foreground="{StaticResource TextMuted}"
-                                               Text="Проёмы (из снимка)"/>
-                                    <TextBlock Text="{Binding OpeningsText}" FontSize="11"
-                                               LineHeight="15" TextWrapping="Wrap"
-                                               Foreground="{StaticResource TextDark}"/>
-                                    <TextBlock Text="{Binding WindowForecastText}" FontSize="11"
-                                               LineHeight="15" TextWrapping="Wrap" Margin="0,4,0,0"
-                                               Foreground="{StaticResource PrimaryDarkBrush}"/>
-                                    <TextBlock Margin="0,10,0,0" FontSize="11"
-                                               Foreground="{StaticResource TextMuted}"
-                                               Text="Примечание расчёта"/>
-                                    <TextBlock Text="{Binding Room.Warning}" FontSize="11"
-                                               LineHeight="15" TextWrapping="Wrap"
-                                               Foreground="{StaticResource TextDark}"/>
-                                </StackPanel>
-
-                                <!-- Подсказка для не-системных узлов -->
-                                <TextBlock Margin="0,10,0,0" FontSize="11" LineHeight="16"
-                                           Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
-                                           Text="Выберите узел слева: фильтр таблицы и плана. Правка свойств системы (типоразмер, правило количества, паттерны) — на ветках систем.">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Crm.HasSelectedSystem}" Value="False">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                <TextBlock Margin="0,10,0,0" FontSize="11"
+                                           Foreground="{StaticResource TextMuted}"
+                                           Text="Проёмы (из снимка)"/>
+                                <TextBlock Text="{Binding OpeningsText}" FontSize="11"
+                                           LineHeight="15" TextWrapping="Wrap"
+                                           Foreground="{StaticResource TextDark}"/>
+                                <TextBlock Text="{Binding WindowForecastText}" FontSize="11"
+                                           LineHeight="15" TextWrapping="Wrap" Margin="0,4,0,0"
+                                           Foreground="{StaticResource PrimaryDarkBrush}"/>
+                                <TextBlock Margin="0,10,0,0" FontSize="11"
+                                           Foreground="{StaticResource TextMuted}"
+                                           Text="Примечание расчёта"/>
+                                <TextBlock Text="{Binding Room.Warning}" FontSize="11"
+                                           LineHeight="15" TextWrapping="Wrap"
+                                           Foreground="{StaticResource TextDark}"/>
                             </StackPanel>
-                        </ScrollViewer>
-                    </DockPanel>
-                </Border>
-            </Grid>
-
-            <!-- Нижний ряд: помещения и приборы -->
-            <Grid Grid.Row="1" Margin="0,6,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-            <!-- Помещения (низ-лево) -->
-            <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource PanelBg}"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="6" Margin="0,0,4,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Margin="10,8"
-                               FontWeight="SemiBold" Foreground="{StaticResource TextDark}">
-                        Помещения — редактируйте Q, приток, вытяжку и назначение
-                    </TextBlock>
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding RoomsView}"
-                              Margin="6,0,6,6" BorderThickness="1"
-                              SelectionMode="Extended" SelectionUnit="FullRow"
-                              x:Name="RoomsGrid"
-                              SelectionChanged="RoomsGrid_SelectionChanged">
-                        <DataGrid.Columns>
-                            <DataGridCheckBoxColumn Header="☑"
-                                Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}"
-                                Width="34"/>
-                            <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="45"/>
-                            <DataGridTextColumn Header="Помещение" Binding="{Binding Name}" Width="140"/>
-                            <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
-                            <DataGridTextColumn Header="S, м²" Binding="{Binding Area, StringFormat=F1}" Width="60"/>
-                            <DataGridCheckBoxColumn Header="Угл." Binding="{Binding IsCorner}" Width="45"/>
-                            <DataGridTextColumn Header="Назначение" Binding="{Binding Purpose}" Width="95"/>
-                            <DataGridTextColumn Header="Q, Вт" Binding="{Binding HeatingW}" Width="85"/>
-                            <DataGridTextColumn Header="Приток, м³/ч" Binding="{Binding Supply}" Width="85"/>
-                            <DataGridTextColumn Header="Вытяжка, м³/ч" Binding="{Binding Exhaust}" Width="90"/>
-                            <DataGridTextColumn Header="Системы" Binding="{Binding SystemsSummary, Mode=OneWay}" IsReadOnly="True" Width="95"/>
-                            <DataGridTemplateColumn Width="82">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Button Content="Системы…" Padding="4,1"
-                                                Click="EditSystems_Click"/>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Примечание" Binding="{Binding Warning}" Width="*"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- Пустое состояние -->
-                    <Border Grid.RowSpan="2" Background="#FBFCFE">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasRooms}" Value="False">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="Нет данных" FontSize="22" FontWeight="Bold"
-                                       Foreground="{StaticResource TextMuted}"
-                                       HorizontalAlignment="Center"/>
-                            <TextBlock TextAlignment="Center" Margin="0,10,0,0"
-                                       Foreground="{StaticResource TextMuted}" LineHeight="20">
-                                Нажмите «① Открыть снимок…» и выберите JSON-файл,<LineBreak/>
-                                например:<LineBreak/>
-                                <Run FontStyle="Italic">%AppData%\HeatLossRevit2\data\snapshots_raw\…\*.json</Run><LineBreak/>
-                                <LineBreak/>
-                                Помещения, нагрузки и режимы появятся автоматически.
-                            </TextBlock>
                         </StackPanel>
-                    </Border>
-                </Grid>
+                    </ScrollViewer>
+                </DockPanel>
             </Border>
-
-            <!-- Приборы (низ-право), фильтруются деревом CRM -->
-            <Border Grid.Row="1" Grid.Column="1" Background="{StaticResource PanelBg}"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="6" Padding="6" Margin="4,0,0,0">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Margin="4,4,4,6" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextDark}">
-                        Размещённые приборы (k_ef: &lt;0.6 недогруз · 0.6–0.9 норма · &gt;0.9 перегруз)
-                    </TextBlock>
-                    <DataGrid ItemsSource="{Binding PlacementsView}" BorderThickness="1">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="120"/>
-                                <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
-                                <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
-                                <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
-                                <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
-                                <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding CalculatedFlow, StringFormat=F1}" Width="90"/>
-                                <DataGridTextColumn Header="Высота, мм" Binding="{Binding MountHeightMm}" Width="70"/>
-                                <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="80"/>
-                                <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="80"/>
-                                <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>
-                                <!-- U3.1/M0.1: k_ef цветом по порогам, «—» когда неприменим -->
-                                <DataGridTextColumn Header="k_ef" Binding="{Binding KEfText}" Width="55">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="FontWeight" Value="SemiBold"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding KefStatus}" Value="low">
-                                                    <Setter Property="Foreground" Value="#E67E22"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding KefStatus}" Value="ok">
-                                                    <Setter Property="Foreground" Value="#1E8E3E"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding KefStatus}" Value="high">
-                                                    <Setter Property="Foreground" Value="#D93025"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <!-- P2: правило количества — словарь прототипа -->
-                                <DataGridTextColumn Header="Расчёт" Binding="{Binding CalculationOption}" Width="110"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </DockPanel>
-                </Border>
-            </Grid>
         </Grid>
     </DockPanel>
 </Window>

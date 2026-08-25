@@ -266,6 +266,8 @@ namespace HVACLoadTerminals.Core.Tests
             var presenter = CreateLoadedPresenter();
             var fake = new FakeScheduler();
             presenter.LiveRecalcScheduler = fake;
+            // Этап C: живой пересчёт по умолчанию выключен — включаем явно.
+            presenter.LiveRecalc = true;
 
             int calcCount = 0;
             presenter.StateChanged += s => { if (s.IsCalculation) calcCount++; };
