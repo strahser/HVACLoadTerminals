@@ -288,7 +288,7 @@
                                              Text="{Binding Room.HeatingW, UpdateSourceTrigger=LostFocus}"/>
                                     <TextBlock Text="t°:" Foreground="#637381" VerticalAlignment="Center" Margin="10,0,4,0"/>
                                     <TextBox Width="50" IsReadOnly="True" Background="#F7F9FC"
-                                             Text="{Binding TemperatureText}"/>
+                                             Text="{Binding TemperatureText, Mode=OneWay}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                     <TextBlock Text="Приток:" Foreground="#637381" VerticalAlignment="Center"/>

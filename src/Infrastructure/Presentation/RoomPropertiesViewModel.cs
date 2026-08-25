@@ -33,21 +33,21 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public string TemperatureText
         {
             get => _temperatureText;
-            private set { _temperatureText = value; OnPropertyChanged(nameof(TemperatureText)); }
+            set { _temperatureText = value; OnPropertyChanged(nameof(TemperatureText)); }
         }
 
         private string _openingsText = "";
         public string OpeningsText
         {
             get => _openingsText;
-            private set { _openingsText = value; OnPropertyChanged(nameof(OpeningsText)); }
+            set { _openingsText = value; OnPropertyChanged(nameof(OpeningsText)); }
         }
 
         private string _windowForecastText = "";
         public string WindowForecastText
         {
             get => _windowForecastText;
-            private set { _windowForecastText = value; OnPropertyChanged(nameof(WindowForecastText)); }
+            set { _windowForecastText = value; OnPropertyChanged(nameof(WindowForecastText)); }
         }
 
         /// <summary>Обновить под выбранный узел дерева / последний расчёт.</summary>
