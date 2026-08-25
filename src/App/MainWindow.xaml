@@ -5,7 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:vm="clr-namespace:HVACLoadTerminals.App.ViewModels"
-        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         Title="HVAC Terminals · Расстановка приборов по снимку помещений"
@@ -304,36 +303,30 @@
                     </DockPanel>
                 </Border>
 
-                <!-- Центр: табы План 2D / 3D -->
+                <!-- Центр: план 2D (фильтр по уровню) -->
                 <Border Grid.Column="1" Background="{StaticResource PanelBg}"
                         BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                         CornerRadius="6">
-                    <TabControl x:Name="CenterTabs" SelectionChanged="CenterTabs_SelectionChanged"
-                                BorderThickness="0" Background="Transparent">
-                        <TabItem Header="План 2D">
-                            <DockPanel Margin="4">
-                                <DockPanel DockPanel.Dock="Top" Margin="2,2,2,6">
-                                    <ComboBox ItemsSource="{Binding Levels}"
-                                              SelectedItem="{Binding SelectedLevel}"
-                                              Width="150" Margin="0,0,8,0"
-                                              HorizontalAlignment="Left"/>
-                                    <TextBlock Text="Цвета:" VerticalAlignment="Center" Margin="0,0,4,0"
-                                               Foreground="{StaticResource TextMuted}"/>
-                                    <ComboBox ItemsSource="{Binding PlanColorModes}"
-                                              SelectedItem="{Binding SelectedColorMode}"
-                                              Width="120" VerticalContentAlignment="Center"
-                                              HorizontalAlignment="Left"/>
-                                    <CheckBox Content="Подписи комнат" IsChecked="{Binding ShowRoomLabels}"
-                                              VerticalAlignment="Center" Margin="12,0,0,0"
-                                              HorizontalAlignment="Left"/>
-                                </DockPanel>
-                                <oxy:PlotView Model="{Binding PlotModel}"/>
-                            </DockPanel>
-                        </TabItem>
-                        <TabItem Header="3D">
-                            <wv2:WebView2 x:Name="Web3D"/>
-                        </TabItem>
-                    </TabControl>
+                    <DockPanel Margin="4">
+                        <DockPanel DockPanel.Dock="Top" Margin="2,2,2,6">
+                            <TextBlock Text="Уровень:" VerticalAlignment="Center" Margin="0,0,4,0"
+                                       Foreground="{StaticResource TextMuted}"/>
+                            <ComboBox ItemsSource="{Binding Levels}"
+                                      SelectedItem="{Binding SelectedLevel}"
+                                      Width="170" Margin="0,0,12,0"
+                                      HorizontalAlignment="Left"/>
+                            <TextBlock Text="Цвета:" VerticalAlignment="Center" Margin="0,0,4,0"
+                                       Foreground="{StaticResource TextMuted}"/>
+                            <ComboBox ItemsSource="{Binding PlanColorModes}"
+                                      SelectedItem="{Binding SelectedColorMode}"
+                                      Width="120" VerticalContentAlignment="Center"
+                                      HorizontalAlignment="Left"/>
+                            <CheckBox Content="Подписи комнат" IsChecked="{Binding ShowRoomLabels}"
+                                      VerticalAlignment="Center" Margin="12,0,0,0"
+                                      HorizontalAlignment="Left"/>
+                        </DockPanel>
+                        <oxy:PlotView Model="{Binding PlotModel}"/>
+                    </DockPanel>
                 </Border>
 
                 <!-- Свойства выбранного узла (M2.1: редактирование системы) -->

@@ -1052,9 +1052,12 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
         private void RaiseState(string status)
         {
+            // Levels обязателен в любом состоянии: после загрузки снимка хост
+            // заполняет селектор уровней до первого расчёта.
             StateChanged?.Invoke(new WorkspaceState
             {
                 Rooms = Rooms.ToList(),
+                Levels = Rooms.Select(r => r.LevelName).Distinct().ToList(),
                 Status = status
             });
         }

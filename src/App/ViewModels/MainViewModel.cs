@@ -76,6 +76,23 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
+        /// <summary>Сигнатура набора уровней текущего документа: при смене
+        /// документа план автоматически переключается на первый уровень
+        /// (вид «Все уровни» сливает этажи и остаётся ручной опцией).</summary>
+        private string _levelsSignature = "";
+
+        /// <summary>M1.2: выбор уровня/комнаты в дереве переводит план
+        /// на соответствующий уровень (план следует за деревом).</summary>
+        private void SyncPlanLevelWithNode()
+        {
+            var node = Crm.SelectedNode;
+            if (node?.Kind != "Level" && node?.Kind != "Room")
+                return;
+            string level = node.LevelName ?? "";
+            if (level.Length > 0 && SelectedLevel != level && Levels.Contains(level))
+                SelectedLevel = level;
+        }
+
         // ---- P4: раскраска плана и подписи комнат ----
 
         /// <summary>Режимы раскраски приборов на плане (аналог SetColor прототипа).</summary>
@@ -331,6 +348,7 @@ namespace HVACLoadTerminals.App.ViewModels
             Crm.SelectionChanged += () =>
             {
                 PlacementsView.Refresh();
+                SyncPlanLevelWithNode();
                 PlotLevel();
             };
 
@@ -464,11 +482,22 @@ namespace HVACLoadTerminals.App.ViewModels
 
                 var levels = new[] { "Все уровни" }
                     .Concat(state.Levels).Distinct().ToList();
+                string signature = string.Join("\n", levels);
+                bool newDocument = signature != _levelsSignature;
+                _levelsSignature = signature;
                 Levels.Clear();
                 foreach (var l in levels)
                     Levels.Add(l);
-                if (!Levels.Contains(SelectedLevel))
+                if (newDocument)
+                {
+                    // Новый снимок/проект: по умолчанию первый реальный уровень —
+                    // «Все уровни» сливает этажи в одну кашу.
+                    SelectedLevel = levels.Count > 1 ? levels[1] : "Все уровни";
+                }
+                else if (!Levels.Contains(SelectedLevel))
+                {
                     SelectedLevel = "Все уровни";
+                }
 
                 OnPropertyChanged(nameof(RoomsView));
                 RoomsView.Refresh();
@@ -483,7 +512,6 @@ namespace HVACLoadTerminals.App.ViewModels
 
                 // Дерево и панели обновляет CrmViewModel (подписан раньше).
                 PlotLevel();
-                Raise3DChanged();
             }
             catch (Exception ex)
             {
@@ -507,32 +535,6 @@ namespace HVACLoadTerminals.App.ViewModels
         }
 
         // ---------------- M1.2: дерево CRM → CrmViewModel (M1.1b) ----------------
-
-        // ---------------- M3.1: 3D-вкладка ----------------
-
-        /// <summary>HTML 3D-сцены для WebView2; null — нет расчёта.</summary>
-        public string? Build3DHtml()
-        {
-            try
-            {
-                var results = Workspace.BuildPlacementResults();
-                string json = PlacementSceneSerializer.ToJson(
-                    results, $"Расстановка — {SelectedLevel}");
-                return HtmlSceneExporter.BuildHtml("3D · HVAC Terminals", json);
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error("Build3DHtml failed", ex);
-                StatusMessage = "3D недоступно: " + ex.Message;
-                return null;
-            }
-        }
-
-        /// <summary>Сигнал хосту (окну): пересобрать 3D при активной вкладке.</summary>
-        public event Action? ThreeDChanged;
-
-        private void Raise3DChanged() => ThreeDChanged?.Invoke();
-
 
         private void PlotLevelCore()
         {
