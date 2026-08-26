@@ -53,7 +53,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             CmbType.SelectedIndex = 0;
             CmbRule.ItemsSource = new[]
             {
-                "По расчёту (Auto)", "По площади (ByArea)", "По расходу (ByFlow)", "Фиксированное N"
+                "По расчёту (Auto)", "По площади (ByArea)", "По расходу (ByFlow)",
+                "Фиксированное N", "По длине стороны (ByLength)"
             };
             CmbRule.SelectedIndex = 0;
             CmbPattern.ItemsSource = new[]
@@ -236,6 +237,10 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                             1 => byArea,
                             2 => (int)Math.Ceiling(flow / Math.Max(1, best.MaxFlowRate)),
                             3 => Math.Max(1, ParseInt(TxtFixedCount.Text, 1)),
+                            4 => best.DirectiveLengthMm > 0
+                                ? Math.Max(1, (int)Math.Ceiling(
+                                    LengthUnitConverter.UnitsToMm(RoomLongest(poly)) / best.DirectiveLengthMm))
+                                : Math.Max(1, (int)Math.Ceiling(flow / Math.Max(1, best.MaxFlowRate))),
                             _ => Math.Max(byArea, (int)Math.Ceiling(flow / Math.Max(1, best.MaxFlowRate)))
                         };
                         count = Math.Max(1, count);
@@ -247,6 +252,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                                 1 => CeilingCountRule.ByArea,
                                 2 => CeilingCountRule.ByFlow,
                                 3 => CeilingCountRule.Fixed,
+                                4 => CeilingCountRule.ByLength,
                                 _ => CeilingCountRule.Auto
                             },
                             FixedCount = Math.Max(1, ParseInt(TxtFixedCount.Text, 1)),
@@ -372,6 +378,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     1 => CeilingCountRule.ByArea,
                     2 => CeilingCountRule.ByFlow,
                     3 => CeilingCountRule.Fixed,
+                    4 => CeilingCountRule.ByLength,
                     _ => null
                 },
                 FixedCountOverride = CmbRule.SelectedIndex == 3
@@ -424,6 +431,12 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
         }
+
+        /// <summary>RW9: длина длинной стороны контура (внутренних единицах).</summary>
+        private static double RoomLongest(Polygon2D poly) =>
+            RoomGeometryAnalyzer.GetEdges(poly).Count == 0
+                ? 0
+                : RoomGeometryAnalyzer.GetEdges(poly).Max(e => e.Length);
 
         private static int ParseInt(string? text, int fallback) =>
             int.TryParse(text ?? "", out var v) ? v : fallback;

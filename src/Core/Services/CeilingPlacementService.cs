@@ -15,7 +15,10 @@ namespace HVACLoadTerminals.Core.Services
         /// <summary>Pure ceil(flow / maxFlow).</summary>
         ByFlow,
         /// <summary>User-fixed count.</summary>
-        Fixed
+        Fixed,
+        /// <summary>RW9: ceil(длина выбранной стороны / DirectiveLengthMm типоразмера)
+        /// — аналог directive_length прототипа.</summary>
+        ByLength
     }
 
     /// <summary>Mass placement pattern for ceiling devices — plan card U2.1
@@ -162,6 +165,9 @@ namespace HVACLoadTerminals.Core.Services
 
             // Quantity from the CHOSEN device only (its own service area + flow);
             // never inflate by other catalog entries.
+            // RW9: ByLength — ceil(длина выбранной стороны / DirectiveLengthMm);
+            // сторона определяется после офсета, поэтому здесь предварительная оценка
+            // по длинной стороне контура (финальный N пересчитывается на паттерне).
             int count = options.CountRule switch
             {
                 CeilingCountRule.ByArea => device.ServiceAreaM2 > 0 && roomAreaM2 > 0
@@ -171,6 +177,7 @@ namespace HVACLoadTerminals.Core.Services
                     ? (int)Math.Ceiling(requiredFlow / device.MaxFlowRate)
                     : 1,
                 CeilingCountRule.Fixed => Math.Max(1, options.FixedCount),
+                CeilingCountRule.ByLength => ByLengthEstimate(boundary, options, device, CountFor(device)),
                 _ => CountFor(device)
             };
             count = Math.Max(count, 1);
@@ -188,6 +195,7 @@ namespace HVACLoadTerminals.Core.Services
                 CeilingCountRule.ByArea => CalculationOptionLabels.Area,
                 CeilingCountRule.ByFlow => CalculationOptionLabels.MinByFlow,
                 CeilingCountRule.Fixed => CalculationOptionLabels.FixedN,
+                CeilingCountRule.ByLength => CalculationOptionLabels.Length,
                 _ => areaN >= flowN
                     ? CalculationOptionLabels.Area
                     : CalculationOptionLabels.MinByFlow
@@ -331,6 +339,22 @@ namespace HVACLoadTerminals.Core.Services
                 Placements = Array.Empty<DevicePlacement>(),
                 Warnings = new[] { message }
             };
+
+        /// <summary>RW9: оценка N для ByLength — ceil(длина длинной стороны контура /
+        /// DirectiveLengthMm). Если у типоразмера длина не задана — fallback на CountFor.</summary>
+        private static int ByLengthEstimate(
+            Polygon2D boundary, CeilingPlacementOptions options,
+            TerminalDevice device, int fallback)
+        {
+            if (device.DirectiveLengthMm <= 0)
+                return fallback;
+            var edges = RoomGeometryAnalyzer.GetEdges(boundary);
+            if (edges.Count == 0)
+                return fallback;
+            double longest = edges.Max(e => e.Length);
+            double longestMm = LengthUnitConverter.UnitsToMm(longest);
+            return Math.Max(1, (int)Math.Ceiling(longestMm / device.DirectiveLengthMm));
+        }
 
         /// <summary>Wall-specific размещение: вдоль выбранной стены (нумерация 1..n) со смещением.
         /// Возвращает null если индекс вне диапазона или длина вырождена — фолбэк на общий паттерн/сетку.</summary>

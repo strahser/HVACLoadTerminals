@@ -148,6 +148,30 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// H потолка − offset (аналог ceiling_offset прототипа).</summary>
         public double? CeilingOffsetOverrideMm { get; set; }
 
+        // ---- RW9: presentation-only представления для инлайн-редактора
+        // (nullable оверрайды → конкретные значения для ComboBox в гриде).
+
+        /// <summary>Правило для комбобокса: null показывается как Auto.</summary>
+        public CeilingCountRule RuleView
+        {
+            get => CountRuleOverride ?? CeilingCountRule.Auto;
+            set => CountRuleOverride = value;
+        }
+
+        /// <summary>N для поля грида: null показывается как 1.</summary>
+        public int FixedCountView
+        {
+            get => FixedCountOverride ?? 1;
+            set => FixedCountOverride = value < 1 ? (int?)null : value;
+        }
+
+        /// <summary>Паттерн для комбобокса: null → CeilingGrid («по умолчанию тулбара»).</summary>
+        public WallPattern PatternView
+        {
+            get => PatternOverride ?? WallPattern.CeilingGrid;
+            set => PatternOverride = value == WallPattern.CeilingGrid ? null : value;
+        }
+
         // ---- RoomDetailWindow: привязка к конкретной стене (нумерация кривых 1..n) ----
         /// <summary>Индекс стены для wall-specific размещения (0-based, null = авто/паттерн).
         /// В UI отображается как 1-based. Сохраняется в проекте (per-room).</summary>

@@ -238,9 +238,9 @@ namespace HVACLoadTerminals.App
 
         private void EditSystems_Click(object sender, RoutedEventArgs e)
         {
-            // RW7: кнопка в строке → мастер назначения для этой комнаты
+            // RW9: кнопка в строке → детальная карточка систем комнаты (инлайн).
             if ((sender as FrameworkElement)?.DataContext is RoomRow row)
-                OpenAssignWizardForRooms(new[] { row });
+                new SystemEditorWindow(row, _vm.Workspace) { Owner = this }.ShowDialog();
         }
 
         /// <summary>RW7: мастер назначения систем для набора комнат

@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:core="clr-namespace:HVACLoadTerminals.Core.Models;assembly=HVACLoadTerminals.Core"
+        xmlns:svc="clr-namespace:HVACLoadTerminals.Core.Services;assembly=HVACLoadTerminals.Core"
         Title="Системы помещения"
         Width="560" Height="430"
         WindowStartupLocation="CenterOwner"
@@ -14,6 +15,19 @@
             <core:HVACSystemType>FanCoil</core:HVACSystemType>
             <core:HVACSystemType>Cooling</core:HVACSystemType>
             <core:HVACSystemType>Heating</core:HVACSystemType>
+        </x:Array>
+        <x:Array x:Key="CountRules" Type="{x:Type svc:CeilingCountRule}">
+            <svc:CeilingCountRule>Auto</svc:CeilingCountRule>
+            <svc:CeilingCountRule>ByArea</svc:CeilingCountRule>
+            <svc:CeilingCountRule>ByFlow</svc:CeilingCountRule>
+            <svc:CeilingCountRule>Fixed</svc:CeilingCountRule>
+            <svc:CeilingCountRule>ByLength</svc:CeilingCountRule>
+        </x:Array>
+        <x:Array x:Key="WallPatterns" Type="{x:Type svc:WallPattern}">
+            <svc:WallPattern>CeilingGrid</svc:WallPattern>
+            <svc:WallPattern>LongSide</svc:WallPattern>
+            <svc:WallPattern>ShortSide</svc:WallPattern>
+            <svc:WallPattern>Explicit</svc:WallPattern>
         </x:Array>
         <Style TargetType="Button">
             <Setter Property="Height" Value="28"/>
@@ -50,19 +64,30 @@
             <Button x:Name="AddExhaustBtn" Click="AddExhaust_Click" MinWidth="0">＋ Вытяжка</Button>
             <Button x:Name="AddFanCoilBtn" Click="AddFanCoil_Click" MinWidth="0">＋ Кондиционирование</Button>
             <Button x:Name="AddHeatingBtn" Click="AddHeating_Click" MinWidth="0">＋ Отопление</Button>
+            <Button x:Name="WizardBtn" Click="Wizard_Click" MinWidth="0"
+                    ToolTip="Пошаговый подбор: Тип→Класс→Производитель→Марка (для этого помещения)">🧙 Через мастер…</Button>
             <Button x:Name="RemoveBtn" Click="Remove_Click" MinWidth="0">− Удалить</Button>
         </StackPanel>
 
         <!-- Таблица систем -->
         <DataGrid x:Name="Grid" Grid.Row="1" ItemsSource="{Binding Systems}" RowHeight="26">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Имя" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
+                <DataGridTextColumn Header="Имя" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
                 <DataGridComboBoxColumn Header="Тип"
                                         SelectedItemBinding="{Binding Type}"
                                         ItemsSource="{StaticResource SystemTypes}"
-                                        Width="120"/>
-                <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding FlowM3h, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
-                <DataGridCheckBoxColumn Header="Включено" Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                                        Width="100"/>
+                <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding FlowM3h, UpdateSourceTrigger=PropertyChanged}" Width="95"/>
+                <DataGridComboBoxColumn Header="Правило N"
+                                        SelectedItemBinding="{Binding RuleView}"
+                                        ItemsSource="{StaticResource CountRules}"
+                                        Width="105"/>
+                <DataGridTextColumn Header="N" Binding="{Binding FixedCountView, UpdateSourceTrigger=PropertyChanged}" Width="45"/>
+                <DataGridComboBoxColumn Header="Геометрия"
+                                        SelectedItemBinding="{Binding PatternView}"
+                                        ItemsSource="{StaticResource WallPatterns}"
+                                        Width="110"/>
+                <DataGridCheckBoxColumn Header="Вкл" Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
             </DataGrid.Columns>
         </DataGrid>
 

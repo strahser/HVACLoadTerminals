@@ -365,9 +365,9 @@
                                         <DataGridTemplateColumn Width="82">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <Button Content="Система…" Padding="4,1"
-                                                            Click="WizardForRoom_Click"
-                                                            ToolTip="Мастер назначения системы этой комнате (Тип→Класс→Производитель→Марка)"/>
+                                                    <Button Content="Системы…" Padding="4,1"
+                                                            Click="EditSystems_Click"
+                                                            ToolTip="Все системы этой комнаты — инлайн-редактор (имя/тип/расход/правило/геометрия) + добавление через мастер"/>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>

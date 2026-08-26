@@ -9,15 +9,17 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
     public partial class SystemEditorWindow : System.Windows.Window
     {
         private readonly RoomRow _row;
+        private readonly SnapshotWorkspacePresenter? _presenter;
         private readonly ObservableCollection<SystemRow> _working;
         private readonly double _estimateSupply;
         private readonly double _estimateExhaust;
         private bool _applied;
 
-        public SystemEditorWindow(RoomRow row)
+        public SystemEditorWindow(RoomRow row, SnapshotWorkspacePresenter? presenter = null)
         {
             InitializeComponent();
             _row = row ?? throw new ArgumentNullException(nameof(row));
+            _presenter = presenter;
             _estimateSupply = row.Supply;
             _estimateExhaust = row.Exhaust;
             _working = new ObservableCollection<SystemRow>(row.Systems ?? new List<SystemRow>());
@@ -77,6 +79,33 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             if (Grid.SelectedItem is SystemRow selected)
             {
                 _working.Remove(selected);
+                UpdateBalance();
+            }
+        }
+
+        /// <summary>RW9: пошаговый подбор марки/правил для этой комнаты
+        /// (результат — новая строка системы в списке).</summary>
+        private void Wizard_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (_presenter == null)
+            {
+                System.Windows.MessageBox.Show("Мастер недоступен: контекст презентера не передан.",
+                    "Мастер", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+            var ids = new HashSet<string> { _row.RoomId };
+            var win = new AssignSystemWizardWindow(_presenter, r => ids.Contains(r.RoomId)) { Owner = this };
+            if (win.ShowDialog() == true)
+            {
+                // Перезагрузить список из комнаты: мастер уже записал системы через presenter.
+                var known = _working.Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var s in _row.Systems.Where(x => !known.Contains(x.Name)))
+                    _working.Add(s);
+                // Убрать удалённые мастером (замена однотипных).
+                var names = _row.Systems.Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                for (int i = _working.Count - 1; i >= 0; i--)
+                    if (!names.Contains(_working[i].Name))
+                        _working.RemoveAt(i);
                 UpdateBalance();
             }
         }
