@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using HVACLoadTerminals.App.ViewModels;
+using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Infrastructure.Presentation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -451,6 +452,47 @@ namespace HVACLoadTerminals.App
         {
             var win = new PlacementRulesWindow(_vm) { Owner = this };
             win.ShowDialog();
+        }
+
+        private void QuickCatalog_Click(object sender, RoutedEventArgs e)
+        {
+            var sysVm = _vm.Crm.SelectedSystem;
+            if (sysVm == null || !sysVm.ShowEditing)
+            {
+                MessageBox.Show("Выберите систему в дереве (Вид→Дерево систем).", "Быстрый каталог", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var repo = _vm.Workspace.CatalogRepository as Infrastructure.Data.JsonCatalogRepository;
+            if (repo == null)
+            {
+                try { repo = new Infrastructure.Data.JsonCatalogRepository(Infrastructure.Data.JsonCatalogRepository.ResolveDefaultPath()); }
+                catch (Exception ex) { MessageBox.Show("Каталог недоступен: " + ex.Message); return; }
+            }
+            // Определяем тип системы
+            var type = _vm.Workspace.GetSystemOptions(sysVm.SystemName!)?.Type ?? HVACLoadTerminals.Core.Models.HVACSystemType.Supply;
+            TerminalDevice? device = null;
+            string? selId = sysVm.SelectedDevice?.Id;
+            if (!string.IsNullOrWhiteSpace(selId))
+            {
+                try { device = repo.GetDeviceById(selId!); } catch { }
+                if (device == null)
+                    try { device = _vm.Workspace.LastUsedCatalog?.FirstOrDefault(d => d.Id == selId); } catch { }
+            }
+            // Если автоподбор — создаём новый
+            bool isNew = device == null;
+            var win = new QuickDeviceEditorWindow(device, type, repo) { Owner = this };
+            if (win.ShowDialog() == true)
+            {
+                // Перестроить список типоразмеров панели без ухода с экрана
+                sysVm.Refresh();
+                if (isNew && win.SavedDeviceId != null)
+                {
+                    var opt = sysVm.Devices.FirstOrDefault(d => d.Id == win.SavedDeviceId);
+                    if (opt != null) sysVm.SelectedDevice = opt;
+                }
+                _vm.Workspace.Calculate();
+                MessageBox.Show(isNew ? "Типоразмер создан и сохранён в каталог." : "Типоразмер обновлён.", "Быстрый каталог", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e) => Close();

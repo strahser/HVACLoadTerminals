@@ -581,9 +581,12 @@
                                 </DockPanel>
 
                                 <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">Типоразмер прибора</TextBlock>
-                                <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Devices}"
-                                          SelectedItem="{Binding Crm.SelectedSystem.SelectedDevice}"
-                                          DisplayMemberPath="Label" Margin="0,1,0,2"/>
+                                <DockPanel Margin="0,1,0,2">
+                                    <Button DockPanel.Dock="Right" Content="⚙" Width="28" Margin="4,0,0,0" Click="QuickCatalog_Click" ToolTip="Быстрый каталог — править типоразмер без ухода"/>
+                                    <ComboBox ItemsSource="{Binding Crm.SelectedSystem.Devices}"
+                                              SelectedItem="{Binding Crm.SelectedSystem.SelectedDevice}"
+                                              DisplayMemberPath="Label"/>
+                                </DockPanel>
                                 <TextBlock Text="{Binding Crm.SelectedSystem.DeviceInfoText}"
                                            FontSize="11" LineHeight="15" TextWrapping="Wrap"
                                            Foreground="{StaticResource TextMuted}" Margin="0,0,0,10"/>
