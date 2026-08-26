@@ -10,7 +10,8 @@
         Title="HVAC Terminals · Расстановка приборов по снимку помещений"
         Height="900" Width="1500"
         WindowStartupLocation="CenterScreen"
-        Background="#F4F6F9">
+        Background="#F4F6F9"
+        Loaded="Window_Loaded">
 
     <Window.InputBindings>
         <KeyBinding Modifiers="Control" Key="O" Command="{Binding OpenSnapshotCommand}"/>
@@ -200,15 +201,15 @@
         <!-- ============ РАБОЧАЯ ОБЛАСТЬ (этап C: минимализм) ============ -->
         <Grid Margin="6">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition x:Name="TreeColumn" Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition x:Name="PropsColumn" Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <!-- Дерево систем (скрыто по умолчанию — Вид▸Дерево систем) -->
-            <Border Grid.Column="0" Width="250" Background="{StaticResource PanelBg}"
+            <Border x:Name="TreePanelBorder" Grid.Column="0" Background="{StaticResource PanelBg}"
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                     CornerRadius="6" Margin="0,0,4,0"
                     Visibility="{Binding ShowTreePanel, Converter={StaticResource BoolToVis}}">
@@ -403,7 +404,7 @@
                                            Foreground="{StaticResource TextDark}">
                                     Размещённые приборы (k_ef: &lt;0.6 недогруз · 0.6–0.9 норма · &gt;0.9 перегруз)
                                 </TextBlock>
-                                <DataGrid ItemsSource="{Binding PlacementsView}" BorderThickness="1">
+                                <DataGrid x:Name="PlacementsGrid" ItemsSource="{Binding PlacementsView}" BorderThickness="1">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="120"/>
                                         <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
@@ -514,7 +515,7 @@
             <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Right"
                           VerticalAlignment="Stretch" Background="Transparent"
                           Visibility="{Binding ShowPropsPanel, Converter={StaticResource BoolToVis}}"/>
-            <Border Grid.Column="4" Width="300" Background="{StaticResource PanelBg}"
+            <Border x:Name="PropsPanelBorder" Grid.Column="4" Background="{StaticResource PanelBg}"
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                     CornerRadius="6" Margin="4,0,0,0"
                     Visibility="{Binding ShowPropsPanel, Converter={StaticResource BoolToVis}}">

@@ -27,6 +27,11 @@ namespace HVACLoadTerminals.App.ViewModels
     {
         public SnapshotWorkspacePresenter Workspace { get; } = new();
 
+        // ---- Персист UI-настроек (панели/колонки/размер окна, %AppData% JSON + реконсиляция) ----
+        private JsonUiSettingsStore _uiStore = null!;
+        private UiSettings _uiSettings = new UiSettings();
+        private bool _suppressUiSave;
+
         public ObservableCollection<PlacementRow> Placements { get; } =
             new ObservableCollection<PlacementRow>();
 
@@ -109,6 +114,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 OnPropertyChanged(nameof(RoomFilterMode));
                 RoomsView.Refresh();
                 UpdateRoomCounts();
+                SaveUiSettings();
             }
         }
 
@@ -245,7 +251,14 @@ namespace HVACLoadTerminals.App.ViewModels
         public bool ShowEnclosureCurves
         {
             get => _showEnclosureCurves;
-            set { _showEnclosureCurves = value; OnPropertyChanged(nameof(ShowEnclosureCurves)); PlotLevel(); }
+            set
+            {
+                if (_showEnclosureCurves == value) return;
+                _showEnclosureCurves = value;
+                OnPropertyChanged(nameof(ShowEnclosureCurves));
+                PlotLevel();
+                SaveUiSettings();
+            }
         }
         private bool _showEnclosureCurves = true;
 
@@ -253,7 +266,13 @@ namespace HVACLoadTerminals.App.ViewModels
         public bool ShowTreePanel
         {
             get => _showTreePanel;
-            set { _showTreePanel = value; OnPropertyChanged(nameof(ShowTreePanel)); }
+            set
+            {
+                if (_showTreePanel == value) return;
+                _showTreePanel = value;
+                OnPropertyChanged(nameof(ShowTreePanel));
+                SaveUiSettings();
+            }
         }
         private bool _showTreePanel;
 
@@ -261,9 +280,42 @@ namespace HVACLoadTerminals.App.ViewModels
         public bool ShowPropsPanel
         {
             get => _showPropsPanel;
-            set { _showPropsPanel = value; OnPropertyChanged(nameof(ShowPropsPanel)); }
+            set
+            {
+                if (_showPropsPanel == value) return;
+                _showPropsPanel = value;
+                OnPropertyChanged(nameof(ShowPropsPanel));
+                SaveUiSettings();
+            }
         }
         private bool _showPropsPanel;
+
+        // ---- Персист: ширины панелей (250/300 по умолчанию) ----
+        private double _treePanelWidth = 250;
+        public double TreePanelWidth
+        {
+            get => _treePanelWidth;
+            set
+            {
+                if (Math.Abs(_treePanelWidth - value) < 0.5) return;
+                _treePanelWidth = value;
+                OnPropertyChanged(nameof(TreePanelWidth));
+                SaveUiSettings();
+            }
+        }
+
+        private double _propsPanelWidth = 300;
+        public double PropsPanelWidth
+        {
+            get => _propsPanelWidth;
+            set
+            {
+                if (Math.Abs(_propsPanelWidth - value) < 0.5) return;
+                _propsPanelWidth = value;
+                OnPropertyChanged(nameof(PropsPanelWidth));
+                SaveUiSettings();
+            }
+        }
 
         // ---- P4: раскраска плана и подписи комнат ----
 
@@ -280,6 +332,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 _selectedColorMode = value ?? "По k_ef";
                 OnPropertyChanged(nameof(SelectedColorMode));
                 PlotLevel();
+                SaveUiSettings();
             }
         }
 
@@ -289,9 +342,11 @@ namespace HVACLoadTerminals.App.ViewModels
             get => _showRoomLabels;
             set
             {
+                if (_showRoomLabels == value) return;
                 _showRoomLabels = value;
                 OnPropertyChanged(nameof(ShowRoomLabels));
                 PlotLevel();
+                SaveUiSettings();
             }
         }
 
@@ -469,8 +524,10 @@ namespace HVACLoadTerminals.App.ViewModels
             get => Workspace.LiveRecalc;
             set
             {
+                if (Workspace.LiveRecalc == value) return;
                 Workspace.LiveRecalc = value;
                 OnPropertyChanged(nameof(LiveRecalc));
+                SaveUiSettings();
             }
         }
 
@@ -639,7 +696,106 @@ namespace HVACLoadTerminals.App.ViewModels
                                 " — используется встроенный каталог приборов";
             }
 
+            // UX: персист UI-настроек — загрузка с реконсиляцией (панели/колонки/размер окна)
+            try
+            {
+                _uiStore = new JsonUiSettingsStore(JsonUiSettingsStore.ResolveDefaultPath());
+                _uiSettings = _uiStore.Load();
+                ApplyUiSettings(_uiSettings);
+                AppLogger.Info("UiSettings: " + _uiStore.FilePath +
+                               $" ShowTree={_uiSettings.ShowTreePanel} ShowProps={_uiSettings.ShowPropsPanel}");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("UiSettings load failed, using defaults", ex);
+                _uiStore = new JsonUiSettingsStore(JsonUiSettingsStore.ResolveDefaultPath());
+                _uiSettings = new UiSettings();
+                _uiSettings.Reconcile();
+            }
+
             AppLogger.Info("MainViewModel initialized");
+        }
+
+        // ---- UiSettings helpers (персист панелей/колонок/окна) ----
+
+        private void ApplyUiSettings(UiSettings s)
+        {
+            _suppressUiSave = true;
+            try
+            {
+                _showTreePanel = s.ShowTreePanel;
+                _showPropsPanel = s.ShowPropsPanel;
+                _showEnclosureCurves = s.ShowEnclosureCurves;
+                _showRoomLabels = s.ShowRoomLabels;
+                _selectedColorMode = s.SelectedColorMode ?? "По k_ef";
+                _roomFilterMode = s.RoomFilterMode ?? RoomRowFilter.All;
+                _treePanelWidth = s.TreePanelWidth;
+                _propsPanelWidth = s.PropsPanelWidth;
+                Workspace.LiveRecalc = s.LiveRecalc;
+
+                OnPropertyChanged(nameof(ShowTreePanel));
+                OnPropertyChanged(nameof(ShowPropsPanel));
+                OnPropertyChanged(nameof(ShowEnclosureCurves));
+                OnPropertyChanged(nameof(ShowRoomLabels));
+                OnPropertyChanged(nameof(SelectedColorMode));
+                OnPropertyChanged(nameof(RoomFilterMode));
+                OnPropertyChanged(nameof(TreePanelWidth));
+                OnPropertyChanged(nameof(PropsPanelWidth));
+                OnPropertyChanged(nameof(LiveRecalc));
+            }
+            finally
+            {
+                _suppressUiSave = false;
+            }
+        }
+
+        private void SaveUiSettings()
+        {
+            if (_suppressUiSave || _uiStore == null || _uiSettings == null) return;
+            try
+            {
+                _uiSettings.ShowTreePanel = _showTreePanel;
+                _uiSettings.ShowPropsPanel = _showPropsPanel;
+                _uiSettings.ShowEnclosureCurves = _showEnclosureCurves;
+                _uiSettings.ShowRoomLabels = _showRoomLabels;
+                _uiSettings.SelectedColorMode = _selectedColorMode;
+                _uiSettings.RoomFilterMode = _roomFilterMode;
+                _uiSettings.TreePanelWidth = _treePanelWidth;
+                _uiSettings.PropsPanelWidth = _propsPanelWidth;
+                _uiSettings.LiveRecalc = Workspace.LiveRecalc;
+                _uiSettings.Reconcile();
+                _uiStore.Save(_uiSettings);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("UiSettings save failed", ex);
+            }
+        }
+
+        /// <summary>Хост (MainWindow) сообщает геометрию окна для персиста.</summary>
+        public void SaveWindowGeometry(double left, double top, double width, double height, string windowState)
+        {
+            if (_uiSettings == null || _uiStore == null) return;
+            _uiSettings.WindowLeft = left;
+            _uiSettings.WindowTop = top;
+            _uiSettings.WindowWidth = width;
+            _uiSettings.WindowHeight = height;
+            _uiSettings.WindowState = windowState ?? "Normal";
+            SaveUiSettings();
+        }
+
+        public UiSettings CurrentUiSettings => _uiSettings;
+
+        public void SaveColumnWidths(
+            Dictionary<string, double> roomsWidths,
+            Dictionary<string, double> placementsWidths)
+        {
+            if (_uiSettings == null) return;
+            if (roomsWidths != null)
+                _uiSettings.RoomsGridColumnWidths = new Dictionary<string, double>(roomsWidths, StringComparer.Ordinal);
+            if (placementsWidths != null)
+                _uiSettings.PlacementsGridColumnWidths = new Dictionary<string, double>(placementsWidths, StringComparer.Ordinal);
+            SaveUiSettings();
         }
 
         private void CalculateSafe()
