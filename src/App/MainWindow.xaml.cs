@@ -508,6 +508,12 @@ namespace HVACLoadTerminals.App
             win.ShowDialog();
         }
 
+        private void LevelPlan_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new LevelPlanWindow(_vm, _vm.SelectedLevel) { Owner = this };
+            win.Show();
+        }
+
         private void QuickCatalog_Click(object sender, RoutedEventArgs e)
         {
             var sysVm = _vm.Crm.SelectedSystem;

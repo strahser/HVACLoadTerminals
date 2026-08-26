@@ -313,15 +313,15 @@
                                             Content="☐ Видимые"/>
                                 </WrapPanel>
 
-                                <!-- UX-серия: строка контекста — уровень, счётчики, выделение -->
+                                <!-- UX-серия: строка контекста — уровень, счётчики, включение -->
                                 <DockPanel Grid.Row="2" Margin="10,0,10,4" LastChildFill="True">
                                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                                        <Button Content="✓ все" Padding="8,1"
-                                                Click="SelectAllRows_Click"
-                                                ToolTip="Выделить все видимые строки (Ctrl+A в таблице)"/>
-                                        <Button Content="☐ снять" Padding="8,1"
-                                                Click="UnselectAllRows_Click"
-                                                ToolTip="Снять выделение строк"/>
+                                        <Button Content="☑ Включить видимые" Padding="8,1"
+                                                Command="{Binding IncludeVisibleCommand}"
+                                                ToolTip="Поставить чекбокс «Включено» у всех помещений, видимых в таблице (с учётом поиска/фильтра)"/>
+                                        <Button Content="☐ Исключить видимые" Padding="8,1"
+                                                Command="{Binding ExcludeVisibleCommand}"
+                                                ToolTip="Снять чекбокс «Включено» у видимых помещений"/>
                                     </StackPanel>
                                     <TextBlock Text="{Binding RoomsContextText}"
                                                Foreground="{StaticResource TextMuted}"
@@ -494,7 +494,8 @@
                                       SelectedItem="{Binding SelectedLevel}"
                                       Width="150" Margin="0,0,4,0"
                                       HorizontalAlignment="Left"/>
-                            <Button Content="▦" Width="26" Margin="0,0,12,0" Click="Levels_Click" ToolTip="Менеджер уровней"/>
+                            <Button Content="▦" Width="26" Margin="0,0,4,0" Click="Levels_Click" ToolTip="Менеджер уровней"/>
+                            <Button Content="🗺" Width="26" Margin="0,0,12,0" Click="LevelPlan_Click" ToolTip="Показать уровень в отдельном окне"/>
                             <TextBlock Text="Цвета:" VerticalAlignment="Center" Margin="0,0,4,0"
                                        Foreground="{StaticResource TextMuted}"/>
                             <ComboBox ItemsSource="{Binding PlanColorModes}"

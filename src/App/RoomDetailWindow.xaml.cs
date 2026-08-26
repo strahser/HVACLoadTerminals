@@ -50,7 +50,13 @@ namespace HVACLoadTerminals.App
             SingleRuleCombo.ItemsSource = Enum.GetValues(typeof(SingleRule)).Cast<SingleRule>().ToList();
             try { _polygon = _snapRoom.ToPolygon(); } catch { _polygon = null; }
             if (_polygon != null)
+            {
+                // RW3: санитизация — одна прямая = одна стена (нумерация 1..n стабильна)
+                var sanitized = PolygonSanitizer.MergeCollinear(_polygon);
+                if (sanitized.Vertices.Count <= _polygon.Vertices.Count)
+                    _polygon = sanitized;
                 _edges = RoomGeometryAnalyzer.GetEdges(_polygon);
+            }
 
             BuildWallCombo();
             LoadSelectedSystem();
@@ -329,6 +335,35 @@ namespace HVACLoadTerminals.App
             if (_selectedSystem != null)
                 SingleRuleCombo.SelectedItem = SingleRule.Center;
             BuildPlot();
+        }
+
+        private void AddSystem_Click(object sender, RoutedEventArgs e)
+        {
+            new SystemEditorWindow(_room) { Owner = this }.ShowDialog();
+            _presenter.CommitRoomSystems(_room);
+            // Пересобрать список систем (могли добавиться П2/В2/К1…)
+            var selectedName = _selectedSystem?.Name;
+            SystemCombo.ItemsSource = null;
+            SystemCombo.ItemsSource = _room.Systems;
+            if (_room.Systems.Count > 0)
+                SystemCombo.SelectedItem =
+                    _room.Systems.FirstOrDefault(s => s.Name == selectedName) ?? _room.Systems[0];
+            SubtitleText.Text = $"Уровень: {_room.LevelName} · S={_room.Area:F1} м² · систем: {_room.Systems.Count}";
+        }
+
+        private void RecalcRoom_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                _presenter.Calculate();
+                BuildPlot();
+                PreviewInfoText.Text += " · пересчитано";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка расчёта: " + ex.Message, "Расчёт помещения",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void Apply_Click(object sender, RoutedEventArgs e)

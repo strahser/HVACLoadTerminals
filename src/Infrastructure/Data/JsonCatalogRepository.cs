@@ -80,6 +80,38 @@ namespace HVACLoadTerminals.Infrastructure.Data
             SaveAll(CatalogFactory.CreateDemo());
         }
 
+        /// <summary>RW1: миграция старых каталогов — пустой Manufacturer заполняется
+        /// по семейству/типу (CatalogFactory.DefaultManufacturer). Возвращает число
+        /// исправленных строк (0 — файл уже хороший).</summary>
+        public int EnrichEmptyManufacturers()
+        {
+            var devices = GetAllDevices().ToList();
+            bool changed = false;
+            var rebuilt = new List<TerminalDevice>(devices.Count);
+            foreach (var d in devices)
+            {
+                if (!string.IsNullOrWhiteSpace(d.Manufacturer))
+                {
+                    rebuilt.Add(d);
+                    continue;
+                }
+                changed = true;
+                rebuilt.Add(new TerminalDevice(
+                    d.Id, d.FamilyName, d.TypeName,
+                    CatalogFactory.DefaultManufacturer(d.FamilyName, d.SystemType),
+                    d.MaxFlowRate, d.FlowParameterName, d.SystemType,
+                    coolingCapacityW: d.CoolingCapacityW, widthMm: d.WidthMm, heightMm: d.HeightMm,
+                    heatingCapacityW: d.HeatingCapacityW, serviceAreaM2: d.ServiceAreaM2,
+                    ceilingOffsetMm: d.CeilingOffsetMm, wallOffsetMm: d.WallOffsetMm,
+                    directiveTerminals: d.DirectiveTerminals, directiveLengthMm: d.DirectiveLengthMm,
+                    orientationOption1: d.OrientationOption1, orientationOption2: d.OrientationOption2,
+                    singleOrientation: d.SingleOrientation));
+            }
+            if (changed)
+                SaveAll(rebuilt);
+            return changed ? rebuilt.Count : 0;
+        }
+
         /// <summary>Полный документ: версия + приборы. Бросает внятную ошибку на битый JSON.</summary>
         public CatalogDocument LoadDocument()
         {

@@ -746,6 +746,9 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 var repo = new JsonCatalogRepository(JsonCatalogRepository.ResolveDefaultPath());
                 repo.EnsureSeeded();
+                int enriched = repo.EnrichEmptyManufacturers(); // RW1: миграция пустых производителей
+                if (enriched > 0)
+                    AppLogger.Info($"Catalog enriched manufacturers: {enriched}");
                 Workspace.CatalogRepository = repo;
                 AppLogger.Info("Catalog: " + repo.FilePath);
             }

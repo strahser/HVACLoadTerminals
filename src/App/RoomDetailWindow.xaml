@@ -119,7 +119,13 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10,8,10,8">
                         <TextBlock Text="Система помещения" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"/>
-                        <ComboBox x:Name="SystemCombo" Margin="0,4,0,8" DisplayMemberPath="Name" SelectionChanged="SystemCombo_SelectionChanged"/>
+                        <ComboBox x:Name="SystemCombo" Margin="0,4,0,4" DisplayMemberPath="Name" SelectionChanged="SystemCombo_SelectionChanged"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button Content="➕ Система…" Padding="6,3" Click="AddSystem_Click"
+                                    ToolTip="Добавить/изменить системы этого помещения (приток/вытяжка/кондиционирование)"/>
+                            <Button Content="▶ Рассчитать помещение" Padding="6,3" Click="RecalcRoom_Click"
+                                    ToolTip="Пересчитать расстановку и обновить превью"/>
+                        </StackPanel>
 
                         <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,4,0,8"/>
 
