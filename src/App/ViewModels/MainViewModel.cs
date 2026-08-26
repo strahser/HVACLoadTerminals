@@ -4,8 +4,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using HVACLoadTerminals.App.Commands;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Services;
@@ -356,6 +358,44 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
+        // ---- IC1–IC3: Canvas-план — UseCanvasPlan + фильтр "Все системы уровня" + Hover ----
+        public ObservableCollection<PlanItemViewModel> PlanItems { get; } = new();
+
+        private string? _hoveredRoomId;
+        public string? HoveredRoomId
+        {
+            get => _hoveredRoomId;
+            set { if (_hoveredRoomId == value) return; _hoveredRoomId = value; OnPropertyChanged(nameof(HoveredRoomId)); }
+        }
+
+        private bool _useCanvasPlan = true;
+        public bool UseCanvasPlan
+        {
+            get => _useCanvasPlan;
+            set
+            {
+                if (_useCanvasPlan == value) return;
+                _useCanvasPlan = value;
+                OnPropertyChanged(nameof(UseCanvasPlan));
+                SaveUiSettings();
+                PlotLevel();
+            }
+        }
+
+        private bool _showAllSystemsInPlan;
+        public bool ShowAllSystemsInPlan
+        {
+            get => _showAllSystemsInPlan;
+            set
+            {
+                if (_showAllSystemsInPlan == value) return;
+                _showAllSystemsInPlan = value;
+                OnPropertyChanged(nameof(ShowAllSystemsInPlan));
+                SaveUiSettings();
+                PlotLevel();
+            }
+        }
+
         // ---- M1.2: дерево CRM «Системы → Уровни → Помещения» ----
 
         public ObservableCollection<CrmNode> TreeRoots => Crm.TreeRoots;
@@ -399,9 +439,26 @@ namespace HVACLoadTerminals.App.ViewModels
             SelectedRoomIds = items != null
                 ? items.OfType<RoomRow>().Select(r => r.RoomId).ToList()
                 : (IReadOnlyList<string>)Array.Empty<string>();
+            SyncPlanSelection();
             // Требование 9: подсветка/кривые ограждений следуют за выделением.
             PlotLevel();
             OnPropertyChanged(nameof(RoomsContextText));
+        }
+
+        /// <summary>IC4: двусторонняя синхронизация Canvas → VM (клик по полигону).</summary>
+        public void SetSelectedRoomIds(IReadOnlyList<string> ids)
+        {
+            SelectedRoomIds = ids ?? Array.Empty<string>();
+            SyncPlanSelection();
+            PlotLevel();
+            OnPropertyChanged(nameof(RoomsContextText));
+        }
+
+        private void SyncPlanSelection()
+        {
+            var set = new HashSet<string>(SelectedRoomIds);
+            foreach (var pi in PlanItems)
+                pi.IsSelected = set.Contains(pi.Row.RoomId);
         }
 
         private void ApplyMass()
@@ -888,6 +945,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 _propsPanelWidth = s.PropsPanelWidth;
                 Workspace.LiveRecalc = s.LiveRecalc;
                 _showBottomPlan = s.ShowBottomPlan;
+                _useCanvasPlan = s.UseCanvasPlan;
+                _showAllSystemsInPlan = s.ShowAllSystemsInPlan;
 
                 // Глобальные правила размещения
                 Workspace.MinWindowLengthRatio = s.MinWindowLengthRatio;
@@ -912,6 +971,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 OnPropertyChanged(nameof(PropsPanelWidth));
                 OnPropertyChanged(nameof(LiveRecalc));
                 OnPropertyChanged(nameof(ShowBottomPlan));
+                OnPropertyChanged(nameof(UseCanvasPlan));
+                OnPropertyChanged(nameof(ShowAllSystemsInPlan));
                 OnPropertyChanged(nameof(MinLengthRatio));
                 OnPropertyChanged(nameof(SupplyRule));
                 OnPropertyChanged(nameof(ExhaustRule));
@@ -945,6 +1006,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 _uiSettings.PropsPanelWidth = _propsPanelWidth;
                 _uiSettings.LiveRecalc = Workspace.LiveRecalc;
                 _uiSettings.ShowBottomPlan = _showBottomPlan;
+                _uiSettings.UseCanvasPlan = _useCanvasPlan;
+                _uiSettings.ShowAllSystemsInPlan = _showAllSystemsInPlan;
                 _uiSettings.MinWindowLengthRatio = Workspace.MinWindowLengthRatio;
                 _uiSettings.SupplyRule = Workspace.SupplyRule;
                 _uiSettings.ExhaustRule = Workspace.ExhaustRule;
@@ -1219,8 +1282,100 @@ namespace HVACLoadTerminals.App.ViewModels
 
         // ---------------- M1.2: дерево CRM → CrmViewModel (M1.1b) ----------------
 
+        private void RebuildPlanItems()
+        {
+            PlanItems.Clear();
+            var snapshot = Workspace.CurrentSnapshot;
+            if (snapshot == null || string.IsNullOrEmpty(SelectedLevel))
+                return;
+            double mmPerFoot = LengthUnitConverter.MmPerFoot;
+            var selectedIds = new HashSet<string>(_selectedRoomIds);
+            foreach (var room in snapshot.Rooms)
+            {
+                if (room.LevelName != SelectedLevel) continue;
+                var polygon = room.ToPolygon();
+                if (polygon == null) continue;
+                try
+                {
+                    var sanitized = PolygonSanitizer.MergeCollinear(polygon);
+                    if (sanitized.Vertices.Count >= 3 && sanitized.Vertices.Count <= polygon.Vertices.Count)
+                        polygon = sanitized;
+                }
+                catch { }
+                var mmVerts = polygon.Vertices.Select(p => new Point2D(p.X * mmPerFoot, p.Y * mmPerFoot)).ToList();
+                Polygon2D mmPoly;
+                try { mmPoly = new Polygon2D(mmVerts); } catch { continue; }
+                var points = new PointCollection(mmVerts.Select(p => new Point(p.X, p.Y)));
+                bool isSelected = selectedIds.Contains(room.Id ?? "");
+                var row = Workspace.Rooms.FirstOrDefault(r => r.RoomId == (room.Id ?? ""));
+                if (row == null)
+                    row = new RoomRow { RoomId = room.Id ?? "", Number = room.Number ?? "", Name = room.Name ?? "", LevelName = room.LevelName ?? "", Area = room.Area };
+                Brush fill, stroke;
+                if (isSelected)
+                {
+                    fill = new SolidColorBrush(Color.FromArgb(60, 45, 108, 223));
+                    stroke = new SolidColorBrush(Color.FromRgb(45, 108, 223));
+                }
+                else
+                {
+                    fill = new SolidColorBrush(Color.FromArgb(28, 176, 190, 197));
+                    stroke = new SolidColorBrush(Color.FromRgb(144, 164, 174));
+                }
+                fill.Freeze(); stroke.Freeze();
+                // команды для карточки (захватываем roomId)
+                string rid = room.Id ?? "";
+                var selectCmd = new RelayCommand(_ =>
+                {
+                    var r = Workspace.Rooms.FirstOrDefault(x => x.RoomId == rid);
+                    if (r != null) SetSelectedRoomIds(new[] { rid });
+                });
+                var detailCmd = new RelayCommand(_ =>
+                {
+                    var r = Workspace.Rooms.FirstOrDefault(x => x.RoomId == rid);
+                    if (r != null)
+                    {
+                        var snapRoom = Workspace.FindSnapshotRoom(rid);
+                        if (snapRoom != null)
+                        {
+                            string before = Workspace.CaptureStateJson();
+                            PushUndo($"План помещения {r.Number}");
+                            var win = new RoomDetailWindow(r, snapRoom, Workspace) { Owner = System.Windows.Application.Current?.MainWindow };
+                            bool? res = win.ShowDialog();
+                            if (res == true)
+                            {
+                                Workspace.CommitRoomSystems(r);
+                                PopUndoIfNoChange(before);
+                                MarkDirty();
+                                Workspace.Calculate();
+                                if (Workspace.CaptureStateJson() != before)
+                                    RequestToast($"Привязка {r.Number} сохранена", () => Undo());
+                            }
+                            else PopUndoIfNoChange(before);
+                        }
+                    }
+                });
+                var pi = new PlanItemViewModel(row, mmPoly, points, fill, stroke, selectCmd, detailCmd);
+                pi.IsSelected = isSelected;
+                PlanItems.Add(pi);
+            }
+            // синхронизация hover/selection уже в SetSelected
+        }
+
         private void PlotLevelCore()
         {
+            // IC1: ветвление Canvas vs OxyPlot
+            if (UseCanvasPlan)
+            {
+                try { RebuildPlanItems(); } catch (Exception ex) { AppLogger.Error("RebuildPlanItems failed", ex); }
+                // OxyPlot не строим — план рисует Canvas; оставляем старый PlotModel для совместимости LevelPlanWindow
+                // Но если снимка нет — очищаем PlanItems уже, PlotModel можно оставить пустым
+                if (Workspace.CurrentSnapshot == null)
+                {
+                    PlotModel = new PlotModel { Title = $"Расстановка — {SelectedLevel}", Background = OxyColors.White };
+                }
+                return;
+            }
+
             var snapshot = Workspace.CurrentSnapshot;
             var model = new PlotModel
             {
@@ -1450,8 +1605,8 @@ namespace HVACLoadTerminals.App.ViewModels
                         Text = label,
                         TextPosition = new DataPoint(
                             polygon.Center.X * mmPerFoot, polygon.Center.Y * mmPerFoot),
-                        TextHorizontalAlignment = HorizontalAlignment.Center,
-                        TextVerticalAlignment = VerticalAlignment.Middle,
+                        TextHorizontalAlignment = OxyPlot.HorizontalAlignment.Center,
+                        TextVerticalAlignment = OxyPlot.VerticalAlignment.Middle,
                         FontSize = 9,
                         TextColor = OxyColors.Black,
                         Stroke = OxyColors.Transparent,

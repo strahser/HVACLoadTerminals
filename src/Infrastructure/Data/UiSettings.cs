@@ -39,6 +39,10 @@ namespace HVACLoadTerminals.Infrastructure.Data
         public bool LiveRecalc { get; set; } = false;
         /// <summary>RW8: показывать план уровня внизу главного окна (по умолчанию — только 🗺 модально).</summary>
         public bool ShowBottomPlan { get; set; } = false;
+        /// <summary>IC1: использовать Canvas-план вместо OxyPlot внизу (default true, grill 2026-08-27 п.2).</summary>
+        public bool UseCanvasPlan { get; set; } = true;
+        /// <summary>IC3: показывать приборы всех систем уровня в плане (игнор фильтр PlacementsView).</summary>
+        public bool ShowAllSystemsInPlan { get; set; } = false;
 
         // ---- RW10: недавние файлы + автозагрузка ----
         public List<string> RecentProjects { get; set; } = new List<string>();

@@ -1,0 +1,38 @@
+<UserControl x:Class="HVACLoadTerminals.App.Controls.PlanCanvasControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="430" d:DesignWidth="800"
+             Background="Transparent">
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="PanelBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#D5DBE3"/>
+    </UserControl.Resources>
+    <Grid x:Name="RootGrid" ClipToBounds="True" Background="#FFFFFF">
+        <Canvas x:Name="WorldCanvas"
+                Background="Transparent"
+                ClipToBounds="False"
+                MouseMove="WorldCanvas_MouseMove"
+                MouseLeave="WorldCanvas_MouseLeave"
+                MouseLeftButtonDown="WorldCanvas_MouseLeftButtonDown"
+                MouseLeftButtonUp="WorldCanvas_MouseLeftButtonUp"
+                MouseDown="WorldCanvas_MouseDown"
+                MouseWheel="WorldCanvas_MouseWheel"/>
+        <TextBlock x:Name="EmptyText" Text="Нет помещений на уровне" 
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="#637381" FontSize="13" Visibility="Collapsed"/>
+        <TextBlock x:Name="HoverTip" HorizontalAlignment="Left" VerticalAlignment="Top"
+                   Background="#F2CC0000" Foreground="White" Padding="6,3"
+                   FontSize="11" Visibility="Collapsed" IsHitTestVisible="False"/>
+        <Popup x:Name="CardPopup" AllowsTransparency="True" Placement="Mouse" StaysOpen="True"
+               PopupAnimation="Fade" HorizontalOffset="14" VerticalOffset="14">
+            <ContentControl x:Name="CardHost"/>
+        </Popup>
+        <!-- zoom hint -->
+        <TextBlock HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6,0,0,6"
+                   FontSize="10" Foreground="#637381" IsHitTestVisible="False"
+                   Text="Колесо — масштаб · перетаскивание — сдвиг · двойной клик — вписать"/>
+    </Grid>
+</UserControl>

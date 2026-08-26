@@ -49,6 +49,25 @@ namespace HVACLoadTerminals.App
             _vm.ToastRequested += ShowToast;
             _toastTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             _toastTimer.Tick += (s, e) => HideToast();
+            // IC4: двусторонняя синхронизация — Canvas выбор → Grid
+            Loaded += (_, _) =>
+            {
+                try
+                {
+                    PlanCanvas.SelectionChanged += (s, ids) =>
+                    {
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            var set = new HashSet<string>(ids);
+                            RoomsGrid.SelectedItems.Clear();
+                            foreach (var row in _vm.Workspace.Rooms)
+                                if (set.Contains(row.RoomId)) RoomsGrid.SelectedItems.Add(row);
+                            _vm.SetSelectedRoomIds(ids);
+                        }));
+                    };
+                }
+                catch (Exception ex) { AppLogger.Error("PlanCanvas hook failed", ex); }
+            };
         }
 
         private void ShowToast(string message, Action? onUndo)
