@@ -447,6 +447,12 @@ namespace HVACLoadTerminals.App
             }
         }
 
+        private void PlacementRules_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new PlacementRulesWindow(_vm) { Owner = this };
+            win.ShowDialog();
+        }
+
         private void Exit_Click(object sender, RoutedEventArgs e) => Close();
 
         private void Help_Click(object sender, RoutedEventArgs e)

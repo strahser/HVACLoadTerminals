@@ -176,6 +176,7 @@
             </MenuItem>
             <MenuItem Header="_Сервис">
                 <MenuItem Header="🗂 Каталог приборов…" Command="{Binding EditCatalogCommand}"/>
+                <MenuItem Header="⚙ Правила размещения…" Click="PlacementRules_Click" ToolTip="Глобальные правила: доля от окна, паттерны, скорость решёток — слайдеры + превью + профили"/>
                 <MenuItem Header="↻ Вернуть авторасчёт нагрузок" Command="{Binding RecalcLoadsCommand}"/>
                 <MenuItem Header="Живой пересчёт" IsCheckable="True"
                           IsChecked="{Binding LiveRecalc}"

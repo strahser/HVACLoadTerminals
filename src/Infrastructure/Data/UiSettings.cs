@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using HVACLoadTerminals.Core.Services;
 
 namespace HVACLoadTerminals.Infrastructure.Data
 {
@@ -35,6 +36,17 @@ namespace HVACLoadTerminals.Infrastructure.Data
         public string SelectedColorMode { get; set; } = "По k_ef";
         public string RoomFilterMode { get; set; } = "Все помещения";
         public bool LiveRecalc { get; set; } = false;
+
+        // ---- Глобальные правила размещения (модалка Сервис→Правила) ----
+        public double MinWindowLengthRatio { get; set; } = 0.6;
+        public CeilingCountRule SupplyRule { get; set; } = CeilingCountRule.Auto;
+        public CeilingCountRule ExhaustRule { get; set; } = CeilingCountRule.ByFlow;
+        public int FixedSupplyCount { get; set; } = 2;
+        public WallPattern SupplyPattern { get; set; } = WallPattern.LongSide;
+        public WallPattern ExhaustPattern { get; set; } = WallPattern.ShortSide;
+        public SingleRule SingleDeviceRule { get; set; } = SingleRule.Center;
+        public double GrilleVelocityMs { get; set; } = 2.0;
+        public double WallClearanceMm { get; set; } = 500;
 
         // ---- Колонки гридов (ключ = заголовок столбца) ----
         public Dictionary<string, double> RoomsGridColumnWidths { get; set; }
@@ -90,6 +102,17 @@ namespace HVACLoadTerminals.Infrastructure.Data
             };
             if (!allowedFilterModes.Contains(RoomFilterMode))
                 RoomFilterMode = "Все помещения";
+
+            // Глобальные правила размещения
+            MinWindowLengthRatio = Clamp(MinWindowLengthRatio, 0.3, 1.0, 0.6);
+            GrilleVelocityMs = Clamp(GrilleVelocityMs, 0.5, 5.0, 2.0);
+            WallClearanceMm = Clamp(WallClearanceMm, 100, 1000, 500);
+            FixedSupplyCount = (int)Clamp(FixedSupplyCount, 1, 10, 2);
+            if (!Enum.IsDefined(typeof(CeilingCountRule), SupplyRule)) SupplyRule = CeilingCountRule.Auto;
+            if (!Enum.IsDefined(typeof(CeilingCountRule), ExhaustRule)) ExhaustRule = CeilingCountRule.ByFlow;
+            if (!Enum.IsDefined(typeof(WallPattern), SupplyPattern)) SupplyPattern = WallPattern.LongSide;
+            if (!Enum.IsDefined(typeof(WallPattern), ExhaustPattern)) ExhaustPattern = WallPattern.ShortSide;
+            if (!Enum.IsDefined(typeof(SingleRule), SingleDeviceRule)) SingleDeviceRule = SingleRule.Center;
 
             ReconcileColumns(RoomsGridColumnWidths, KnownRoomsColumns);
             ReconcileColumns(PlacementsGridColumnWidths, KnownPlacementsColumns);

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace HVACLoadTerminals.Infrastructure.Data
 {
@@ -16,7 +17,8 @@ namespace HVACLoadTerminals.Infrastructure.Data
         private static readonly JsonSerializerSettings JsonSettings = new JsonSerializerSettings
         {
             Formatting = Formatting.Indented,
-            NullValueHandling = NullValueHandling.Ignore
+            NullValueHandling = NullValueHandling.Ignore,
+            Converters = { new StringEnumConverter() }
         };
 
         private readonly string _path;

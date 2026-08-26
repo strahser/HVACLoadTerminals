@@ -438,6 +438,7 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 Workspace.MinWindowLengthRatio = value;
                 OnPropertyChanged(nameof(MinLengthRatio));
+                SaveUiSettings();
                 RecalcIfLive();
             }
         }
@@ -449,6 +450,7 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 Workspace.SupplyRule = value;
                 OnPropertyChanged(nameof(SupplyRule));
+                SaveUiSettings();
                 RecalcIfLive();
             }
         }
@@ -460,6 +462,7 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 Workspace.ExhaustRule = value;
                 OnPropertyChanged(nameof(ExhaustRule));
+                SaveUiSettings();
                 RecalcIfLive();
             }
         }
@@ -472,6 +475,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 // U3.1: без молчаливого Math.Max — валидация с сообщением в presenter.
                 Workspace.FixedSupplyCount = value;
                 OnPropertyChanged(nameof(FixedSupplyCount));
+                SaveUiSettings();
                 RecalcIfLive();
             }
         }
@@ -485,6 +489,7 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 Workspace.SupplyPattern = value;
                 OnPropertyChanged(nameof(SupplyPattern));
+                SaveUiSettings();
                 RecalcIfLive();
             }
         }
@@ -496,6 +501,7 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 Workspace.ExhaustPattern = value;
                 OnPropertyChanged(nameof(ExhaustPattern));
+                SaveUiSettings();
                 RecalcIfLive();
             }
         }
@@ -507,6 +513,7 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 Workspace.SingleDeviceRule = value;
                 OnPropertyChanged(nameof(SingleDeviceRule));
+                SaveUiSettings();
                 RecalcIfLive();
             }
         }
@@ -524,6 +531,7 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 Workspace.GrilleVelocityMs = value;
                 OnPropertyChanged(nameof(GrilleVelocityMs));
+                SaveUiSettings();
                 RecalcIfLive();
             }
         }
@@ -771,6 +779,16 @@ namespace HVACLoadTerminals.App.ViewModels
                 _propsPanelWidth = s.PropsPanelWidth;
                 Workspace.LiveRecalc = s.LiveRecalc;
 
+                // Глобальные правила размещения
+                Workspace.MinWindowLengthRatio = s.MinWindowLengthRatio;
+                Workspace.SupplyRule = s.SupplyRule;
+                Workspace.ExhaustRule = s.ExhaustRule;
+                Workspace.FixedSupplyCount = s.FixedSupplyCount;
+                Workspace.SupplyPattern = s.SupplyPattern;
+                Workspace.ExhaustPattern = s.ExhaustPattern;
+                Workspace.SingleDeviceRule = s.SingleDeviceRule;
+                Workspace.GrilleVelocityMs = s.GrilleVelocityMs;
+
                 OnPropertyChanged(nameof(ShowTreePanel));
                 OnPropertyChanged(nameof(ShowPropsPanel));
                 OnPropertyChanged(nameof(ShowEnclosureCurves));
@@ -780,6 +798,14 @@ namespace HVACLoadTerminals.App.ViewModels
                 OnPropertyChanged(nameof(TreePanelWidth));
                 OnPropertyChanged(nameof(PropsPanelWidth));
                 OnPropertyChanged(nameof(LiveRecalc));
+                OnPropertyChanged(nameof(MinLengthRatio));
+                OnPropertyChanged(nameof(SupplyRule));
+                OnPropertyChanged(nameof(ExhaustRule));
+                OnPropertyChanged(nameof(FixedSupplyCount));
+                OnPropertyChanged(nameof(SupplyPattern));
+                OnPropertyChanged(nameof(ExhaustPattern));
+                OnPropertyChanged(nameof(SingleDeviceRule));
+                OnPropertyChanged(nameof(GrilleVelocityMs));
             }
             finally
             {
@@ -801,6 +827,14 @@ namespace HVACLoadTerminals.App.ViewModels
                 _uiSettings.TreePanelWidth = _treePanelWidth;
                 _uiSettings.PropsPanelWidth = _propsPanelWidth;
                 _uiSettings.LiveRecalc = Workspace.LiveRecalc;
+                _uiSettings.MinWindowLengthRatio = Workspace.MinWindowLengthRatio;
+                _uiSettings.SupplyRule = Workspace.SupplyRule;
+                _uiSettings.ExhaustRule = Workspace.ExhaustRule;
+                _uiSettings.FixedSupplyCount = Workspace.FixedSupplyCount;
+                _uiSettings.SupplyPattern = Workspace.SupplyPattern;
+                _uiSettings.ExhaustPattern = Workspace.ExhaustPattern;
+                _uiSettings.SingleDeviceRule = Workspace.SingleDeviceRule;
+                _uiSettings.GrilleVelocityMs = Workspace.GrilleVelocityMs;
                 _uiSettings.Reconcile();
                 _uiStore.Save(_uiSettings);
             }
