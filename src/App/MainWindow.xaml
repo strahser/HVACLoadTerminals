@@ -167,6 +167,8 @@
                           ToolTip="Стены/окна рисуются только у помещений, выделенных в списке"/>
                 <MenuItem Header="Подписи комнат на плане" IsCheckable="True"
                           IsChecked="{Binding ShowRoomLabels}"/>
+                <Separator/>
+                <MenuItem Header="Менеджер уровней…" Click="Levels_Click" ToolTip="Сводка по уровням: помещения, площадь, нагрузки, вкл/без систем"/>
             </MenuItem>
             <MenuItem Header="_Экспорт">
                 <MenuItem Header="📄 Отчёт уровня (HTML)" Command="{Binding ExportReportCommand}"/>
@@ -489,8 +491,9 @@
                                        Foreground="{StaticResource TextMuted}"/>
                             <ComboBox ItemsSource="{Binding Levels}"
                                       SelectedItem="{Binding SelectedLevel}"
-                                      Width="170" Margin="0,0,12,0"
+                                      Width="150" Margin="0,0,4,0"
                                       HorizontalAlignment="Left"/>
+                            <Button Content="▦" Width="26" Margin="0,0,12,0" Click="Levels_Click" ToolTip="Менеджер уровней"/>
                             <TextBlock Text="Цвета:" VerticalAlignment="Center" Margin="0,0,4,0"
                                        Foreground="{StaticResource TextMuted}"/>
                             <ComboBox ItemsSource="{Binding PlanColorModes}"

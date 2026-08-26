@@ -454,6 +454,12 @@ namespace HVACLoadTerminals.App
             win.ShowDialog();
         }
 
+        private void Levels_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new LevelsWindow(_vm) { Owner = this };
+            win.ShowDialog();
+        }
+
         private void QuickCatalog_Click(object sender, RoutedEventArgs e)
         {
             var sysVm = _vm.Crm.SelectedSystem;
