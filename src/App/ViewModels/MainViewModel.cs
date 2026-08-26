@@ -605,7 +605,7 @@ namespace HVACLoadTerminals.App.ViewModels
             PushUndo($"Назначение системы ({_selectedRoomIds.Count} помещ.)");
             var ids = new HashSet<string>(_selectedRoomIds);
             var owner = System.Windows.Application.Current?.MainWindow;
-            var window = new AssignSystemWindow(
+            var window = new AssignSystemWizardWindow(
                 Workspace, row => ids.Contains(row.RoomId)) { Owner = owner };
             window.ShowDialog();
             PopUndoIfNoChange(before);

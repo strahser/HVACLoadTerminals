@@ -124,7 +124,7 @@ namespace HVACLoadTerminals.App
             if (ids.Count == 0) return;
             string before = _vm.Workspace.CaptureStateJson();
             _vm.PushUndo($"Назначить систему уровню {lvl}");
-            var win = new HVACLoadTerminals.Infrastructure.Presentation.AssignSystemWindow(_vm.Workspace, r => ids.Contains(r.RoomId)) { Owner = this };
+            var win = new HVACLoadTerminals.Infrastructure.Presentation.AssignSystemWizardWindow(_vm.Workspace, r => ids.Contains(r.RoomId)) { Owner = this };
             bool? res = win.ShowDialog();
             _vm.PopUndoIfNoChange(before);
             BuildGrid();
