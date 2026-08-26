@@ -177,6 +177,28 @@
                         </Grid>
                         <TextBlock Text="Скорость в живом сечении решётки (расчёт A=L/(3600·v))" Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,2,0,0"/>
 
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="Отопление — зазоры"/>
+                        <Grid Margin="0,2,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="70"/>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="70"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="От стены, мм:"/>
+                            <TextBox Grid.Column="1" x:Name="HeatingWallBox" Padding="4,2" TextChanged="HeatingBox_TextChanged"/>
+                            <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="Высота, мм:" Margin="6,0,0,0"/>
+                            <TextBox Grid.Column="3" x:Name="HeatingMountBox" Padding="4,2" TextChanged="HeatingBox_TextChanged"/>
+                        </Grid>
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="70"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Край, мм:"/>
+                            <TextBox Grid.Column="1" x:Name="HeatingEdgeBox" Padding="4,2" TextChanged="HeatingBox_TextChanged"/>
+                        </Grid>
+
                         <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,12,0,8"/>
                         <TextBlock Text="Профили" Style="{StaticResource SectionHeader}" Margin="0,0,0,4"/>
                         <StackPanel Orientation="Horizontal">

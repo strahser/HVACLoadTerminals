@@ -538,6 +538,22 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
+        public double HeatingWallOffsetMm
+        {
+            get => Workspace.HeatingWallOffsetMm;
+            set { Workspace.HeatingWallOffsetMm = value; OnPropertyChanged(nameof(HeatingWallOffsetMm)); SaveUiSettings(); RecalcIfLive(); }
+        }
+        public double HeatingMountHeightMm
+        {
+            get => Workspace.HeatingMountHeightMm;
+            set { Workspace.HeatingMountHeightMm = value; OnPropertyChanged(nameof(HeatingMountHeightMm)); SaveUiSettings(); RecalcIfLive(); }
+        }
+        public double HeatingEdgeMarginMm
+        {
+            get => Workspace.HeatingEdgeMarginMm;
+            set { Workspace.HeatingEdgeMarginMm = value; OnPropertyChanged(nameof(HeatingEdgeMarginMm)); SaveUiSettings(); RecalcIfLive(); }
+        }
+
         public bool LiveRecalc
         {
             get => Workspace.LiveRecalc;
@@ -882,6 +898,9 @@ namespace HVACLoadTerminals.App.ViewModels
                 Workspace.ExhaustPattern = s.ExhaustPattern;
                 Workspace.SingleDeviceRule = s.SingleDeviceRule;
                 Workspace.GrilleVelocityMs = s.GrilleVelocityMs;
+                Workspace.HeatingWallOffsetMm = s.HeatingWallOffsetMm;
+                Workspace.HeatingMountHeightMm = s.HeatingMountHeightMm;
+                Workspace.HeatingEdgeMarginMm = s.HeatingEdgeMarginMm;
 
                 OnPropertyChanged(nameof(ShowTreePanel));
                 OnPropertyChanged(nameof(ShowPropsPanel));
@@ -901,6 +920,9 @@ namespace HVACLoadTerminals.App.ViewModels
                 OnPropertyChanged(nameof(ExhaustPattern));
                 OnPropertyChanged(nameof(SingleDeviceRule));
                 OnPropertyChanged(nameof(GrilleVelocityMs));
+                OnPropertyChanged(nameof(HeatingWallOffsetMm));
+                OnPropertyChanged(nameof(HeatingMountHeightMm));
+                OnPropertyChanged(nameof(HeatingEdgeMarginMm));
             }
             finally
             {
@@ -931,6 +953,9 @@ namespace HVACLoadTerminals.App.ViewModels
                 _uiSettings.ExhaustPattern = Workspace.ExhaustPattern;
                 _uiSettings.SingleDeviceRule = Workspace.SingleDeviceRule;
                 _uiSettings.GrilleVelocityMs = Workspace.GrilleVelocityMs;
+                _uiSettings.HeatingWallOffsetMm = Workspace.HeatingWallOffsetMm;
+                _uiSettings.HeatingMountHeightMm = Workspace.HeatingMountHeightMm;
+                _uiSettings.HeatingEdgeMarginMm = Workspace.HeatingEdgeMarginMm;
                 _uiSettings.Reconcile();
                 _uiStore.Save(_uiSettings);
             }

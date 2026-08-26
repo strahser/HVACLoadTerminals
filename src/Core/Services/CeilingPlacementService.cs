@@ -209,6 +209,9 @@ namespace HVACLoadTerminals.Core.Services
             {
                 mountHeightMm = Math.Max(0, options.RoomHeightMm - ceilingOffsetMm);
             }
+            // RW11: warning высоты потолка вне рекомендации 2,5–4,0 м (оптимально 2,6–4,0)
+            if (options.RoomHeightMm > 0 && (options.RoomHeightMm < 2500 || options.RoomHeightMm > 4000))
+                warnings.Add($"Высота потолка {options.RoomHeightMm:F0} мм вне рекомендации 2500–4000 мм");
 
             // --- geometry: inward offset, then grid ---
             // RoomDetailWindow: wall-specific размещение вдоль выбранной стены (нумерация 1..n)

@@ -140,6 +140,10 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public CeilingCountRule SupplyRule { get; set; } = CeilingCountRule.Auto;
         public CeilingCountRule ExhaustRule { get; set; } = CeilingCountRule.ByFlow;
 
+        public double HeatingWallOffsetMm { get; set; } = 60;
+        public double HeatingMountHeightMm { get; set; } = 500;
+        public double HeatingEdgeMarginMm { get; set; } = 50;
+
         private int _fixedSupplyCount = 2;
         /// <summary>Фиксированное количество приборов притока для правила Fixed (≥ 1).</summary>
         public int FixedSupplyCount
@@ -613,7 +617,10 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         row.HeatingW, catalog,
                         new HeatingPlacementOptions
                         {
-                            MinLengthToWindowRatio = MinWindowLengthRatio
+                            MinLengthToWindowRatio = MinWindowLengthRatio,
+                            CenterOffsetMm = HeatingWallOffsetMm,
+                            MountHeightMm = HeatingMountHeightMm,
+                            EdgeMarginMm = HeatingEdgeMarginMm
                         });
                     placements.AddRange(res.Placements);
                     roomWarnings.AddRange(res.Warnings);

@@ -54,6 +54,9 @@ namespace HVACLoadTerminals.App
             SingleRuleCombo.SelectedItem = _vm.SingleDeviceRule;
             VelocitySlider.Value = _vm.GrilleVelocityMs;
             VelocityBox.Text = _vm.GrilleVelocityMs.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+            HeatingWallBox.Text = _vm.HeatingWallOffsetMm.ToString("F0");
+            HeatingMountBox.Text = _vm.HeatingMountHeightMm.ToString("F0");
+            HeatingEdgeBox.Text = _vm.HeatingEdgeMarginMm.ToString("F0");
             _syncing = false;
         }
 
@@ -167,6 +170,8 @@ namespace HVACLoadTerminals.App
         private void Pattern_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => BuildPreview();
         private void SingleRule_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => BuildPreview();
 
+        private void HeatingBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) { /* live preview not needed for heating */ }
+
         private void Apply_Click(object sender, RoutedEventArgs e)
         {
             if (!double.TryParse(RatioBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double ratio) || ratio < 0.3 || ratio > 1.0)
@@ -175,6 +180,12 @@ namespace HVACLoadTerminals.App
             { MessageBox.Show("Скорость 0.5–5.0 м/с"); return; }
             if (!int.TryParse(FixedBox.Text, out int fc) || fc < 1 || fc > 10)
             { MessageBox.Show("N 1–10"); return; }
+            if (!double.TryParse(HeatingWallBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double hw) || hw < 10 || hw > 200)
+            { MessageBox.Show("От стены отопления 10–200 мм"); return; }
+            if (!double.TryParse(HeatingMountBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double hm) || hm < 100 || hm > 1000)
+            { MessageBox.Show("Высота отопления 100–1000 мм"); return; }
+            if (!double.TryParse(HeatingEdgeBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double he) || he < 10 || he > 200)
+            { MessageBox.Show("Край отопления 10–200 мм"); return; }
 
             string before = _vm.Workspace.CaptureStateJson();
             _vm.PushUndo("Правила размещения");
@@ -186,6 +197,9 @@ namespace HVACLoadTerminals.App
             _vm.ExhaustPattern = (WallPattern)ExhaustPatternCombo.SelectedItem;
             _vm.SingleDeviceRule = (SingleRule)SingleRuleCombo.SelectedItem;
             _vm.GrilleVelocityMs = vel;
+            _vm.HeatingWallOffsetMm = hw;
+            _vm.HeatingMountHeightMm = hm;
+            _vm.HeatingEdgeMarginMm = he;
             _vm.PopUndoIfNoChange(before);
             // UiSettings уже сохранён через setters
             if (_vm.LiveRecalc) _vm.Workspace.Calculate();
@@ -203,6 +217,7 @@ namespace HVACLoadTerminals.App
             ExhaustPatternCombo.SelectedItem = WallPattern.ShortSide;
             SingleRuleCombo.SelectedItem = SingleRule.Center;
             VelocitySlider.Value = 2.0; VelocityBox.Text = "2.0";
+            HeatingWallBox.Text = "60"; HeatingMountBox.Text = "500"; HeatingEdgeBox.Text = "50";
             _syncing = false;
             BuildPreview();
         }
@@ -218,6 +233,9 @@ namespace HVACLoadTerminals.App
             public WallPattern ExhaustPattern { get; set; }
             public SingleRule SingleDeviceRule { get; set; }
             public double GrilleVelocityMs { get; set; }
+            public double HeatingWallOffsetMm { get; set; }
+            public double HeatingMountHeightMm { get; set; }
+            public double HeatingEdgeMarginMm { get; set; }
         }
 
         private void LoadProfileList()
@@ -245,6 +263,9 @@ namespace HVACLoadTerminals.App
                 SupplyPattern = (WallPattern)SupplyPatternCombo.SelectedItem,
                 ExhaustPattern = (WallPattern)ExhaustPatternCombo.SelectedItem,
                 SingleDeviceRule = (SingleRule)SingleRuleCombo.SelectedItem,
+                HeatingWallOffsetMm = double.TryParse(HeatingWallBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double hw) ? hw : 60,
+                HeatingMountHeightMm = double.TryParse(HeatingMountBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double hm) ? hm : 500,
+                HeatingEdgeMarginMm = double.TryParse(HeatingEdgeBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double he) ? he : 50,
                 GrilleVelocityMs = VelocitySlider.Value
             };
             string path = Path.Combine(_profilesDir, name + ".json");
@@ -271,6 +292,9 @@ namespace HVACLoadTerminals.App
                 ExhaustPatternCombo.SelectedItem = dto.ExhaustPattern;
                 SingleRuleCombo.SelectedItem = dto.SingleDeviceRule;
                 VelocitySlider.Value = dto.GrilleVelocityMs; VelocityBox.Text = dto.GrilleVelocityMs.ToString("F1");
+                HeatingWallBox.Text = dto.HeatingWallOffsetMm.ToString("F0");
+                HeatingMountBox.Text = dto.HeatingMountHeightMm.ToString("F0");
+                HeatingEdgeBox.Text = dto.HeatingEdgeMarginMm.ToString("F0");
                 _syncing = false;
                 BuildPreview();
                 StatusText.Text = $"Профиль загружен: {name}";

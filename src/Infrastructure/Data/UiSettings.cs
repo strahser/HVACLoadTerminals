@@ -55,6 +55,10 @@ namespace HVACLoadTerminals.Infrastructure.Data
         public SingleRule SingleDeviceRule { get; set; } = SingleRule.Center;
         public double GrilleVelocityMs { get; set; } = 2.0;
         public double WallClearanceMm { get; set; } = 500;
+        // RW11: отопление — зазоры
+        public double HeatingWallOffsetMm { get; set; } = 60;
+        public double HeatingMountHeightMm { get; set; } = 500;
+        public double HeatingEdgeMarginMm { get; set; } = 50;
 
         // ---- Колонки гридов (ключ = заголовок столбца) ----
         public Dictionary<string, double> RoomsGridColumnWidths { get; set; }
@@ -121,6 +125,9 @@ namespace HVACLoadTerminals.Infrastructure.Data
             if (!Enum.IsDefined(typeof(WallPattern), SupplyPattern)) SupplyPattern = WallPattern.LongSide;
             if (!Enum.IsDefined(typeof(WallPattern), ExhaustPattern)) ExhaustPattern = WallPattern.ShortSide;
             if (!Enum.IsDefined(typeof(SingleRule), SingleDeviceRule)) SingleDeviceRule = SingleRule.Center;
+            HeatingWallOffsetMm = Clamp(HeatingWallOffsetMm, 10, 200, 60);
+            HeatingMountHeightMm = Clamp(HeatingMountHeightMm, 100, 1000, 500);
+            HeatingEdgeMarginMm = Clamp(HeatingEdgeMarginMm, 10, 200, 50);
 
             ReconcileColumns(RoomsGridColumnWidths, KnownRoomsColumns);
             ReconcileColumns(PlacementsGridColumnWidths, KnownPlacementsColumns);
