@@ -56,8 +56,7 @@ namespace HVACLoadTerminals.App
             if (room.Systems.Count > 0)
                 SystemCombo.SelectedIndex = 0;
 
-            // SingleRule
-            SingleRuleCombo.ItemsSource = Enum.GetValues(typeof(SingleRule)).Cast<SingleRule>().ToList();
+            // SingleRule — только отображение в SingleRuleText
             try { _polygon = _snapRoom.ToPolygon(); } catch { _polygon = null; }
             if (_polygon != null)
             {
@@ -68,7 +67,6 @@ namespace HVACLoadTerminals.App
                 _edges = RoomGeometryAnalyzer.GetEdges(_polygon);
             }
 
-            BuildWallCombo();
             BuildFilterCombo();
             LoadSelectedSystem();
             BuildPlot();
@@ -82,40 +80,13 @@ namespace HVACLoadTerminals.App
             FilterCombo.SelectedIndex = 0;
         }
 
-        private void BuildWallCombo()
-        {
-            var items = new List<string> { "Авто (по паттерну/сетке)" };
-            if (_polygon != null && _edges.Count > 0)
-            {
-                for (int i = 0; i < _edges.Count; i++)
-                {
-                    double lenMm = LengthUnitConverter.UnitsToMm(_edges[i].Length);
-                    items.Add($"Стена {i + 1} — {lenMm:F0} мм");
-                }
-            }
-            WallCombo.ItemsSource = items;
-        }
+        // BuildWallCombo удалён — только просмотр, геометрия в мастере
 
         private void LoadSelectedSystem()
         {
             _selectedSystem = SystemCombo.SelectedItem as SystemRow;
             if (_selectedSystem == null) return;
-            // WallIndex 0-based -> UI 1-based (0 = Авто)
-            if (_selectedSystem.WallIndex.HasValue)
-            {
-                int idx = _selectedSystem.WallIndex.Value;
-                if (idx >= 0 && idx < _edges.Count)
-                    WallCombo.SelectedIndex = idx + 1;
-                else
-                    WallCombo.SelectedIndex = 0;
-                OffsetBox.Text = _selectedSystem.WallOffsetMm?.ToString("F0") ?? "";
-            }
-            else
-            {
-                WallCombo.SelectedIndex = 0;
-                OffsetBox.Text = _selectedSystem.WallOffsetMm?.ToString("F0") ?? "";
-            }
-            SingleRuleCombo.SelectedItem = _selectedSystem.SingleRuleOverride ?? SingleRule.Center;
+            // только отображение — правка в мастере
             UpdateWallInfo();
         }
 
@@ -124,35 +95,29 @@ namespace HVACLoadTerminals.App
             if (_selectedSystem == null)
             {
                 WallInfoText.Text = "";
+                SingleRuleText.Text = "";
                 return;
             }
-            if (WallCombo.SelectedIndex <= 0)
+            if (_selectedSystem.WallIndex.HasValue)
             {
-                WallInfoText.Text = "Авто: используется общий паттерн (длинная/короткая сторона) или потолочная сетка. Смещение берётся из „Отступ от стен“ системы.";
-            }
-            else
-            {
-                int wallIdx = WallCombo.SelectedIndex - 1;
+                int wallIdx = _selectedSystem.WallIndex.Value;
                 if (wallIdx >= 0 && wallIdx < _edges.Count)
                 {
                     var e = _edges[wallIdx];
                     double lenMm = LengthUnitConverter.UnitsToMm(e.Length);
-                    double offset = ParseOffset() ?? _selectedSystem.EdgeOffsetOverrideMm ?? 500;
-                    WallInfoText.Text = $"Стена {wallIdx + 1}: длина {lenMm:F0} мм, нормаль внутрь ({e.InwardNormal.X:F2},{e.InwardNormal.Y:F2}), смещение {offset:F0} мм.";
+                    double offset = _selectedSystem.WallOffsetMm ?? _selectedSystem.EdgeOffsetOverrideMm ?? 500;
+                    WallInfoText.Text = $"Стена {wallIdx + 1}: длина {lenMm:F0} мм, нормаль внутрь ({e.InwardNormal.X:F2},{e.InwardNormal.Y:F2}), смещение {offset:F0} мм (задано в мастере).";
                 }
+                else WallInfoText.Text = $"Стена {_selectedSystem.WallIndex.Value + 1}: вне диапазона";
             }
+            else
+            {
+                WallInfoText.Text = "Авто: используется общий паттерн (длинная/короткая сторона) или потолочная сетка. Смещение — из настроек системы (мастер).";
+            }
+            SingleRuleText.Text = _selectedSystem.SingleRuleOverride?.ToString() ?? "Центр (по умолчанию)";
         }
 
-        private double? ParseOffset()
-        {
-            string t = OffsetBox.Text?.Trim() ?? "";
-            if (string.IsNullOrEmpty(t)) return null;
-            if (double.TryParse(t, System.Globalization.NumberStyles.Any,
-                    System.Globalization.CultureInfo.InvariantCulture, out double v) ||
-                double.TryParse(t, out v))
-                return v;
-            return null;
-        }
+        private double? ParseOffset() => null; // Offset теперь только в мастере
 
         private void BuildPlot()
         {
@@ -197,8 +162,8 @@ namespace HVACLoadTerminals.App
                     TextHorizontalAlignment = OxyPlot.HorizontalAlignment.Center,
                     TextVerticalAlignment = OxyPlot.VerticalAlignment.Middle
                 });
-                // Тонкая линия стены для визуального выделения
-                bool isSelectedWall = WallCombo.SelectedIndex - 1 == i;
+                // Выделение выбранной стены (из SystemRow.WallIndex)
+                bool isSelectedWall = _selectedSystem != null && _selectedSystem.WallIndex == i;
                 if (isSelectedWall)
                 {
                     var wallLine = new LineSeries
@@ -237,13 +202,13 @@ namespace HVACLoadTerminals.App
             }
             catch { }
 
-            // Смещение выбранной стены (красная пунктирная линия параллельная стене)
-            if (WallCombo.SelectedIndex > 0 && _selectedSystem != null)
+            // Линия размещения для выбранной стены (из SystemRow)
+            if (_selectedSystem != null && _selectedSystem.WallIndex.HasValue)
             {
-                int idx = WallCombo.SelectedIndex - 1;
+                int idx = _selectedSystem.WallIndex.Value;
                 if (idx >= 0 && idx < _edges.Count)
                 {
-                    double offMm = ParseOffset() ?? _selectedSystem.WallOffsetMm ?? _selectedSystem.EdgeOffsetOverrideMm ?? 500;
+                    double offMm = _selectedSystem.WallOffsetMm ?? _selectedSystem.EdgeOffsetOverrideMm ?? 500;
                     var e = _edges[idx];
                     double offFt = LengthUnitConverter.MmToUnits(offMm);
                     var n = e.InwardNormal;
@@ -293,11 +258,11 @@ namespace HVACLoadTerminals.App
                         var scatter = new ScatterSeries { MarkerType = MarkerType.Circle, MarkerSize = 5, MarkerFill = OxyColors.Red, Title = $"{target.Name} — {preview.Count} шт" };
                         foreach (var p in preview) scatter.Points.Add(new ScatterPoint(p.X * mmPerFoot, p.Y * mmPerFoot));
                         model.Series.Add(scatter);
-                        PreviewInfoText.Text = $"Превью: {target.Name} — {preview.Count} прибора(ов) вдоль стены {(WallCombo.SelectedIndex > 0 ? WallCombo.SelectedIndex.ToString() : "авто")}.";
+                        PreviewInfoText.Text = $"Превью: {target.Name} — {preview.Count} прибора(ов) вдоль стены {(target.WallIndex.HasValue ? (target.WallIndex.Value + 1).ToString() : "авто")}.";
                     }
                     else
                     {
-                        PreviewInfoText.Text = WallCombo.SelectedIndex > 0 ? "Превью: нет приборов (проверьте расход/каталог)." : "Превью: авто-режим — считайте проектом для деталей.";
+                        PreviewInfoText.Text = target.WallIndex.HasValue ? "Превью: нет приборов (проверьте расход/каталог)." : "Превью: авто-режим — считайте проектом для деталей.";
                     }
                 }
             }
@@ -321,10 +286,9 @@ namespace HVACLoadTerminals.App
                 SingleRule = _selectedSystem.SingleRuleOverride ?? SingleRule.Center,
                 EdgeOffsetOverrideMm = _selectedSystem.EdgeOffsetOverrideMm,
                 CeilingOffsetOverrideMm = _selectedSystem.CeilingOffsetOverrideMm,
-                TargetWallIndex = WallCombo.SelectedIndex > 0 ? WallCombo.SelectedIndex - 1 : (int?)null,
-                TargetWallOffsetMm = ParseOffset(),
+                TargetWallIndex = _selectedSystem.WallIndex,
+                TargetWallOffsetMm = _selectedSystem.WallOffsetMm,
                 RoomHeightMm = 0
-                // RoomHeightMm берём из снапшота если есть, но для превью не критично
             };
             if (_snapRoom != null && _snapRoom.UpperLimitOffset > 0)
                 opts.RoomHeightMm = LengthUnitConverter.UnitsToMm(_snapRoom.UpperLimitOffset);
@@ -344,8 +308,8 @@ namespace HVACLoadTerminals.App
             var catalog = _presenter.GetCatalog();
             var sysCatalog = catalog.Where(d => d.SystemType == sys.Type && d.MaxFlowRate > 0).ToList();
             if (sysCatalog.Count == 0 && sys.Type != HVACSystemType.Heating) return null;
-            int? wallIdx = useWallCombo && sys == _selectedSystem && WallCombo.SelectedIndex > 0 ? WallCombo.SelectedIndex - 1 : sys.WallIndex;
-            double? wallOff = useWallCombo && sys == _selectedSystem ? ParseOffset() : sys.WallOffsetMm;
+            int? wallIdx = sys.WallIndex;
+            double? wallOff = sys.WallOffsetMm;
             var opts = new CeilingPlacementOptions
             {
                 CountRule = sys.CountRuleOverride ?? _presenter.SupplyRule,
@@ -416,31 +380,8 @@ namespace HVACLoadTerminals.App
             SummaryGrid.ItemsSource = rows;
         }
 
-        private void WallCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            UpdateWallInfo();
-            BuildPlot();
-        }
+        // WallCombo/Offset/SingleRule — только просмотр, правка в мастере
 
-        private void OffsetBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        {
-            UpdateWallInfo();
-            BuildPlot();
-        }
-
-        private void SingleRuleCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            BuildPlot();
-        }
-
-        private void ResetWall_Click(object sender, RoutedEventArgs e)
-        {
-            WallCombo.SelectedIndex = 0;
-            OffsetBox.Text = "";
-            if (_selectedSystem != null)
-                SingleRuleCombo.SelectedItem = SingleRule.Center;
-            BuildPlot();
-        }
 
         private void AddSystem_Click(object sender, RoutedEventArgs e)
         {
@@ -493,41 +434,8 @@ namespace HVACLoadTerminals.App
 
         private void Apply_Click(object sender, RoutedEventArgs e)
         {
-            if (_selectedSystem == null)
-            {
-                StatusText.Text = "Выберите систему.";
-                return;
-            }
-            string offsetText = OffsetBox.Text?.Trim() ?? "";
-            double? offset = null;
-            if (!string.IsNullOrEmpty(offsetText))
-            {
-                if (!double.TryParse(offsetText, System.Globalization.NumberStyles.Any,
-                        System.Globalization.CultureInfo.InvariantCulture, out double v) &&
-                    !double.TryParse(offsetText, out v))
-                {
-                    StatusText.Text = "Смещение — число в мм.";
-                    return;
-                }
-                if (v < 0 || v > 100000)
-                {
-                    StatusText.Text = "Смещение 0–100000 мм.";
-                    return;
-                }
-                offset = v;
-            }
-
-            int? wallIdx = null;
-            if (WallCombo.SelectedIndex > 0)
-                wallIdx = WallCombo.SelectedIndex - 1;
-
-            // Сохраняем в SystemRow (per-room)
-            _selectedSystem.WallIndex = wallIdx;
-            _selectedSystem.WallOffsetMm = offset;
-            if (SingleRuleCombo.SelectedItem is SingleRule sr)
-                _selectedSystem.SingleRuleOverride = sr;
-
-            DialogResult = true;
+            // Только просмотр — геометрия правится в мастере, здесь только закрытие
+            DialogResult = false;
             Close();
         }
 

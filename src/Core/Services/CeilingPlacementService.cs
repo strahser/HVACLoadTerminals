@@ -260,7 +260,7 @@ namespace HVACLoadTerminals.Core.Services
             EdgeInfo? selectedEdge = null;
             double rowRotation = 0;
 
-            if (count == 1)
+            if (count == 1 && options.Pattern == WallPattern.CeilingGrid)
             {
                 points = new List<Point2D> { SingleDevicePoint(offsetPolygon, options.SingleRule) };
             }
@@ -421,9 +421,7 @@ namespace HVACLoadTerminals.Core.Services
             double rowRotation = Math.Atan2(n.Y, n.X);
             if (count == 1)
             {
-                // SingleRule: Corner = начало.offset ребра, Center = середина.offset ребра
-                points = new List<Point2D>(1);
-                points.Add(options.SingleRule == SingleRule.Corner ? offsetEdge.Start : offsetEdge.MidPoint);
+                points = DistributeAlongEdge(offsetEdge, count, options, warnings);
             }
             else
             {
@@ -542,6 +540,20 @@ namespace HVACLoadTerminals.Core.Services
             }
             double startOff = Math.Min(LengthUnitConverter.MmToUnits(effStartOffMm), len / 2);
             double usable = Math.Max(0, len - 2 * startOff);
+
+            if (count == 1)
+            {
+                if (options.SingleRule == SingleRule.Corner)
+                {
+                    // угол — у начала ребра с отступом StartOffset
+                    pts.Add(new Point2D(edge.Start.X + edge.Direction.X * startOff, edge.Start.Y + edge.Direction.Y * startOff));
+                }
+                else
+                {
+                    pts.Add(edge.MidPoint);
+                }
+                return pts;
+            }
 
             if (usable <= 1e-9 || count < 1)
             {
