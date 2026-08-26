@@ -120,6 +120,8 @@
                     <StackPanel Margin="10,8,10,8">
                         <TextBlock Text="Система помещения" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"/>
                         <ComboBox x:Name="SystemCombo" Margin="0,4,0,4" DisplayMemberPath="Name" SelectionChanged="SystemCombo_SelectionChanged"/>
+                        <TextBlock Text="Фильтр превью (все/одна):" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,2,0,2"/>
+                        <ComboBox x:Name="FilterCombo" Margin="0,0,0,6" SelectionChanged="FilterCombo_SelectionChanged" ToolTip="Показать одну систему или все вместе"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                             <Button Content="➕ Система (мастер)…" Padding="6,3" Click="AddSystem_Click"
                                     ToolTip="Мастер: Тип→Класс→Производитель→Марка→Расчёт для этого помещения"/>
@@ -153,6 +155,17 @@
                         <ComboBox x:Name="SingleRuleCombo" Margin="0,0,0,8" SelectionChanged="SingleRuleCombo_SelectionChanged"/>
 
                         <TextBlock x:Name="WallInfoText" Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,8" LineHeight="15"/>
+
+                        <TextBlock Text="Сводка по системам" FontWeight="SemiBold" Foreground="{StaticResource TextDark}" Margin="0,4,0,4"/>
+                        <DataGrid x:Name="SummaryGrid" Height="110" Margin="0,0,0,8" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" FontSize="11" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="70"/>
+                                <DataGridTextColumn Header="Σ расход" Binding="{Binding FlowText}" Width="70"/>
+                                <DataGridTextColumn Header="N" Binding="{Binding CountText}" Width="40"/>
+                                <DataGridTextColumn Header="Марка" Binding="{Binding DeviceText}" Width="*"/>
+                                <DataGridTextColumn Header="k_ef" Binding="{Binding KefText}" Width="50"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
 
                         <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,4,0,8"/>
 

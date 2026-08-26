@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
@@ -40,6 +41,18 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             private set { _previewModel = value; OnPropertyChanged(nameof(PreviewModel)); }
         }
 
+        private readonly ObservableCollection<WizardSummaryRow> _summaryRows = new();
+        public ObservableCollection<WizardSummaryRow> SummaryRows => _summaryRows;
+
+        public class WizardSummaryRow
+        {
+            public string SystemName { get; set; } = "";
+            public string TotalFlowText { get; set; } = "";
+            public string CountText { get; set; } = "";
+            public string DeviceText { get; set; } = "";
+            public string KefText { get; set; } = "";
+        }
+
         public AssignSystemWizardWindow(
             SnapshotWorkspacePresenter presenter, Func<RoomRow, bool> roomFilter)
         {
@@ -71,7 +84,37 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             FillDevices();
             TxtFlow.Text = DefaultFlow().ToString("F0");
             UpdateExistingSummary();
+            SummaryGrid.ItemsSource = _summaryRows;
+            FillWallCombo();
             RebuildPreview();
+        }
+
+        private void FillWallCombo()
+        {
+            var rooms = _presenter.Rooms.Where(_roomFilter).ToList();
+            if (rooms.Count == 1)
+            {
+                var snap = _presenter.FindSnapshotRoom(rooms[0].RoomId);
+                var poly = snap?.ToPolygon();
+                if (poly != null)
+                {
+                    poly = PolygonSanitizer.MergeCollinear(poly);
+                    var edges = RoomGeometryAnalyzer.GetEdges(poly);
+                    var items = new List<string> { "Авто (по паттерну)" };
+                    for (int i = 0; i < edges.Count; i++)
+                        items.Add($"Стена {i + 1} — {LengthUnitConverter.UnitsToMm(edges[i].Length):F0} мм");
+                    CmbWall.ItemsSource = items;
+                    CmbWall.SelectedIndex = 0;
+                    CmbWall.IsEnabled = true;
+                    TxtWallOffset.IsEnabled = true;
+                    return;
+                }
+            }
+            CmbWall.ItemsSource = new[] { "Авто (только для 1 помещения)" };
+            CmbWall.SelectedIndex = 0;
+            CmbWall.IsEnabled = false;
+            TxtWallOffset.IsEnabled = false;
+            TxtWallOffset.Text = "";
         }
 
         /// <summary>RW11: сводка контекста — какие системы уже стоят у выбранных помещений.</summary>
@@ -217,6 +260,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         {
             try
             {
+                _summaryRows.Clear();
                 var roomRow = _presenter.Rooms.FirstOrDefault(_roomFilter);
                 var snap = _presenter.FindSnapshotRoom(roomRow?.RoomId ?? "");
                 var rawPoly = snap?.ToPolygon();
@@ -270,6 +314,14 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         };
                         count = Math.Max(1, count);
 
+                        int? wallIdx = null;
+                        double? wallOff = null;
+                        if (_presenter.Rooms.Count(_roomFilter) == 1 && CmbWall.SelectedIndex > 0)
+                        {
+                            wallIdx = CmbWall.SelectedIndex - 1;
+                            double wo = ParseNum(TxtWallOffset.Text);
+                            if (wo > 0) wallOff = wo;
+                        }
                         var opts = new CeilingPlacementOptions
                         {
                             CountRule = CmbRule.SelectedIndex switch
@@ -290,7 +342,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                             },
                             SingleRule = CmbSingleRule.SelectedIndex == 1 ? SingleRule.Corner : SingleRule.Center,
                             EdgeOffsetOverrideMm = ParseNum(TxtEdgeOffset.Text) is > 0 ? ParseNum(TxtEdgeOffset.Text) : null,
-                            TargetWallIndex = null
+                            TargetWallIndex = wallIdx,
+                            TargetWallOffsetMm = wallOff
                         };
                         var res = new CeilingPlacementService().PlaceForRoom(
                             roomRow.RoomId, poly, flow, roomRow.Area,
@@ -317,11 +370,24 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                                 ? $", k_ef ≈ {flow / res.Placements.Count / Math.Max(1, device.MaxFlowRate):F2}"
                                 : "") +
                             (res.Warnings.Count > 0 ? $" · ⚠ {string.Join("; ", res.Warnings.Take(2))}" : "");
+                        // сводка таблицы
+                        int roomsCnt = _presenter.Rooms.Count(_roomFilter);
+                        string totalFlowText = roomsCnt > 1 ? $"{flow:F0}×{roomsCnt}={flow * roomsCnt:F0}" : $"{flow:F0}";
+                        string deviceText = device != null ? $"{device.Manufacturer} {device.TypeName}".Trim() : "(автоподбор)";
+                        string kefText = device != null && res.Placements.Count > 0 ? $"{flow / res.Placements.Count / Math.Max(1, device.MaxFlowRate):F2}" : "—";
+                        _summaryRows.Add(new WizardSummaryRow { SystemName = TxtName.Text.Trim(), TotalFlowText = totalFlowText, CountText = res.Placements.Count.ToString(), DeviceText = deviceText, KefText = kefText });
                         PreviewModel = model;
                         return;
                     }
                 }
 
+                // сводка для отопления/пустого
+                if (SelectedType == HVACSystemType.Heating)
+                {
+                    var dev = FindDevice(((DeviceItem?)CmbDevice.SelectedItem)?.Id);
+                    string dText = dev != null ? $"{dev.Manufacturer} {dev.TypeName}".Trim() : "(автоподбор)";
+                    _summaryRows.Add(new WizardSummaryRow { SystemName = TxtName.Text.Trim(), TotalFlowText = "—", CountText = "—", DeviceText = dText, KefText = "—" });
+                }
                 // Отопление или нет данных: только контур + подпись.
                 PreviewInfoText.Text = SelectedType == HVACSystemType.Heating
                     ? "Отопление расставляется движком по окнам от нагрузки Q."
@@ -377,6 +443,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         private void Rule_Changed(object sender, SelectionChangedEventArgs e) => RebuildPreviewSafe();
         private void Pattern_Changed(object sender, SelectionChangedEventArgs e) => RebuildPreviewSafe();
         private void Preview_Changed(object sender, TextChangedEventArgs e) => RebuildPreviewSafe();
+        private void Wall_Changed(object sender, SelectionChangedEventArgs e) => RebuildPreviewSafe();
+        private void Recalc_Click(object sender, RoutedEventArgs e) => RebuildPreview();
 
         private void RebuildPreviewSafe()
         {
@@ -432,7 +500,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     3 => WallPattern.CeilingGrid,
                     _ => null
                 },
-                ReplaceSameType = ChkReplace.IsChecked == true
+                ReplaceSameType = ChkReplace.IsChecked == true,
+                WallIndex = _presenter.Rooms.Count(_roomFilter) == 1 && CmbWall.SelectedIndex > 0 ? CmbWall.SelectedIndex - 1 : null,
+                WallOffsetMm = _presenter.Rooms.Count(_roomFilter) == 1 && CmbWall.SelectedIndex > 0 ? (ParseNum(TxtWallOffset.Text) is > 0 ? ParseNum(TxtWallOffset.Text) : null) : null
             };
 
             if (spec.SystemType != HVACSystemType.Heating && spec.FlowM3hPerRoom <= 0)

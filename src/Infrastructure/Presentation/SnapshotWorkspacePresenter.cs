@@ -488,7 +488,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     PatternOverride = ps.PatternOverride,
                     SingleRuleOverride = ps.SingleRuleOverride,
                     EdgeOffsetOverrideMm = ps.EdgeOffsetOverrideMm,
-                    CeilingOffsetOverrideMm = ps.CeilingOffsetOverrideMm
+                    CeilingOffsetOverrideMm = ps.CeilingOffsetOverrideMm,
+                    WallIndex = spec.WallIndex,
+                    WallOffsetMm = spec.WallOffsetMm
                 });
                 SyncRoomToCatalog(room, "mass", markExistingManual: false);
                 room.RefreshSystemSummary();

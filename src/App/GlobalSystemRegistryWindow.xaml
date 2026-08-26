@@ -1,0 +1,63 @@
+<Window x:Class="HVACLoadTerminals.App.GlobalSystemRegistryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Глобальный справочник систем проекта"
+        Height="520" Width="860"
+        WindowStartupLocation="CenterOwner"
+        Background="#F4F6F9">
+    <Window.Resources>
+        <SolidColorBrush x:Key="PanelBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#D5DBE3"/>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#2D6CDF"/>
+        <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#1B4FA8"/>
+        <SolidColorBrush x:Key="TextDark" Color="#212B36"/>
+        <SolidColorBrush x:Key="TextMuted" Color="#637381"/>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Background" Value="{StaticResource PanelBg}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style TargetType="Button" x:Key="PrimaryButton" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PrimaryDarkBrush}"/>
+        </Style>
+    </Window.Resources>
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#1F2A44" Padding="14,6">
+            <StackPanel>
+                <TextBlock Text="Системы проекта — глобальный реестр" FontSize="14" FontWeight="Bold" Foreground="White"/>
+                <TextBlock Text="Перечень всех систем проекта (П1, В1, К1 …). Правка здесь меняет все комнаты сразу. Добавление — через мастер." FontSize="11" Foreground="#AEBBD4" TextWrapping="Wrap" Margin="0,2,0,0"/>
+            </StackPanel>
+        </Border>
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,6">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="➕ Добавить через мастер…" Click="AddViaWizard_Click" ToolTip="Открыть мастер для создания новой системы"/>
+                    <Button Content="✏ Переименовать" Click="Rename_Click"/>
+                    <Button Content="🗑 Удалить" Click="Delete_Click" ToolTip="Удалить систему из проекта (из всех комнат)"/>
+                    <Button Content="Отмена" Click="Cancel_Click" Margin="12,0,0,0"/>
+                    <Button Content="Применить и пересчитать" Style="{StaticResource PrimaryButton}" Click="Apply_Click"/>
+                </StackPanel>
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap"/>
+            </DockPanel>
+        </Border>
+        <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Margin="8">
+            <DataGrid x:Name="Grid" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" Margin="6" RowHeight="26" AlternatingRowBackground="#F7F9FC">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Имя" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                    <DataGridTextColumn Header="Тип" Binding="{Binding TypeText}" Width="110" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Прибор / марка" Binding="{Binding DeviceText}" Width="220" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Правило" Binding="{Binding RuleText}" Width="110" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Паттерн" Binding="{Binding PatternText}" Width="110" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Комнат" Binding="{Binding RoomCount}" Width="60" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Приборов" Binding="{Binding DeviceCount}" Width="70" IsReadOnly="True"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </DockPanel>
+</Window>

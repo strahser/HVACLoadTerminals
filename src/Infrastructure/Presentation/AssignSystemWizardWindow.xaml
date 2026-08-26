@@ -159,8 +159,13 @@
                         <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="Отступ от стены, мм:"/>
                         <TextBox Grid.Row="4" Grid.Column="1" x:Name="TxtEdgeOffset" Padding="4,3" TextChanged="Preview_Changed"
                                  ToolTip="Пусто = по типоразмеру/умолчанию; перекрывает каталог"/>
-                        <TextBlock Grid.Row="5" Style="{StaticResource FieldLabel}" Text="Название системы:"/>
+                        <TextBlock Grid.Row="5" Style="{StaticResource FieldLabel}" Text="Привязка к стене:"/>
                         <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <ComboBox x:Name="CmbWall" Width="180" SelectionChanged="Wall_Changed" ToolTip="Для 1 помещения: Авто или Стена 1..n (как в Плане помещения)"/>
+                            <TextBox x:Name="TxtWallOffset" Width="60" Margin="6,0,0,0" Padding="4,3" TextChanged="Preview_Changed" ToolTip="Смещение от стены, мм (пусто=как Отступ)"/>
+                        </StackPanel>
+                        <TextBlock Grid.Row="6" Style="{StaticResource FieldLabel}" Text=""/>
+                        <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                             <CheckBox x:Name="ChkReplace" Content="заменить однотипные в выбранных помещениях" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Grid>
@@ -175,6 +180,19 @@
                 <DockPanel Margin="8">
                     <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"
                                Text="Превью — первое выбранное помещение" Margin="2,2,2,6"/>
+                    <DockPanel DockPanel.Dock="Top" Margin="2,0,2,4">
+                        <Button DockPanel.Dock="Right" Content="⟳ Пересчитать" Click="Recalc_Click" ToolTip="Пересчитать превью и сводку" Padding="8,4"/>
+                        <TextBlock Text="Сводка расчёта:" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource TextMuted}"/>
+                    </DockPanel>
+                    <DataGrid x:Name="SummaryGrid" DockPanel.Dock="Top" Height="95" Margin="2,0,2,6" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" FontSize="11" Background="White" BorderBrush="{StaticResource BorderBrush}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
+                            <DataGridTextColumn Header="Σ расход" Binding="{Binding TotalFlowText}" Width="80"/>
+                            <DataGridTextColumn Header="N" Binding="{Binding CountText}" Width="45"/>
+                            <DataGridTextColumn Header="Марка" Binding="{Binding DeviceText}" Width="*"/>
+                            <DataGridTextColumn Header="k_ef" Binding="{Binding KefText}" Width="55"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
                     <TextBlock DockPanel.Dock="Bottom" x:Name="PreviewInfoText" FontSize="11"
                                Foreground="{StaticResource PrimaryDarkBrush}" TextWrapping="Wrap" Margin="2,6,2,0"/>
                     <oxy:PlotView Model="{Binding PreviewModel}"/>

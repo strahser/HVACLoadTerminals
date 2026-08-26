@@ -212,6 +212,7 @@
             <MenuItem Header="_Сервис">
                 <MenuItem Header="🗂 Каталог приборов…" Command="{Binding EditCatalogCommand}"/>
                 <MenuItem Header="⚙ Правила размещения…" Click="PlacementRules_Click" ToolTip="Глобальные правила: доля от окна, паттерны, скорость решёток — слайдеры + превью + профили"/>
+                <MenuItem Header="📚 Справочник систем проекта…" Click="GlobalSystems_Click" ToolTip="Глобальный реестр всех систем П1/В1/К/ОТ — переименование, смена марки, удаление из всех комнат"/>
                 <MenuItem Header="↻ Вернуть авторасчёт нагрузок" Command="{Binding RecalcLoadsCommand}"/>
                 <MenuItem Header="Живой пересчёт" IsCheckable="True"
                           IsChecked="{Binding LiveRecalc}"
@@ -538,6 +539,8 @@
                             <CheckBox Content="Все системы уровня" IsChecked="{Binding ShowAllSystemsInPlan}"
                                       VerticalAlignment="Center" Margin="12,0,0,0"
                                       ToolTip="Показать приборы всех систем уровня (игнор фильтр дерева) — для оценки подвесного потолка"/>
+                            <Button Content="⚙" Width="26" Margin="12,0,0,0" Click="PlacementRules_Click" ToolTip="Правила размещения — слайдеры + превью + профили"/>
+                            <Button Content="📚" Width="26" Margin="4,0,0,0" Click="GlobalSystems_Click" ToolTip="Глобальный справочник систем проекта"/>
                         </DockPanel>
 
                         <!-- Экспертные параметры расстановки (свёрнуты) -->

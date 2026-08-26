@@ -105,5 +105,9 @@ public class AssignSystemSpec
 
     /// <summary>Снять существующие системы того же типа перед назначением.</summary>
     public bool ReplaceSameType { get; set; }
+
+    /// <summary>Для 1 помещения: привязка к стене 1..n; null=авто.</summary>
+    public int? WallIndex { get; set; }
+    public double? WallOffsetMm { get; set; }
 }
 }

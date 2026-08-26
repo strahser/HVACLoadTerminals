@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
@@ -28,6 +29,15 @@ namespace HVACLoadTerminals.App
         {
             get => _plotModel;
             set { _plotModel = value; OnPropertyChanged(nameof(PlotModel)); }
+        }
+
+        public class SummaryRow
+        {
+            public string SystemName { get; set; } = "";
+            public string FlowText { get; set; } = "";
+            public string CountText { get; set; } = "";
+            public string DeviceText { get; set; } = "";
+            public string KefText { get; set; } = "";
         }
 
         public RoomDetailWindow(RoomRow room, SnapshotRoom snapRoom, SnapshotWorkspacePresenter presenter)
@@ -59,8 +69,17 @@ namespace HVACLoadTerminals.App
             }
 
             BuildWallCombo();
+            BuildFilterCombo();
             LoadSelectedSystem();
             BuildPlot();
+        }
+
+        private void BuildFilterCombo()
+        {
+            var items = new List<string> { "— Все системы —" };
+            foreach (var s in _room.Systems) items.Add(s.Name);
+            FilterCombo.ItemsSource = items;
+            FilterCombo.SelectedIndex = 0;
         }
 
         private void BuildWallCombo()
@@ -243,32 +262,46 @@ namespace HVACLoadTerminals.App
                 }
             }
 
-            // Превью приборов для выбранной системы (если есть)
-            if (_selectedSystem != null)
+            // Превью: фильтр Все vs одна (как в мастере: zoom vs overview)
+            string filterName = FilterCombo?.SelectedItem as string ?? "— Все системы —";
+            bool showAll = FilterCombo == null || FilterCombo.SelectedIndex <= 0 || filterName == "— Все системы —";
+            if (showAll)
             {
-                var preview = BuildPreviewPlacements();
-                if (preview != null && preview.Count > 0)
+                var palette = new[] { OxyColors.Red, OxyColors.Green, OxyColors.Blue, OxyColors.Purple, OxyColors.Orange, OxyColors.Teal, OxyColors.Brown };
+                int idx = 0, total = 0;
+                foreach (var sys in _room.Systems ?? new List<SystemRow>())
                 {
-                    var scatter = new ScatterSeries
-                    {
-                        MarkerType = MarkerType.Circle,
-                        MarkerSize = 5,
-                        MarkerFill = OxyColors.Red,
-                        Title = $"{_selectedSystem.Name} — {preview.Count} шт"
-                    };
-                    foreach (var p in preview)
-                        scatter.Points.Add(new ScatterPoint(p.X * mmPerFoot, p.Y * mmPerFoot));
-                    model.Series.Add(scatter);
-                    PreviewInfoText.Text = $"Превью: {_selectedSystem.Name} — {preview.Count} прибора(ов) вдоль стены {(WallCombo.SelectedIndex > 0 ? WallCombo.SelectedIndex.ToString() : "авто")}.";
+                    if (!sys.IsIncluded) continue;
+                    var pl = BuildPreviewPlacementsForSystem(sys, useWallCombo: false);
+                    if (pl == null || pl.Count == 0) continue;
+                    var col = palette[idx++ % palette.Length];
+                    var sc = new ScatterSeries { MarkerType = MarkerType.Circle, MarkerSize = 5, MarkerFill = col, Title = $"{sys.Name} — {pl.Count} шт" };
+                    foreach (var p in pl) sc.Points.Add(new ScatterPoint(p.X * mmPerFoot, p.Y * mmPerFoot));
+                    model.Series.Add(sc);
+                    total += pl.Count;
                 }
-                else
+                PreviewInfoText.Text = total > 0 ? $"Превью всех систем: {total} приборов" : "Нет приборов для превью (проверьте расходы/каталог)";
+            }
+            else
+            {
+                var target = _room.Systems.FirstOrDefault(s => s.Name == filterName) ?? _selectedSystem;
+                if (target != null)
                 {
-                    PreviewInfoText.Text = WallCombo.SelectedIndex > 0
-                        ? "Превью: нет приборов (проверьте расход/каталог)."
-                        : "Превью: авто-режим — считайте проектом для деталей.";
+                    var preview = BuildPreviewPlacementsForSystem(target, useWallCombo: true);
+                    if (preview != null && preview.Count > 0)
+                    {
+                        var scatter = new ScatterSeries { MarkerType = MarkerType.Circle, MarkerSize = 5, MarkerFill = OxyColors.Red, Title = $"{target.Name} — {preview.Count} шт" };
+                        foreach (var p in preview) scatter.Points.Add(new ScatterPoint(p.X * mmPerFoot, p.Y * mmPerFoot));
+                        model.Series.Add(scatter);
+                        PreviewInfoText.Text = $"Превью: {target.Name} — {preview.Count} прибора(ов) вдоль стены {(WallCombo.SelectedIndex > 0 ? WallCombo.SelectedIndex.ToString() : "авто")}.";
+                    }
+                    else
+                    {
+                        PreviewInfoText.Text = WallCombo.SelectedIndex > 0 ? "Превью: нет приборов (проверьте расход/каталог)." : "Превью: авто-режим — считайте проектом для деталей.";
+                    }
                 }
             }
-
+            UpdateSummary();
             PlotModel = model;
         }
 
@@ -304,11 +337,83 @@ namespace HVACLoadTerminals.App
             return res.Placements.Select(p => p.Position).ToList();
         }
 
+        private List<Point2D>? BuildPreviewPlacementsForSystem(SystemRow sys, bool useWallCombo)
+        {
+            if (sys == null || _polygon == null) return null;
+            if (sys.FlowM3h <= 0 && sys.Type != HVACSystemType.Heating) return null;
+            var catalog = _presenter.GetCatalog();
+            var sysCatalog = catalog.Where(d => d.SystemType == sys.Type && d.MaxFlowRate > 0).ToList();
+            if (sysCatalog.Count == 0 && sys.Type != HVACSystemType.Heating) return null;
+            int? wallIdx = useWallCombo && sys == _selectedSystem && WallCombo.SelectedIndex > 0 ? WallCombo.SelectedIndex - 1 : sys.WallIndex;
+            double? wallOff = useWallCombo && sys == _selectedSystem ? ParseOffset() : sys.WallOffsetMm;
+            var opts = new CeilingPlacementOptions
+            {
+                CountRule = sys.CountRuleOverride ?? _presenter.SupplyRule,
+                FixedCount = sys.FixedCountOverride ?? 2,
+                Pattern = sys.PatternOverride ?? WallPattern.LongSide,
+                SingleRule = sys.SingleRuleOverride ?? SingleRule.Center,
+                EdgeOffsetOverrideMm = sys.EdgeOffsetOverrideMm,
+                CeilingOffsetOverrideMm = sys.CeilingOffsetOverrideMm,
+                TargetWallIndex = wallIdx,
+                TargetWallOffsetMm = wallOff,
+                RoomHeightMm = _snapRoom != null && _snapRoom.UpperLimitOffset > 0 ? LengthUnitConverter.UnitsToMm(_snapRoom.UpperLimitOffset) : 0
+            };
+            double area = _room.Area > 0 ? _room.Area : _polygon.Area * LengthUnitConverter.MmPerFoot / 1_000_000.0;
+            var res = _ceilingService.PlaceForRoom(_room.RoomId, _polygon, sys.FlowM3h, area, sys.Type, sysCatalog, sys.Name, opts);
+            if (res.Placements.Count == 0) return null;
+            return res.Placements.Select(p => p.Position).ToList();
+        }
+
         private void SystemCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             _selectedSystem = SystemCombo.SelectedItem as SystemRow;
             LoadSelectedSystem();
             BuildPlot();
+        }
+
+        private void FilterCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            BuildPlot();
+        }
+
+        private void UpdateSummary()
+        {
+            var rows = new List<SummaryRow>();
+            var catalog = _presenter.GetCatalog();
+            foreach (var sys in _room.Systems ?? new List<SystemRow>())
+            {
+                if (!sys.IsIncluded) continue;
+                var sysCatalog = catalog.Where(d => d.SystemType == sys.Type && d.MaxFlowRate > 0).ToList();
+                if (sysCatalog.Count == 0 && sys.Type != HVACSystemType.Heating)
+                {
+                    rows.Add(new SummaryRow { SystemName = sys.Name, FlowText = $"{sys.FlowM3h:F0}", CountText = "—", DeviceText = "нет прибора", KefText = "—" });
+                    continue;
+                }
+                if (sys.Type == HVACSystemType.Heating)
+                {
+                    rows.Add(new SummaryRow { SystemName = sys.Name, FlowText = $"{_room.HeatingW:F0} Вт", CountText = "—", DeviceText = "отопление", KefText = "—" });
+                    continue;
+                }
+                var opts = new CeilingPlacementOptions
+                {
+                    CountRule = sys.CountRuleOverride ?? _presenter.SupplyRule,
+                    FixedCount = sys.FixedCountOverride ?? 2,
+                    Pattern = sys.PatternOverride ?? WallPattern.LongSide,
+                    SingleRule = sys.SingleRuleOverride ?? SingleRule.Center,
+                    EdgeOffsetOverrideMm = sys.EdgeOffsetOverrideMm,
+                    CeilingOffsetOverrideMm = sys.CeilingOffsetOverrideMm,
+                    TargetWallIndex = sys.WallIndex,
+                    TargetWallOffsetMm = sys.WallOffsetMm,
+                    RoomHeightMm = _snapRoom.UpperLimitOffset > 0 ? LengthUnitConverter.UnitsToMm(_snapRoom.UpperLimitOffset) : 0
+                };
+                double area = _room.Area > 0 ? _room.Area : (_polygon?.Area ?? 0) * LengthUnitConverter.MmPerFoot / 1_000_000.0;
+                var res = _ceilingService.PlaceForRoom(_room.RoomId, _polygon!, sys.FlowM3h, area, sys.Type, sysCatalog, sys.Name, opts);
+                var dev = sysCatalog.FirstOrDefault(d => d.Id == sys.DeviceTypeId) ?? sysCatalog.FirstOrDefault();
+                string devText = dev != null ? $"{dev.Manufacturer} {dev.TypeName}".Trim() : "(авто)";
+                string kef = (dev != null && res.Placements.Count > 0) ? $"{sys.FlowM3h / res.Placements.Count / Math.Max(1, dev.MaxFlowRate):F2}" : "—";
+                rows.Add(new SummaryRow { SystemName = sys.Name, FlowText = $"{sys.FlowM3h:F0}", CountText = res.Placements.Count.ToString(), DeviceText = devText, KefText = kef });
+            }
+            SummaryGrid.ItemsSource = rows;
         }
 
         private void WallCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -368,6 +473,7 @@ namespace HVACLoadTerminals.App
                 SystemCombo.SelectedItem =
                     _room.Systems.FirstOrDefault(s => s.Name == selectedName) ?? _room.Systems[0];
             SubtitleText.Text = $"Уровень: {_room.LevelName} · S={_room.Area:F1} м² · систем: {_room.Systems.Count}";
+            BuildFilterCombo();
         }
 
         private void RecalcRoom_Click(object sender, RoutedEventArgs e)

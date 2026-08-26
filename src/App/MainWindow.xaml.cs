@@ -568,6 +568,15 @@ namespace HVACLoadTerminals.App
             win.ShowDialog();
         }
 
+        private void GlobalSystems_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new GlobalSystemRegistryWindow(_vm.Workspace) { Owner = this };
+            win.ShowDialog();
+            // после правки глобального реестра — обновить дерево/план
+            _vm.Crm.RebuildTree();
+            _vm.RoomsView.Refresh();
+        }
+
         private void Levels_Click(object sender, RoutedEventArgs e)
         {
             var win = new LevelsWindow(_vm) { Owner = this };
