@@ -152,8 +152,7 @@ namespace HVACLoadTerminals.Core.Services
             if (devices.Count == 0)
                 return Warn($"В каталоге нет приборов типа {systemType} с расходом");
 
-            // Best device: fewest units, ties to higher capacity then min reserve
-            // (analog ChooseTerminalFromDB: min count → max flow → k_ef).
+            // Best device: prototype get_minimum_device_number → min N → min Qmax (minimal reserve)
             int CountFor(TerminalDevice d) =>
                 Math.Max(
                     d.ServiceAreaM2 > 0 && roomAreaM2 > 0
@@ -161,10 +160,25 @@ namespace HVACLoadTerminals.Core.Services
                         : 0,
                     requiredFlow > 0 ? (int)Math.Ceiling(requiredFlow / d.MaxFlowRate) : 0);
 
-            var device = devices
-                .OrderBy(CountFor)
-                .ThenByDescending(d => d.MaxFlowRate)
-                .First();
+            TerminalDevice device;
+            if (options.CountRule == CeilingCountRule.Fixed)
+            {
+                int fixedN = Math.Max(1, options.FixedCount);
+                var withReserve = devices
+                    .Select(d => new { Device = d, Reserve = d.MaxFlowRate - (requiredFlow / (double)fixedN) })
+                    .Where(x => x.Reserve >= -1e-9)
+                    .OrderBy(x => x.Reserve)
+                    .ThenBy(x => x.Device.MaxFlowRate)
+                    .ToList();
+                if (withReserve.Count > 0)
+                    device = withReserve.First().Device;
+                else
+                    device = devices.OrderBy(CountFor).ThenBy(d => d.MaxFlowRate).First();
+            }
+            else
+            {
+                device = devices.OrderBy(CountFor).ThenBy(d => d.MaxFlowRate).First();
+            }
 
             // Quantity from the CHOSEN device only (its own service area + flow);
             // never inflate by other catalog entries.
@@ -260,9 +274,20 @@ namespace HVACLoadTerminals.Core.Services
             EdgeInfo? selectedEdge = null;
             double rowRotation = 0;
 
-            if (count == 1 && options.Pattern == WallPattern.CeilingGrid)
+            if (count == 1)
             {
-                points = new List<Point2D> { SingleDevicePoint(offsetPolygon, options.SingleRule) };
+                // одиночный — на линии смещения выбранной стены (угол/центр), не в центре
+                WallPattern pat = options.Pattern == WallPattern.CeilingGrid ? WallPattern.LongSide : options.Pattern;
+                selectedEdge = SelectWallEdge(offsetPolygon, pat, options.ExplicitSide);
+                if (selectedEdge == null || selectedEdge.Length <= 1e-9)
+                {
+                    points = new List<Point2D> { SingleDevicePoint(offsetPolygon, options.SingleRule) };
+                }
+                else
+                {
+                    rowRotation = Math.Atan2(selectedEdge.InwardNormal.Y, selectedEdge.InwardNormal.X);
+                    points = DistributeAlongEdge(selectedEdge, count, options, warnings);
+                }
             }
             else if (options.Pattern != WallPattern.CeilingGrid)
             {

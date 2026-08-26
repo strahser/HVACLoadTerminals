@@ -58,10 +58,14 @@ namespace HVACLoadTerminals.Core.Tests
 
             Assert.Single(result.Placements);
             var p = result.Placements[0].Position;
-            // Near the centre of the room.
-            Assert.InRange(p.X, 2000 * Ft, 4000 * Ft);
-            Assert.InRange(p.Y, 1000 * Ft, 3000 * Ft);
+            // После фикса одиночный на длинной стороне (центр), y = 500 или 3500 для 6000x4000
+            Assert.InRange(Mm(p.X), 2900, 3100);
+            bool nearBottom = Math.Abs(Mm(p.Y) - 500) < 60;
+            bool nearTop = Math.Abs(Mm(p.Y) - 3500) < 60;
+            Assert.True(nearBottom || nearTop, $"y should be near long wall (500/3500), got {Mm(p.Y):F0}");
         }
+
+        private static double Mm(double units) => LengthUnitConverter.UnitsToMm(units);
 
         [Fact]
         public void Flow_Drives_Count_When_No_Service_Area()

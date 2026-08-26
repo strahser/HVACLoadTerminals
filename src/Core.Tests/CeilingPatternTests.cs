@@ -142,8 +142,11 @@ namespace HVACLoadTerminals.Core.Tests
 
             Assert.Single(res.Placements);
             var p = res.Placements[0].Position;
+            // После фикса: одиночный на линии длинной стороны (центр), y = 500 или 7500
             Assert.InRange(Mm(p.X), 5900, 6100);
-            Assert.InRange(Mm(p.Y), 3900, 4100);
+            bool nearBottom = Math.Abs(Mm(p.Y) - 500) < 60;
+            bool nearTop = Math.Abs(Mm(p.Y) - 7500) < 60;
+            Assert.True(nearBottom || nearTop, $"y should be near long wall (500/7500), got {Mm(p.Y):F0}");
         }
 
         [Fact]
@@ -157,9 +160,12 @@ namespace HVACLoadTerminals.Core.Tests
 
             Assert.Single(res.Placements);
             var p = res.Placements[0].Position;
-            // Ближайшая к углу (0,0) точка офсет-контура ≈ (500, 500).
-            Assert.InRange(Mm(p.X), 450, 550);
-            Assert.InRange(Mm(p.Y), 450, 550);
+            // Угол линии смещения длинной стороны: старт с отступом 0 (для общего LongSide) → углы (500,500) или (11500,7500)
+            bool nearCorner = (Math.Abs(Mm(p.X) - 500) < 60 && Math.Abs(Mm(p.Y) - 500) < 60) ||
+                              (Math.Abs(Mm(p.X) - 11500) < 60 && Math.Abs(Mm(p.Y) - 7500) < 60) ||
+                              (Math.Abs(Mm(p.X) - 11500) < 60 && Math.Abs(Mm(p.Y) - 500) < 60) ||
+                              (Math.Abs(Mm(p.X) - 500) < 60 && Math.Abs(Mm(p.Y) - 7500) < 60);
+            Assert.True(nearCorner, $"corner should be near offset corner, got ({Mm(p.X):F0},{Mm(p.Y):F0})");
         }
 
         // ------------------------------------------------------------------
