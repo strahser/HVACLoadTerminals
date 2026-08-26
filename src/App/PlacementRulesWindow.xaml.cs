@@ -57,6 +57,7 @@ namespace HVACLoadTerminals.App
             HeatingWallBox.Text = _vm.HeatingWallOffsetMm.ToString("F0");
             HeatingMountBox.Text = _vm.HeatingMountHeightMm.ToString("F0");
             HeatingEdgeBox.Text = _vm.HeatingEdgeMarginMm.ToString("F0");
+            ShortSideTwoCheck.IsChecked = _vm.ShortSideTwoIfLongerThan1500;
             _syncing = false;
         }
 
@@ -83,7 +84,8 @@ namespace HVACLoadTerminals.App
                     Pattern = supplyPattern,
                     SingleRule = singleRule,
                     WallClearanceMm = 500,
-                    RoomHeightMm = 3000
+                    RoomHeightMm = 3000,
+                    ShortSideTwoIfLongerThan1500 = ShortSideTwoCheck.IsChecked == true
                 };
                 // Use room area 60m2
                 var res = svc.PlaceForRoom("preview", poly, 1200, 60, HVACSystemType.Supply, new[] { device }, "П1", opts);
@@ -171,6 +173,7 @@ namespace HVACLoadTerminals.App
         private void SingleRule_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => BuildPreview();
 
         private void HeatingBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) { /* live preview not needed for heating */ }
+        private void ShortSideTwo_Click(object sender, RoutedEventArgs e) => BuildPreview();
 
         private void Apply_Click(object sender, RoutedEventArgs e)
         {
@@ -200,6 +203,7 @@ namespace HVACLoadTerminals.App
             _vm.HeatingWallOffsetMm = hw;
             _vm.HeatingMountHeightMm = hm;
             _vm.HeatingEdgeMarginMm = he;
+            _vm.ShortSideTwoIfLongerThan1500 = ShortSideTwoCheck.IsChecked == true;
             _vm.PopUndoIfNoChange(before);
             // UiSettings уже сохранён через setters
             if (_vm.LiveRecalc) _vm.Workspace.Calculate();
@@ -218,6 +222,7 @@ namespace HVACLoadTerminals.App
             SingleRuleCombo.SelectedItem = SingleRule.Center;
             VelocitySlider.Value = 2.0; VelocityBox.Text = "2.0";
             HeatingWallBox.Text = "60"; HeatingMountBox.Text = "500"; HeatingEdgeBox.Text = "50";
+            ShortSideTwoCheck.IsChecked = false;
             _syncing = false;
             BuildPreview();
         }
@@ -236,6 +241,7 @@ namespace HVACLoadTerminals.App
             public double HeatingWallOffsetMm { get; set; }
             public double HeatingMountHeightMm { get; set; }
             public double HeatingEdgeMarginMm { get; set; }
+            public bool ShortSideTwoIfLongerThan1500 { get; set; }
         }
 
         private void LoadProfileList()
@@ -266,7 +272,8 @@ namespace HVACLoadTerminals.App
                 HeatingWallOffsetMm = double.TryParse(HeatingWallBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double hw) ? hw : 60,
                 HeatingMountHeightMm = double.TryParse(HeatingMountBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double hm) ? hm : 500,
                 HeatingEdgeMarginMm = double.TryParse(HeatingEdgeBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double he) ? he : 50,
-                GrilleVelocityMs = VelocitySlider.Value
+                GrilleVelocityMs = VelocitySlider.Value,
+                ShortSideTwoIfLongerThan1500 = ShortSideTwoCheck.IsChecked == true
             };
             string path = Path.Combine(_profilesDir, name + ".json");
             File.WriteAllText(path, JsonConvert.SerializeObject(dto, Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter()));
@@ -295,6 +302,7 @@ namespace HVACLoadTerminals.App
                 HeatingWallBox.Text = dto.HeatingWallOffsetMm.ToString("F0");
                 HeatingMountBox.Text = dto.HeatingMountHeightMm.ToString("F0");
                 HeatingEdgeBox.Text = dto.HeatingEdgeMarginMm.ToString("F0");
+                ShortSideTwoCheck.IsChecked = dto.ShortSideTwoIfLongerThan1500;
                 _syncing = false;
                 BuildPreview();
                 StatusText.Text = $"Профиль загружен: {name}";

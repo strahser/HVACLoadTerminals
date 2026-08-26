@@ -63,6 +63,8 @@ namespace HVACLoadTerminals.Infrastructure.Data
         public double HeatingWallOffsetMm { get; set; } = 60;
         public double HeatingMountHeightMm { get; set; } = 500;
         public double HeatingEdgeMarginMm { get; set; } = 50;
+        /// <summary>IC5.7/RW11: 2 прибора на короткой стороне если её длина >1500 мм.</summary>
+        public bool ShortSideTwoIfLongerThan1500 { get; set; } = false;
 
         // ---- Колонки гридов (ключ = заголовок столбца) ----
         public Dictionary<string, double> RoomsGridColumnWidths { get; set; }

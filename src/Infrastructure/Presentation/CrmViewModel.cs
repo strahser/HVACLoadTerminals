@@ -19,6 +19,19 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
         public ObservableCollection<CrmNode> TreeRoots { get; } = new();
 
+        private string _treeSearchText = "";
+        public string TreeSearchText
+        {
+            get => _treeSearchText;
+            set
+            {
+                if (_treeSearchText == value) return;
+                _treeSearchText = value ?? "";
+                OnPropertyChanged(nameof(TreeSearchText));
+                RebuildTree();
+            }
+        }
+
         private CrmNode? _selectedNode;
         public CrmNode? SelectedNode
         {
@@ -115,11 +128,14 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 n.Children.Clear();
             TreeRoots.Clear();
 
+            // ---- Системные узлы из последнего расчёта ----
             var bySystem = _lastRows
                 .GroupBy(p => p.SystemName)
                 .OrderBy(g => g.Key == "Отопление" ? 1 : 0)
                 .ThenByDescending(g => g.Sum(p => p.CalculatedFlow))
                 .ToList();
+
+            var builtRoots = new List<CrmNode>();
 
             foreach (var sys in bySystem)
             {
@@ -157,8 +173,63 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     }
                     systemNode.Children.Add(levelNode);
                 }
-                TreeRoots.Add(systemNode);
+                builtRoots.Add(systemNode);
             }
+
+            // ---- IC5.4: ветка «Без систем (N)» ----
+            try
+            {
+                var withoutRooms = Workspace.Rooms
+                    .Where(r => r.Systems == null || r.Systems.Count == 0 || !r.Systems.Any(s => s.IsIncluded))
+                    .ToList();
+                if (withoutRooms.Count > 0)
+                {
+                    var noSysNode = new CrmNode
+                    {
+                        Kind = "NoSystem",
+                        Title = $"Без систем ({withoutRooms.Count})",
+                        DeviceCount = withoutRooms.Count
+                    };
+                    foreach (var lvl in withoutRooms.GroupBy(r => r.LevelName).OrderBy(g => g.Key, StringComparer.Ordinal))
+                    {
+                        var lvlNode = new CrmNode
+                        {
+                            Kind = "NoSystemLevel",
+                            Title = string.IsNullOrEmpty(lvl.Key) ? "(без уровня)" : lvl.Key!,
+                            LevelName = lvl.Key,
+                            DeviceCount = lvl.Count(),
+                            SystemName = null
+                        };
+                        // Tag NoSystem as parent kind to distinguish
+                        foreach (var r in lvl.OrderBy(x => x.Number, StringComparer.Ordinal))
+                        {
+                            lvlNode.Children.Add(new CrmNode
+                            {
+                                Kind = "NoSystemRoom",
+                                Title = $"{r.Number}. {r.Name}",
+                                LevelName = r.LevelName,
+                                RoomId = r.RoomId,
+                                DeviceCount = 0,
+                                SystemName = null
+                            });
+                        }
+                        noSysNode.Children.Add(lvlNode);
+                    }
+                    builtRoots.Insert(0, noSysNode);
+                }
+            }
+            catch { }
+
+            // ---- Поиск по дереву (IC5.4) ----
+            List<CrmNode> toAdd = builtRoots;
+            if (!string.IsNullOrWhiteSpace(_treeSearchText))
+            {
+                string q = _treeSearchText.Trim();
+                toAdd = FilterTree(builtRoots, q);
+            }
+
+            foreach (var n in toAdd)
+                TreeRoots.Add(n);
 
             OnPropertyChanged(nameof(TreeRoots));
 
@@ -174,6 +245,39 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 TreeRoots, previous.Kind, previous.SystemName, previous.LevelName, previous.RoomId);
             if (restored != null && !ReferenceEquals(restored, previous))
                 SelectedNode = restored;
+        }
+
+        private static List<CrmNode> FilterTree(IEnumerable<CrmNode> nodes, string query)
+        {
+            var result = new List<CrmNode>();
+            foreach (var n in nodes)
+            {
+                bool titleMatch = n.Title.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+                var filteredChildren = FilterTree(n.Children, query);
+                if (titleMatch || filteredChildren.Count > 0)
+                {
+                    var copy = new CrmNode
+                    {
+                        Kind = n.Kind,
+                        Title = n.Title,
+                        SystemName = n.SystemName,
+                        LevelName = n.LevelName,
+                        RoomId = n.RoomId,
+                        DeviceCount = n.DeviceCount
+                    };
+                    if (titleMatch)
+                    {
+                        // keep all children when parent matches
+                        foreach (var c in n.Children) copy.Children.Add(c);
+                    }
+                    else
+                    {
+                        foreach (var c in filteredChildren) copy.Children.Add(c);
+                    }
+                    result.Add(copy);
+                }
+            }
+            return result;
         }
 
         private static CrmNode? FindTreeNode(
@@ -239,6 +343,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                            (SelectedNode.SystemName == null ||
                             p.SystemName == SelectedNode.SystemName),
                 "Room" => p.RoomId == SelectedNode.RoomId,
+                "NoSystem" => false,
+                "NoSystemLevel" => false,
+                "NoSystemRoom" => p.RoomId == SelectedNode.RoomId,
                 _ => true
             };
         }

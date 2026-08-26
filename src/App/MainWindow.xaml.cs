@@ -527,6 +527,17 @@ namespace HVACLoadTerminals.App
             }
         }
 
+        private void ContextCopySystemsList_Click(object sender, RoutedEventArgs e)
+        {
+            _vm.CopySystemsFromSelected();
+            if (_vm.HasCopiedSystems) ShowToast($"Скопировано систем: {_vm.CopiedSystems!.Count}", null);
+        }
+
+        private void ContextPasteSystemsList_Click(object sender, RoutedEventArgs e)
+        {
+            _vm.PasteSystemsToSelected();
+        }
+
         // ---- Этап C: пункты меню, требующие доступа к гриду/окну ----
 
         private void SelectAllRows_Click(object sender, RoutedEventArgs e) =>

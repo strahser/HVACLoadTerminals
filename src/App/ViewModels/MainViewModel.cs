@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using HVACLoadTerminals.App.Commands;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Services;
@@ -39,6 +40,12 @@ namespace HVACLoadTerminals.App.ViewModels
         private const int MaxUndo = 20;
         private class UndoEntry { public string Json = ""; public string Label = ""; public DateTime At = DateTime.UtcNow; }
         private bool _isRestoringUndo;
+
+        // ---- IC5.3: буфер копирования систем между помещениями (ПКМ) ----
+        private List<SystemRow>? _copiedSystemsBuffer;
+        public IReadOnlyList<SystemRow>? CopiedSystems => _copiedSystemsBuffer;
+        public bool HasCopiedSystems => _copiedSystemsBuffer != null && _copiedSystemsBuffer.Count > 0;
+        public string PasteSystemsLabel => HasCopiedSystems ? $"Вставить системы ({_copiedSystemsBuffer!.Count})" : "Вставить системы";
 
         public ObservableCollection<PlacementRow> Placements { get; } =
             new ObservableCollection<PlacementRow>();
@@ -242,12 +249,18 @@ namespace HVACLoadTerminals.App.ViewModels
         /// документа план автоматически переключается на первый уровень.</summary>
         private string _levelsSignature = "";
 
+        // ---- IC5.5: автосохранение ----
+        private string _currentProjectPath = "";
+        private readonly System.Windows.Threading.DispatcherTimer _autoSaveTimer;
+        public string CurrentProjectPath => _currentProjectPath;
+
         /// <summary>M1.2: выбор уровня/комнаты в дереве переводит план
         /// на соответствующий уровень (план следует за деревом).</summary>
         private void SyncPlanLevelWithNode()
         {
             var node = Crm.SelectedNode;
-            if (node?.Kind != "Level" && node?.Kind != "Room")
+            if (node == null) return;
+            if (node.Kind != "Level" && node.Kind != "Room" && node.Kind != "NoSystemLevel" && node.Kind != "NoSystemRoom")
                 return;
             string level = node.LevelName ?? "";
             if (level.Length > 0 && SelectedLevel != level && Levels.Contains(level))
@@ -461,6 +474,105 @@ namespace HVACLoadTerminals.App.ViewModels
                 pi.IsSelected = set.Contains(pi.Row.RoomId);
         }
 
+        // ---- IC5.3: копирование/вставка систем между помещениями ----
+        public bool CanCopySystems()
+        {
+            if (_selectedRoomIds.Count == 0) return false;
+            var first = Workspace.Rooms.FirstOrDefault(r => _selectedRoomIds.Contains(r.RoomId));
+            return first != null && first.Systems != null && first.Systems.Count > 0;
+        }
+
+        public void CopySystemsFromSelected()
+        {
+            if (!CanCopySystems())
+            {
+                StatusMessage = "Нет систем для копирования";
+                return;
+            }
+            var first = Workspace.Rooms.FirstOrDefault(r => _selectedRoomIds.Contains(r.RoomId));
+            if (first == null) return;
+            _copiedSystemsBuffer = first.Systems.Select(s => s.Clone()).ToList();
+            OnPropertyChanged(nameof(HasCopiedSystems));
+            OnPropertyChanged(nameof(PasteSystemsLabel));
+            StatusMessage = $"Скопировано систем: {_copiedSystemsBuffer.Count} из {first.Number}. {first.Name}";
+            RequestToast($"Скопировано {_copiedSystemsBuffer.Count} систем", null);
+        }
+
+        public bool CanPasteSystems()
+        {
+            return HasCopiedSystems && _selectedRoomIds.Count > 0;
+        }
+
+        public void PasteSystemsToSelected()
+        {
+            if (!CanPasteSystems() || _copiedSystemsBuffer == null) return;
+            string before = Workspace.CaptureStateJson();
+            PushUndo($"Вставка систем ({_copiedSystemsBuffer.Count} → {_selectedRoomIds.Count} помещ.)");
+            int added = 0, updated = 0, totalTargets = 0;
+            foreach (var room in Workspace.Rooms.Where(r => _selectedRoomIds.Contains(r.RoomId)).ToList())
+            {
+                room.Systems ??= new List<SystemRow>();
+                bool changed = false;
+                foreach (var src in _copiedSystemsBuffer)
+                {
+                    var existing = room.Systems.FirstOrDefault(s => string.Equals(s.Name, src.Name, StringComparison.OrdinalIgnoreCase));
+                    if (existing != null)
+                    {
+                        // обновляем параметры существующей системы
+                        bool diff = existing.Type != src.Type || Math.Abs(existing.FlowM3h - src.FlowM3h) > 0.001 ||
+                                    existing.DeviceTypeId != src.DeviceTypeId || existing.CountRuleOverride != src.CountRuleOverride ||
+                                    existing.FixedCountOverride != src.FixedCountOverride || existing.PatternOverride != src.PatternOverride ||
+                                    existing.SingleRuleOverride != src.SingleRuleOverride || existing.EdgeOffsetOverrideMm != src.EdgeOffsetOverrideMm ||
+                                    existing.CeilingOffsetOverrideMm != src.CeilingOffsetOverrideMm || existing.WallIndex != src.WallIndex ||
+                                    existing.WallOffsetMm != src.WallOffsetMm;
+                        if (diff)
+                        {
+                            existing.Type = src.Type;
+                            existing.FlowM3h = src.FlowM3h;
+                            existing.DeviceTypeId = src.DeviceTypeId;
+                            existing.CountRuleOverride = src.CountRuleOverride;
+                            existing.FixedCountOverride = src.FixedCountOverride;
+                            existing.PatternOverride = src.PatternOverride;
+                            existing.SingleRuleOverride = src.SingleRuleOverride;
+                            existing.EdgeOffsetOverrideMm = src.EdgeOffsetOverrideMm;
+                            existing.CeilingOffsetOverrideMm = src.CeilingOffsetOverrideMm;
+                            existing.WallIndex = src.WallIndex;
+                            existing.WallOffsetMm = src.WallOffsetMm;
+                            updated++;
+                            changed = true;
+                        }
+                    }
+                    else
+                    {
+                        room.Systems.Add(src.Clone());
+                        added++;
+                        changed = true;
+                    }
+                }
+                if (changed)
+                {
+                    Workspace.CommitRoomSystems(room);
+                    room.RefreshSystemSummary();
+                    totalTargets++;
+                }
+            }
+            PopUndoIfNoChange(before);
+            if (Workspace.CaptureStateJson() != before)
+            {
+                MarkDirty();
+                RoomsView.Refresh();
+                UpdateRoomCounts();
+                Crm.RefreshPanels();
+                PlotLevel();
+                StatusMessage = $"Вставлено систем: +{added} новых, {updated} обновлено в {totalTargets} помещ.";
+                RequestToast($"Вставлено {added + updated} систем в {totalTargets} помещ.", () => Undo());
+            }
+            else
+            {
+                StatusMessage = "Вставка не изменила помещения (системы уже есть)";
+            }
+        }
+
         private void ApplyMass()
         {
             if (_selectedRoomIds.Count == 0)
@@ -611,6 +723,12 @@ namespace HVACLoadTerminals.App.ViewModels
             set { Workspace.HeatingEdgeMarginMm = value; OnPropertyChanged(nameof(HeatingEdgeMarginMm)); SaveUiSettings(); RecalcIfLive(); }
         }
 
+        public bool ShortSideTwoIfLongerThan1500
+        {
+            get => Workspace.ShortSideTwoIfLongerThan1500;
+            set { Workspace.ShortSideTwoIfLongerThan1500 = value; OnPropertyChanged(nameof(ShortSideTwoIfLongerThan1500)); SaveUiSettings(); RecalcIfLive(); }
+        }
+
         public bool LiveRecalc
         {
             get => Workspace.LiveRecalc;
@@ -698,9 +816,15 @@ namespace HVACLoadTerminals.App.ViewModels
             try
             {
                 if (isProject)
+                {
                     Workspace.LoadProject(path);
+                    _currentProjectPath = path;
+                }
                 else
+                {
                     Workspace.LoadSnapshot(path);
+                    _currentProjectPath = "";
+                }
                 MarkClean();
                 PushRecent(isProject, path);
                 AppLogger.Info("Recent opened: " + path);
@@ -917,6 +1041,7 @@ namespace HVACLoadTerminals.App.ViewModels
                     File.Exists(_uiSettings.RecentProjects[0]))
                 {
                     Workspace.LoadProject(_uiSettings.RecentProjects[0]);
+                    _currentProjectPath = _uiSettings.RecentProjects[0];
                     MarkClean();
                     StatusMessage = $"Восстановлен последний проект: {_uiSettings.RecentProjects[0]}";
                     AppLogger.Info("AutoLoad last project: " + _uiSettings.RecentProjects[0]);
@@ -925,6 +1050,35 @@ namespace HVACLoadTerminals.App.ViewModels
             catch (Exception ex)
             {
                 AppLogger.Error("AutoLoad last project failed", ex);
+            }
+
+            // IC5.5: автосохранение каждые 5 мин
+            _autoSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
+            _autoSaveTimer.Tick += (s, e) => DoAutoSave();
+            _autoSaveTimer.Start();
+        }
+
+        private void DoAutoSave()
+        {
+            try
+            {
+                if (!IsDirty || string.IsNullOrWhiteSpace(_currentProjectPath) || Workspace.Rooms.Count == 0) return;
+                string dir = Path.GetDirectoryName(_currentProjectPath) ?? "";
+                if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir)) return;
+                string fileName = Path.GetFileName(_currentProjectPath);
+                string autosaveName;
+                if (fileName.EndsWith(".hvacproj.json", StringComparison.OrdinalIgnoreCase))
+                    autosaveName = fileName.Substring(0, fileName.Length - ".hvacproj.json".Length) + ".autosave.hvacproj.json";
+                else
+                    autosaveName = Path.GetFileNameWithoutExtension(fileName) + ".autosave" + Path.GetExtension(fileName);
+                string autosavePath = Path.Combine(dir, autosaveName);
+                Workspace.SaveProject(autosavePath);
+                AppLogger.Info("Autosave: " + autosavePath);
+                StatusMessage = $"Автосохранение: {autosavePath} ({DateTime.Now:HH:mm})";
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Autosave failed", ex);
             }
         }
 
@@ -960,6 +1114,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 Workspace.HeatingWallOffsetMm = s.HeatingWallOffsetMm;
                 Workspace.HeatingMountHeightMm = s.HeatingMountHeightMm;
                 Workspace.HeatingEdgeMarginMm = s.HeatingEdgeMarginMm;
+                Workspace.ShortSideTwoIfLongerThan1500 = s.ShortSideTwoIfLongerThan1500;
 
                 OnPropertyChanged(nameof(ShowTreePanel));
                 OnPropertyChanged(nameof(ShowPropsPanel));
@@ -984,6 +1139,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 OnPropertyChanged(nameof(HeatingWallOffsetMm));
                 OnPropertyChanged(nameof(HeatingMountHeightMm));
                 OnPropertyChanged(nameof(HeatingEdgeMarginMm));
+                OnPropertyChanged(nameof(ShortSideTwoIfLongerThan1500));
             }
             finally
             {
@@ -1019,6 +1175,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 _uiSettings.HeatingWallOffsetMm = Workspace.HeatingWallOffsetMm;
                 _uiSettings.HeatingMountHeightMm = Workspace.HeatingMountHeightMm;
                 _uiSettings.HeatingEdgeMarginMm = Workspace.HeatingEdgeMarginMm;
+                _uiSettings.ShortSideTwoIfLongerThan1500 = Workspace.ShortSideTwoIfLongerThan1500;
                 _uiSettings.Reconcile();
                 _uiStore.Save(_uiSettings);
             }
@@ -1167,6 +1324,7 @@ namespace HVACLoadTerminals.App.ViewModels
             try
             {
                 Workspace.LoadSnapshot(path);
+                _currentProjectPath = "";
                 MarkClean(); // UX-серия: только что загруженный снимок — чистый
                 PushRecent(isProject: false, path); // RW10
                 AppLogger.Info("Snapshot loaded: " + path +
@@ -1643,6 +1801,7 @@ namespace HVACLoadTerminals.App.ViewModels
             try
             {
                 Workspace.SaveProject(dlg.FileName);
+                _currentProjectPath = dlg.FileName;
                 StatusMessage = $"Проект сохранён: {dlg.FileName}";
                 MarkClean();
                 PushRecent(isProject: true, dlg.FileName); // RW10
@@ -1670,6 +1829,7 @@ namespace HVACLoadTerminals.App.ViewModels
             try
             {
                 Workspace.LoadProject(dlg.FileName); // raises StateChanged
+                _currentProjectPath = dlg.FileName;
                 MarkClean(); // UX-серия: только что загруженный проект — чистый
                 PushRecent(isProject: true, dlg.FileName); // RW10
             }

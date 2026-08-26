@@ -176,6 +176,9 @@
                 <Separator/>
                 <MenuItem Header="Выделить все строки" Click="SelectAllRows_Click"/>
                 <MenuItem Header="Снять выделение строк" Click="UnselectAllRows_Click"/>
+                <Separator/>
+                <MenuItem Header="📋 Копировать системы" Click="ContextCopySystemsList_Click" ToolTip="Копировать системы первой выделенной комнаты"/>
+                <MenuItem Header="📋 Вставить системы" Click="ContextPasteSystemsList_Click" ToolTip="Вставить системы в выделенные помещения"/>
             </MenuItem>
             <MenuItem Header="_Вид">
                 <MenuItem Header="Дерево систем" IsCheckable="True"
@@ -250,8 +253,12 @@
                     CornerRadius="6" Margin="0,0,4,0"
                     Visibility="{Binding ShowTreePanel, Converter={StaticResource BoolToVis}}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Margin="10,8" FontWeight="SemiBold"
+                    <TextBlock DockPanel.Dock="Top" Margin="10,8,10,4" FontWeight="SemiBold"
                                Foreground="{StaticResource TextDark}">Системы проекта</TextBlock>
+                    <DockPanel DockPanel.Dock="Top" Margin="6,0,6,6">
+                        <TextBlock DockPanel.Dock="Left" Text="🔍" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{StaticResource TextMuted}"/>
+                        <TextBox Text="{Binding Crm.TreeSearchText, UpdateSourceTrigger=PropertyChanged}" Padding="5,3" VerticalContentAlignment="Center" ToolTip="Поиск по дереву (система/уровень/помещение)"/>
+                    </DockPanel>
                     <TreeView ItemsSource="{Binding TreeRoots}"
                               SelectedItemChanged="CrmTree_SelectedItemChanged"
                               Margin="4,0,4,6" BorderThickness="0">
@@ -369,6 +376,8 @@
                                                 <MenuItem Header="Копировать сводку систем" Click="ContextCopySystems_Click"/>
                                             </MenuItem>
                                             <MenuItem Header="📋 Копировать параметры" Click="ContextCopySystemParams_Click" ToolTip="Копирует WallIndex/WallOffset первой системы для вставки"/>
+                                            <MenuItem Header="📋 Копировать системы" Click="ContextCopySystemsList_Click" ToolTip="Копировать список систем первой выделенной комнаты в буфер"/>
+                                            <MenuItem Header="📋 Вставить системы" Click="ContextPasteSystemsList_Click" ToolTip="Вставить скопированные системы в выделенные помещения"/>
                                             <Separator/>
                                             <MenuItem Header="Выделить все видимые" Click="SelectAllRows_Click"/>
                                             <MenuItem Header="Снять выделение" Click="UnselectAllRows_Click"/>

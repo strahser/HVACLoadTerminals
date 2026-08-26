@@ -199,6 +199,9 @@
                             <TextBox Grid.Column="1" x:Name="HeatingEdgeBox" Padding="4,2" TextChanged="HeatingBox_TextChanged"/>
                         </Grid>
 
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="Размещение — доп. правила"/>
+                        <CheckBox x:Name="ShortSideTwoCheck" Content="2 прибора на короткой стороне если &gt;1500 мм (RW11)" Margin="0,4,0,8" ToolTip="Когда короткая сторона помещения &gt;1500 мм и правило &quot;короткая сторона&quot; даёт 1 прибор — принудительно 2" Click="ShortSideTwo_Click"/>
+
                         <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,12,0,8"/>
                         <TextBlock Text="Профили" Style="{StaticResource SectionHeader}" Margin="0,0,0,4"/>
                         <StackPanel Orientation="Horizontal">

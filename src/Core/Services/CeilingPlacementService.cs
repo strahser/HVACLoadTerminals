@@ -102,6 +102,9 @@ namespace HVACLoadTerminals.Core.Services
 
         /// <summary>Смещение от выбранной стены, мм (null = использовать EdgeOffsetOverrideMm).</summary>
         public double? TargetWallOffsetMm { get; set; }
+
+        /// <summary>IC5.7/RW11: если pattern==ShortSide и длина короткой стороны >1500мм — минимум 2 прибора.</summary>
+        public bool ShortSideTwoIfLongerThan1500 { get; set; } = false;
     }
 
     /// <summary>Placements plus human-readable warnings for one room.</summary>
@@ -181,6 +184,14 @@ namespace HVACLoadTerminals.Core.Services
                 _ => CountFor(device)
             };
             count = Math.Max(count, 1);
+            // IC5.7/RW11: 2 на короткой если её длина >1500 мм
+            if (options.ShortSideTwoIfLongerThan1500 && options.Pattern == WallPattern.ShortSide && count < 2)
+            {
+                var edges = RoomGeometryAnalyzer.GetEdges(boundary);
+                var shortLen = edges.Where(e => e.Length > 1e-9).Select(e => e.Length).DefaultIfEmpty(0).Min();
+                double shortMm = LengthUnitConverter.UnitsToMm(shortLen);
+                if (shortMm > 1500) count = 2;
+            }
             if (count < 1)
                 return Warn("Нагрузка не задана — количество приборов не рассчитать");
 

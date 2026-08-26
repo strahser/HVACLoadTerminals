@@ -181,6 +181,24 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// Имеет смысл только когда <see cref="WallIndex"/> задан.</summary>
         public double? WallOffsetMm { get; set; }
 
+        /// <summary>IC5.3: глубокое клонирование для буфера копирования систем.</summary>
+        public SystemRow Clone() => new SystemRow
+        {
+            Name = Name,
+            Type = Type,
+            FlowM3h = FlowM3h,
+            IsIncluded = IsIncluded,
+            DeviceTypeId = DeviceTypeId,
+            CountRuleOverride = CountRuleOverride,
+            FixedCountOverride = FixedCountOverride,
+            PatternOverride = PatternOverride,
+            SingleRuleOverride = SingleRuleOverride,
+            EdgeOffsetOverrideMm = EdgeOffsetOverrideMm,
+            CeilingOffsetOverrideMm = CeilingOffsetOverrideMm,
+            WallIndex = WallIndex,
+            WallOffsetMm = WallOffsetMm
+        };
+
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

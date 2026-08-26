@@ -167,6 +167,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public WallPattern SupplyPattern { get; set; } = WallPattern.LongSide;
         public WallPattern ExhaustPattern { get; set; } = WallPattern.ShortSide;
         public SingleRule SingleDeviceRule { get; set; } = SingleRule.Center;
+        /// <summary>IC5.7/RW11: 2 на короткой если >1500мм.</summary>
+        public bool ShortSideTwoIfLongerThan1500 { get; set; } = false;
 
         /// <summary>For hosts binding a ComboBox of wall patterns.</summary>
         public WallPattern[] WallPatterns { get; } =
@@ -1148,7 +1150,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
                 // RoomDetailWindow: wall-specific
                 TargetWallIndex = system.WallIndex,
-                TargetWallOffsetMm = system.WallOffsetMm
+                TargetWallOffsetMm = system.WallOffsetMm,
+                ShortSideTwoIfLongerThan1500 = ShortSideTwoIfLongerThan1500
             };
             // Если привязка к стене задана, паттерн игнорируется — фолбэк на wall-specific ветку.
             if (opts.TargetWallIndex.HasValue)
