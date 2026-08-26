@@ -237,7 +237,9 @@ namespace HVACLoadTerminals.Core.Services
 
                 // Balance: when only exhaust is defined, supply mirrors it and vice versa
                 // (offices/unknown rooms are supply-exhaust balanced).
-                if (supply <= 0 && exhaust > 0 && rule.SupplyPerPersonM3h <= 0
+                // Sanitary rooms are exhaust-only per SPP 60.13330 — skip mirroring.
+                if (purpose != RoomPurpose.Sanitary
+                    && supply <= 0 && exhaust > 0 && rule.SupplyPerPersonM3h <= 0
                     && rule.SupplyAirChangesPerHour <= 0)
                     supply = exhaust;
                 if (exhaust <= 0 && supply > 0 && rule.ExhaustAirChangesPerHour <= 0)

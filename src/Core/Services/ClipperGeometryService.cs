@@ -15,8 +15,6 @@ namespace HVACLoadTerminals.Core.Services
         /// <summary>Integer scaling factor applied before Clipper2 integer math.</summary>
         public const double Scale = 10000.0;
 
-        public const double MmPerFoot = 304.8;
-
         /// <summary>
         /// Offsets a polygon inward by <paramref name="offsetUnits"/> (same units as the
         /// polygon coordinates). Handles both CW/CCW orientations: if the negative delta
@@ -102,35 +100,29 @@ namespace HVACLoadTerminals.Core.Services
             if (pts.Count > 1 && Distance(pts[0], pts[pts.Count - 1]) < 1e-6)
                 pts.RemoveAt(pts.Count - 1);
 
-            // Remove collinear points (sin of angle between consecutive segments &lt; 1e-6).
-            bool changed = true;
-            while (changed && pts.Count >= 3)
+            // Remove collinear points (sin of angle between consecutive segments < 1e-6).
+            // Single-pass: advance i when merging, avoid full rescan.
+            for (int i = pts.Count - 1; i >= 0 && pts.Count >= 3; i--)
             {
-                changed = false;
-                for (int i = 0; i < pts.Count; i++)
+                int n = pts.Count;
+                int prev = (i - 1 + n) % n;
+                int next = (i + 1) % n;
+                var a = pts[prev];
+                var b = pts[i];
+                var c = pts[next];
+
+                double cross = (b.X - a.X) * (c.Y - b.Y) - (b.Y - a.Y) * (c.X - b.X);
+                double lenAB = Distance(a, b);
+                double lenBC = Distance(b, c);
+                if (lenAB < 1e-12 || lenBC < 1e-12)
                 {
-                    var a = pts[(i - 1 + pts.Count) % pts.Count];
-                    var b = pts[i];
-                    var c = pts[(i + 1) % pts.Count];
-
-                    double cross = (b.X - a.X) * (c.Y - b.Y) - (b.Y - a.Y) * (c.X - b.X);
-                    double lenAB = Distance(a, b);
-                    double lenBC = Distance(b, c);
-                    if (lenAB < 1e-12 || lenBC < 1e-12)
-                    {
-                        pts.RemoveAt(i);
-                        changed = true;
-                        break;
-                    }
-
-                    double sinAngle = Math.Abs(cross) / (lenAB * lenBC);
-                    if (sinAngle < 1e-6)
-                    {
-                        pts.RemoveAt(i);
-                        changed = true;
-                        break;
-                    }
+                    pts.RemoveAt(i);
+                    continue;
                 }
+
+                double sinAngle = Math.Abs(cross) / (lenAB * lenBC);
+                if (sinAngle < 1e-6)
+                    pts.RemoveAt(i);
             }
 
             if (pts.Count < 3)
@@ -173,13 +165,17 @@ namespace HVACLoadTerminals.Core.Services
         /// </summary>
         private static IReadOnlyList<Point2D> Inflate(IReadOnlyList<Point2D> poly, double deltaUnits)
         {
-            var path = new Path64(poly.Select(p => new Point64((long)(p.X * Scale), (long)(p.Y * Scale))));
+            var path = new Path64(poly.Select(p => new Point64((long)Math.Round(p.X * Scale), (long)Math.Round(p.Y * Scale))));
             var paths = new Paths64 { path };
 
             Paths64 inflated;
             try
             {
                 inflated = Clipper.InflatePaths(paths, deltaUnits * Scale, JoinType.Round, EndType.Polygon);
+            }
+            catch (OutOfMemoryException)
+            {
+                throw;
             }
             catch
             {

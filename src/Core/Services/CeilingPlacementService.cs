@@ -152,13 +152,21 @@ namespace HVACLoadTerminals.Core.Services
             if (devices.Count == 0)
                 return Warn($"В каталоге нет приборов типа {systemType} с расходом");
 
-            // Best device: prototype get_minimum_device_number → min N → min Qmax (minimal reserve)
+            // Best device: prototype get_minimum_device_number → min N → max k_ef
+            // (при одинаковом N выбирается прибор с наименьшим избытком / наибольшим k_ef).
             int CountFor(TerminalDevice d) =>
                 Math.Max(
                     d.ServiceAreaM2 > 0 && roomAreaM2 > 0
                         ? (int)Math.Ceiling(roomAreaM2 / d.ServiceAreaM2)
                         : 0,
                     requiredFlow > 0 ? (int)Math.Ceiling(requiredFlow / d.MaxFlowRate) : 0);
+
+            // k_ef для данного N: (requiredFlow / N) / MaxFlowRate.
+            // Чем ближе к 1.0 — тем лучше загрузка прибора.
+            double KefForN(TerminalDevice d, int n) =>
+                n > 0 && d.MaxFlowRate > 0
+                    ? (requiredFlow / (double)n) / d.MaxFlowRate
+                    : 0;
 
             TerminalDevice device;
             if (options.CountRule == CeilingCountRule.Fixed)
@@ -173,11 +181,17 @@ namespace HVACLoadTerminals.Core.Services
                 if (withReserve.Count > 0)
                     device = withReserve.First().Device;
                 else
-                    device = devices.OrderBy(CountFor).ThenBy(d => d.MaxFlowRate).First();
+                    device = devices
+                        .OrderBy(d => CountFor(d))
+                        .ThenByDescending(d => KefForN(d, CountFor(d)))
+                        .First();
             }
             else
             {
-                device = devices.OrderBy(CountFor).ThenBy(d => d.MaxFlowRate).First();
+                device = devices
+                    .OrderBy(d => CountFor(d))
+                    .ThenByDescending(d => KefForN(d, CountFor(d)))
+                    .First();
             }
 
             // Quantity from the CHOSEN device only (its own service area + flow);
@@ -444,14 +458,7 @@ namespace HVACLoadTerminals.Core.Services
 
             List<Point2D> points;
             double rowRotation = Math.Atan2(n.Y, n.X);
-            if (count == 1)
-            {
-                points = DistributeAlongEdge(offsetEdge, count, options, warnings);
-            }
-            else
-            {
-                points = DistributeAlongEdge(offsetEdge, count, options, warnings);
-            }
+            points = DistributeAlongEdge(offsetEdge, count, options, warnings);
 
             var placements = new List<DevicePlacement>(points.Count);
             foreach (var p in points)
@@ -637,12 +644,13 @@ namespace HVACLoadTerminals.Core.Services
             double minDist = LengthUnitConverter.MmToUnits(options.MinDistanceMm);
 
             List<Point2D>? best = null;
+            int maxCandidates = count * 4; // cap to prevent exponential growth
             for (int refine = 0; refine <= 3; refine++)
             {
                 int cols = baseCols * (1 << refine);
                 int rows = baseRows * (1 << refine);
 
-                var candidates = new List<Point2D>(cols * rows);
+                var candidates = new List<Point2D>(Math.Min(cols * rows, maxCandidates));
                 for (int r = 0; r < rows; r++)
                 {
                     for (int c = 0; c < cols; c++)
@@ -652,6 +660,9 @@ namespace HVACLoadTerminals.Core.Services
                             minY + h * (r + 0.5) / rows));
                     }
                 }
+
+                if (candidates.Count > maxCandidates)
+                    candidates = candidates.Take(maxCandidates).ToList();
 
                 candidates = candidates
                     .Where(polygon.ContainsPoint)

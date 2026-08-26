@@ -85,6 +85,19 @@ namespace HVACLoadTerminals.Core.Tests
         }
 
         [Fact]
+        public void Sanitary_NoSupply_Mirroring()
+        {
+            // CALC-03 fix: Sanitary rooms are exhaust-only per SPP 60.13330.
+            // Supply should NOT be mirrored from exhaust.
+            var service = new LoadsEstimatorService();
+            var result = service.Estimate(Room("r3", "Санузел", 2));
+
+            Assert.Equal(RoomPurpose.Sanitary, result.Purpose);
+            Assert.Equal(0, result.SupplyFlowM3h, 5);
+            Assert.True(result.ExhaustFlowM3h > 0);
+        }
+
+        [Fact]
         public void Height_Falls_Back_To_Default_Without_Walls()
         {
             var service = new LoadsEstimatorService();

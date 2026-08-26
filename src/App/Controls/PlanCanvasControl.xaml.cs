@@ -20,6 +20,19 @@ namespace HVACLoadTerminals.App.Controls
 {
     public partial class PlanCanvasControl : UserControl
     {
+        private static readonly Lazy<DropShadowEffect> s_hoverEffect = new(() =>
+        {
+            var fx = new DropShadowEffect
+            {
+                BlurRadius = 8,
+                ShadowDepth = 0,
+                Color = Color.FromArgb(0x59, 0x00, 0xA8, 0xFF),
+                Opacity = 0.9
+            };
+            fx.Freeze();
+            return fx;
+        });
+
         private MainViewModel? _vm;
         private readonly Dictionary<string, Polygon> _polys = new();
         private readonly Dictionary<string, List<Path>> _placementsByRoom = new();
@@ -372,13 +385,7 @@ namespace HVACLoadTerminals.App.Controls
             poly.StrokeThickness = item.StrokeThickness;
             if (item.IsHovered)
             {
-                poly.Effect = new DropShadowEffect
-                {
-                    BlurRadius = 8,
-                    ShadowDepth = 0,
-                    Color = Color.FromArgb(0x59, 0x00, 0xA8, 0xFF),
-                    Opacity = 0.9
-                };
+                poly.Effect = s_hoverEffect.Value;
             }
             else
             {

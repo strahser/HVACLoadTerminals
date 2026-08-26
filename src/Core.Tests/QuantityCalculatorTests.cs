@@ -62,5 +62,24 @@ namespace HVACLoadTerminals.Core.Tests
         {
             Assert.Equal(400, QuantityCalculator.TotalCapacity(100, 4), 6);
         }
+
+        [Fact]
+        public void ByStep_ZeroDeviceFlow_ReturnsZero()
+        {
+            // CALC-02 fix: ByStep with deviceMaxFlow <= 0 must return 0, not maxCount.
+            int count = QuantityCalculator.CalculateCount(
+                1000, 0, PlacementMode.ByStep, 1, 1, 50);
+
+            Assert.Equal(0, count);
+        }
+
+        [Fact]
+        public void ByCalculation_ZeroDeviceFlow_ReturnsZero()
+        {
+            int count = QuantityCalculator.CalculateCount(
+                1000, 0, PlacementMode.ByCalculation, 1, 1, 50);
+
+            Assert.Equal(0, count);
+        }
     }
 }

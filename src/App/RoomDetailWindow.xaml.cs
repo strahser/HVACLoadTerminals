@@ -200,7 +200,10 @@ namespace HVACLoadTerminals.App
                     model.Series.Add(offsetSeries);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Warn($"Offset polygon visualization failed: {ex.Message}");
+            }
 
             // Линия размещения для выбранной стены (из SystemRow)
             if (_selectedSystem != null && _selectedSystem.WallIndex.HasValue)

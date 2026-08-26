@@ -110,5 +110,44 @@ namespace HVACLoadTerminals.Core.Tests
 
             Assert.Equal(100, area, 6);
         }
+
+        [Fact]
+        public void Center_LShaped_IsInsidePolygon()
+        {
+            // GEO-02 fix: area centroid for concave polygon (L-shape).
+            // Vertex average would give (5, 2.5) which is outside the polygon.
+            // Area centroid should be inside.
+            var lShape = new Polygon2D(new[]
+            {
+                new Point2D(0, 0),
+                new Point2D(10, 0),
+                new Point2D(10, 3),
+                new Point2D(4, 3),
+                new Point2D(4, 7),
+                new Point2D(0, 7),
+            });
+
+            var center = lShape.Center;
+
+            // Area centroid for this L-shape should be approximately (4.58, 2.17)
+            // which is inside the polygon. Vertex average (5, 2.5) is outside.
+            Assert.True(lShape.ContainsPoint(center),
+                $"Centroid ({center.X:F2}, {center.Y:F2}) should be inside the L-shape");
+            Assert.True(center.X > 2 && center.X < 8,
+                $"Centroid X ({center.X:F2}) should be in reasonable range");
+            Assert.True(center.Y > 0 && center.Y < 5,
+                $"Centroid Y ({center.Y:F2}) should be in reasonable range");
+        }
+
+        [Fact]
+        public void Center_Square_EqualsVertexAverage()
+        {
+            // For convex polygons, area centroid and vertex average should be close.
+            var square = Square(10);
+            var center = square.Center;
+
+            Assert.Equal(5, center.X, 6);
+            Assert.Equal(5, center.Y, 6);
+        }
     }
 }

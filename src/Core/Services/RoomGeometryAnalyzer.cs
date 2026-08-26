@@ -189,16 +189,12 @@ namespace HVACLoadTerminals.Core.Services
 
             var normal = new Point2D(-dy / length, dx / length);
 
-            double cx = 0, cy = 0;
-            if (polygon != null && polygon.Count > 0)
-            {
-                foreach (var p in polygon) { cx += p.X; cy += p.Y; }
-                cx /= polygon.Count;
-                cy /= polygon.Count;
-            }
+            var centroid = polygon != null && polygon.Count > 0
+                ? new Polygon2D(polygon).Center
+                : new Point2D(0, 0);
 
             var mid = new Point2D((edgeStart.X + edgeEnd.X) / 2.0, (edgeStart.Y + edgeEnd.Y) / 2.0);
-            double dot = normal.X * (cx - mid.X) + normal.Y * (cy - mid.Y);
+            double dot = normal.X * (centroid.X - mid.X) + normal.Y * (centroid.Y - mid.Y);
             if (dot < 0)
                 normal = new Point2D(-normal.X, -normal.Y);
 
@@ -230,6 +226,7 @@ namespace HVACLoadTerminals.Core.Services
 
             double min = Math.Min(Math.Min(distBottom, distTop), Math.Min(distRight, distLeft));
 
+            // Deterministic tie-breaking: prefer Bottom > Top > Right > Left
             if (min == distBottom) return CoordinateSystem.Bottom;
             if (min == distTop) return CoordinateSystem.Top;
             if (min == distRight) return CoordinateSystem.Right;

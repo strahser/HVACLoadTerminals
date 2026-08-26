@@ -19,8 +19,25 @@ namespace HVACLoadTerminals.Core.Models
         {
             get
             {
-                double cx = Vertices.Average(p => p.X);
-                double cy = Vertices.Average(p => p.Y);
+                // Area-weighted centroid (shoelace formula) — correct for concave polygons.
+                double cx = 0, cy = 0, signedArea = 0;
+                int n = Vertices.Count;
+                for (int i = 0; i < n; i++)
+                {
+                    int j = (i + 1) % n;
+                    double cross = Vertices[i].X * Vertices[j].Y - Vertices[j].X * Vertices[i].Y;
+                    signedArea += cross;
+                    cx += (Vertices[i].X + Vertices[j].X) * cross;
+                    cy += (Vertices[i].Y + Vertices[j].Y) * cross;
+                }
+                signedArea /= 2.0;
+                if (Math.Abs(signedArea) < 1e-12)
+                {
+                    // Degenerate — fall back to vertex average.
+                    return new Point2D(Vertices.Average(p => p.X), Vertices.Average(p => p.Y));
+                }
+                cx /= (6.0 * signedArea);
+                cy /= (6.0 * signedArea);
                 return new Point2D(cx, cy);
             }
         }

@@ -158,8 +158,11 @@ namespace HVACLoadTerminals.Core.Services
             double flowPerDevice = requiredLoad / minCount;
             var best = valid
                 .Where(d => (int)Math.Ceiling(requiredLoad / d.MaxFlowRate) == minCount)
-                .OrderBy(d => d.MaxFlowRate)                 // smallest capacity = min reserve
-                .First(d => d.MaxFlowRate >= flowPerDevice - 1e-9);
+                .OrderBy(d => d.MaxFlowRate)
+                .FirstOrDefault(d => d.MaxFlowRate >= flowPerDevice - 1e-9);
+
+            if (best is null)
+                return (valid.OrderBy(d => d.MaxFlowRate).First(), minCount);
 
             return (best, minCount);
         }

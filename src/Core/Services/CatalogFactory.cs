@@ -58,9 +58,7 @@ namespace HVACLoadTerminals.Core.Services
             {
                 HVACSystemType.Heating => "КЗТО",
                 HVACSystemType.FanCoil or HVACSystemType.Cooling => "Daichi",
-                _ => (familyName ?? "").IndexOf("решётка", StringComparison.OrdinalIgnoreCase) >= 0
-                     || (familyName ?? "").IndexOf("решетка", StringComparison.OrdinalIgnoreCase) >= 0
-                        ? "Вентс" : "Вентс"
+                _ => "Вентс"
             };
     }
 

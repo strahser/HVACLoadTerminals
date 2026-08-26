@@ -48,6 +48,8 @@ namespace HVACLoadTerminals.Core.Services
                     return Math.Min(exact, maxCount);
 
                 case PlacementMode.ByStep:
+                    if (deviceMaxFlow <= 0)
+                        return 0;
                     int step = Math.Max(1, stepCount);
                     int count = 1;
                     while (count < maxCount && deviceMaxFlow * count < requiredFlow)

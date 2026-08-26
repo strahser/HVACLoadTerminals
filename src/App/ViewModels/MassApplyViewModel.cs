@@ -56,6 +56,7 @@ namespace HVACLoadTerminals.App.ViewModels
         private void Apply()
         {
             var ids = _owner.SelectedRoomIds;
+            _owner.PushUndo("Массовое применение оверрайдов");
             _owner.Workspace.ApplyOverridesToRooms(
                 r => ids.Contains(r.RoomId), Spec);
             _owner.RecalcIfLive();

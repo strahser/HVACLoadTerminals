@@ -69,12 +69,17 @@ namespace HVACLoadTerminals.Core.Services
             if (heatingDevices == null || heatingDevices.Count == 0)
                 return Warn("В каталоге нет отопительных приборов");
 
-            // Best device: highest effective capacity, ties to the longer unit
+            // Best device: highest HeatingCapacityW, ties to the longer unit
             // (fewer sections under the window).
             var device = heatingDevices
-                .OrderByDescending(d => d.HeatingCapacityW > 0 ? d.HeatingCapacityW : d.MaxFlowRate)
+                .Where(d => d.HeatingCapacityW > 0)
+                .OrderByDescending(d => d.HeatingCapacityW)
                 .ThenByDescending(d => d.WidthMm)
-                .First();
+                .FirstOrDefault()
+                ?? heatingDevices
+                    .OrderByDescending(d => d.MaxFlowRate)
+                    .ThenByDescending(d => d.WidthMm)
+                    .First();
 
             double capacity = device.HeatingCapacityW > 0
                 ? device.HeatingCapacityW

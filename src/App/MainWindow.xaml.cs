@@ -246,13 +246,16 @@ namespace HVACLoadTerminals.App
         /// <summary>UX-серия: guard — не терять расстановку при закрытии окна.</summary>
         protected override void OnClosing(CancelEventArgs e)
         {
-            // Персист геометрии, панелей и колонок — до возможного Cancel (если юзер отменил, всё равно сохраняем актуальный лейаут)
+            base.OnClosing(e);
+            if (!e.Cancel && !_vm.ConfirmLoseChanges("закрыть приложение"))
+            {
+                e.Cancel = true;
+                return;
+            }
+            // Сохраняем геометрию только если пользователь подтвердил закрытие
             SaveWindowGeometry();
             SavePanelWidths();
             CaptureColumnWidths();
-            base.OnClosing(e);
-            if (!e.Cancel && !_vm.ConfirmLoseChanges("закрыть приложение"))
-                e.Cancel = true;
         }
 
         private void EditSystems_Click(object sender, RoutedEventArgs e)

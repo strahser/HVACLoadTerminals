@@ -28,14 +28,15 @@ namespace HVACLoadTerminals.Core.Services
             }
 
             double totalLength = GetPolylineLength(offsetPolygon);
-            double usableLength = totalLength - 2 * startOffsetMm;
+            double startOffsetUnits = LengthUnitConverter.MmToUnits(startOffsetMm);
+            double usableLength = totalLength - 2 * startOffsetUnits;
             if (usableLength <= 0)
             {
                 usableLength = totalLength / pointCount;
             }
 
             double step = usableLength / pointCount;
-            double currentDist = startOffsetMm;
+            double currentDist = startOffsetUnits;
             var points = new List<Point2D>();
 
             int segIdx = 0;

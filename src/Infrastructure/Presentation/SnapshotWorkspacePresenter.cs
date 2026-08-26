@@ -559,7 +559,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             var catalog = ResolveCatalog();
             var roomsById = new Dictionary<string, SnapshotRoom>();
             foreach (var room in _snapshot.Rooms)
-                roomsById[room.Id] = room;
+                roomsById[room.Id] = room; // last wins on duplicates
 
             var openingsByRoom = _snapshot.Openings
                 .Where(o => o?.SpaceId != null)
@@ -1093,6 +1093,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
             int touched = 0;
             var affectedSystems = new HashSet<string>(StringComparer.Ordinal);
+            var affectedRooms = new List<RoomRow>();
             foreach (var room in Rooms.Where(roomFilter))
             {
                 var systems = room.Systems;
@@ -1125,10 +1126,15 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     affectedSystems.Add(system.Name);
                 }
                 if (roomChanged)
+                {
                     room.RefreshSystemSummary();
+                    affectedRooms.Add(room);
+                }
             }
             foreach (var name in affectedSystems)
                 SyncCatalogOverrides(name);
+            foreach (var room in affectedRooms)
+                SyncRoomToCatalog(room, "mass-apply");
 
             RaiseStatusOnly($"Массовое применение: изменено {touched} систем");
             return touched;

@@ -54,7 +54,9 @@ namespace HVACLoadTerminals.Core.Models
 
         /// <summary>Effective capacity for the given system type, Watts or m3/h.</summary>
         public double CapacityFor(HVACSystemType type) =>
-            type == HVACSystemType.Heating && HeatingCapacityW > 0 ? HeatingCapacityW : CoolingCapacityW;
+            type == HVACSystemType.Heating && HeatingCapacityW > 0
+                ? HeatingCapacityW
+                : MaxFlowRate;
 
         public TerminalDevice(
             string id,
