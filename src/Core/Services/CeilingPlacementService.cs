@@ -534,7 +534,13 @@ namespace HVACLoadTerminals.Core.Services
         {
             var pts = new List<Point2D>(count);
             double len = edge.Length;
-            double startOff = Math.Min(LengthUnitConverter.MmToUnits(options.StartOffsetMm), len / 2);
+            double effStartOffMm = options.StartOffsetMm;
+            if (effStartOffMm <= 0 && options.TargetWallIndex.HasValue)
+            {
+                effStartOffMm = options.TargetWallOffsetMm ?? options.EdgeOffsetOverrideMm ?? options.WallClearanceMm;
+                if (effStartOffMm < 300) effStartOffMm = 300;
+            }
+            double startOff = Math.Min(LengthUnitConverter.MmToUnits(effStartOffMm), len / 2);
             double usable = Math.Max(0, len - 2 * startOff);
 
             if (usable <= 1e-9 || count < 1)
