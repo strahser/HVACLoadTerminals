@@ -29,4 +29,20 @@
   <Target Name="CopyWebView2Loader" AfterTargets="Build">
     <Copy SourceFiles="@(AppWebView2Loader)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
   </Target>
+
+  <!-- Автодеплой в production (запрос владельца 2026-08-26): после Release-сборки
+       весь вывод App копируется в d:\Projects\HVACLoadTerminals\production\HVACLoadTerminals.App\.
+       Перед сборкой закрывать HVACLoadTerminals.App.exe, иначе файл занят (MSB3027-аналог на Copy). -->
+  <PropertyGroup>
+    <ProductionDir>d:\Projects\HVACLoadTerminals\production\HVACLoadTerminals.App\</ProductionDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProductionFiles Include="$(TargetDir)**\*.*" />
+  </ItemGroup>
+  <Target Name="DeployToProduction" AfterTargets="Build" Condition="'$(Configuration)'=='Release'">
+    <Message Text="DeployToProduction -> $(ProductionDir)" Importance="high" />
+    <Copy SourceFiles="@(ProductionFiles)"
+          DestinationFiles="@(ProductionFiles->'$(ProductionDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>
