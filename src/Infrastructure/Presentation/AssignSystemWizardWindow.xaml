@@ -82,6 +82,8 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Content="Отмена" Click="Cancel_Click"/>
+                    <Button Content="✔ Применить и добавить ещё" Click="ApplyAnother_Click"
+                            ToolTip="Назначить систему и остаться в мастере — можно назначить следующий тип"/>
                     <Button Content="Готово" Style="{StaticResource PrimaryButton}" Click="Ok_Click"/>
                 </StackPanel>
                 <TextBlock x:Name="ErrorText" Foreground="#C0392B" FontSize="11" TextWrapping="Wrap"
@@ -90,14 +92,25 @@
         </Border>
 
         <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="380"/>
             </Grid.ColumnDefinitions>
 
+            <!-- Сводка контекста (RW11): что уже назначено -->
+            <Border Grid.Row="0" Grid.ColumnSpan="3" Background="#FFF7E6" BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="0,0,0,1" Padding="12,5">
+                <TextBlock x:Name="ExistingText" FontSize="11" Foreground="{StaticResource TextDark}" TextWrapping="Wrap"
+                           Text="Выберите помещения в таблице."/>
+            </Border>
+
             <!-- Шаги -->
-            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="1" Grid.Column="0" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="12,6,6,10">
                     <TextBlock Style="{StaticResource StepHeader}">1 · ТИП СИСТЕМЫ</TextBlock>
                     <ComboBox x:Name="CmbType" SelectionChanged="Type_Changed" Height="30" FontSize="13"/>
@@ -154,10 +167,10 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent"/>
+            <GridSplitter Grid.Row="1" Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent"/>
 
             <!-- Превью -->
-            <Border Grid.Column="2" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}"
+            <Border Grid.Row="1" Grid.Column="2" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}"
                     BorderThickness="1" CornerRadius="6" Margin="6,8,10,10">
                 <DockPanel Margin="8">
                     <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"

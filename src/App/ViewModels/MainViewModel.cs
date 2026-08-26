@@ -608,7 +608,50 @@ namespace HVACLoadTerminals.App.ViewModels
 
         public ICommand UndoCommand { get; }
 
-        private void OpenAssignSystem()
+        /// <summary>RW10: открыть недавний проект/снимок по пути (Файл▸Недавние).</summary>
+        public ICommand OpenRecentCommand { get; }
+
+        /// <summary>RW10: элементы меню «Недавние проекты» (пути .hvacproj.json).</summary>
+        public IReadOnlyList<string> RecentProjects => _uiSettings?.RecentProjects ?? new List<string>();
+        /// <summary>RW10: элементы меню «Недавние снимки».</summary>
+        public IReadOnlyList<string> RecentSnapshots => _uiSettings?.RecentSnapshots ?? new List<string>();
+
+        private void OpenRecent(object? param)
+        {
+            if (param is not string path || !File.Exists(path)) return;
+            bool isProject = path.EndsWith(".hvacproj.json", StringComparison.OrdinalIgnoreCase);
+            if (!ConfirmLoseChanges(isProject ? "открыть другой проект" : "открыть новый снимок"))
+                return;
+            try
+            {
+                if (isProject)
+                    Workspace.LoadProject(path);
+                else
+                    Workspace.LoadSnapshot(path);
+                MarkClean();
+                PushRecent(isProject, path);
+                AppLogger.Info("Recent opened: " + path);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка открытия: " + ex.Message;
+                AppLogger.Error("OpenRecent failed", ex);
+            }
+        }
+
+        private void PushRecent(bool isProject, string path)
+        {
+            if (_uiSettings == null) return;
+            var list = isProject ? _uiSettings.RecentProjects : _uiSettings.RecentSnapshots;
+            list.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+            list.Insert(0, path);
+            if (list.Count > 10) list.RemoveRange(10, list.Count - 10);
+            SaveUiSettings();
+            OnPropertyChanged(nameof(RecentProjects));
+            OnPropertyChanged(nameof(RecentSnapshots));
+        }
+
+        private void OpenAssignWizard()
         {
             if (_selectedRoomIds.Count == 0)
             {
@@ -735,8 +778,9 @@ namespace HVACLoadTerminals.App.ViewModels
                 Placements.Count > 0);
             EditCatalogCommand = new RelayCommand(_ => EditCatalog());
             ApplyMassCommand = new RelayCommand(_ => ApplyMass(), _ => HasSelectedRooms);
-            AssignSystemCommand = new RelayCommand(_ => OpenAssignSystem(), _ => HasSelectedRooms);
+            AssignSystemCommand = new RelayCommand(_ => OpenAssignWizard(), _ => HasSelectedRooms);
             UndoCommand = new RelayCommand(_ => Undo(), _ => CanUndo);
+            OpenRecentCommand = new RelayCommand(p => OpenRecent(p));
             ExportReportCommand = new RelayCommand(_ => ExportLevelReport(), _ =>
                 Placements.Count > 0);
 
@@ -791,6 +835,24 @@ namespace HVACLoadTerminals.App.ViewModels
             }
 
             AppLogger.Info("MainViewModel initialized");
+
+            // RW10: автозагрузка последнего проекта (если включена и файл жив).
+            try
+            {
+                if (_uiSettings.AutoLoadLastProject &&
+                    _uiSettings.RecentProjects.Count > 0 &&
+                    File.Exists(_uiSettings.RecentProjects[0]))
+                {
+                    Workspace.LoadProject(_uiSettings.RecentProjects[0]);
+                    MarkClean();
+                    StatusMessage = $"Восстановлен последний проект: {_uiSettings.RecentProjects[0]}";
+                    AppLogger.Info("AutoLoad last project: " + _uiSettings.RecentProjects[0]);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("AutoLoad last project failed", ex);
+            }
         }
 
         // ---- UiSettings helpers (персист панелей/колонок/окна) ----
@@ -1018,6 +1080,7 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 Workspace.LoadSnapshot(path);
                 MarkClean(); // UX-серия: только что загруженный снимок — чистый
+                PushRecent(isProject: false, path); // RW10
                 AppLogger.Info("Snapshot loaded: " + path +
                                ", rooms=" + Workspace.Rooms.Count);
             }
@@ -1402,6 +1465,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 Workspace.SaveProject(dlg.FileName);
                 StatusMessage = $"Проект сохранён: {dlg.FileName}";
                 MarkClean();
+                PushRecent(isProject: true, dlg.FileName); // RW10
                 return true;
             }
             catch (Exception ex)
@@ -1427,6 +1491,7 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 Workspace.LoadProject(dlg.FileName); // raises StateChanged
                 MarkClean(); // UX-серия: только что загруженный проект — чистый
+                PushRecent(isProject: true, dlg.FileName); // RW10
             }
             catch (Exception ex)
             {

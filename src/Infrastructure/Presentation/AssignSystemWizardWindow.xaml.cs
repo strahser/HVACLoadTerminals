@@ -70,7 +70,32 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             FillManufacturers();
             FillDevices();
             TxtFlow.Text = DefaultFlow().ToString("F0");
+            UpdateExistingSummary();
             RebuildPreview();
+        }
+
+        /// <summary>RW11: сводка контекста — какие системы уже стоят у выбранных помещений.</summary>
+        private void UpdateExistingSummary()
+        {
+            var rooms = _presenter.Rooms.Where(_roomFilter).ToList();
+            if (rooms.Count == 0)
+            {
+                ExistingText.Text = "Помещения не выбраны.";
+                return;
+            }
+            var assigned = rooms
+                .SelectMany(r => (r.Systems ?? new List<SystemRow>())
+                    .Where(s => s.IsIncluded)
+                    .Select(s => $"{s.Name}={s.FlowM3h:F0}"))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            string scope = rooms.Count == 1
+                ? $"помещение {rooms[0].Number}. {rooms[0].Name}"
+                : $"{rooms.Count} помещений";
+            ExistingText.Text = assigned.Count > 0
+                ? $"Контекст: {scope} · уже назначено: {string.Join(", ", assigned.Take(6))}" +
+                  (assigned.Count > 6 ? $" … (+{assigned.Count - 6})" : "")
+                : $"Контекст: {scope} · систем ещё нет";
         }
 
         private HVACSystemType SelectedType =>
@@ -363,8 +388,25 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
         private void Ok_Click(object sender, RoutedEventArgs e)
         {
+            if (ApplyCore())
+                Close();
+        }
+
+        /// <summary>RW11: применить и остаться в мастере — назначить следующий тип.</summary>
+        private void ApplyAnother_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ApplyCore()) return;
+            // Подготовить следующий проход: имя по следующему номеру, расход из оценки.
+            TxtName.Text = SuggestName(SelectedType);
+            TxtFlow.Text = DefaultFlow().ToString("F0");
+            UpdateExistingSummary();
+            RebuildPreview();
+        }
+
+        private bool ApplyCore()
+        {
             string name = TxtName.Text.Trim();
-            if (name.Length == 0) { ShowError("Введите название системы."); return; }
+            if (name.Length == 0) { ShowError("Введите название системы."); return false; }
 
             var spec = new AssignSystemSpec
             {
@@ -394,16 +436,16 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             };
 
             if (spec.SystemType != HVACSystemType.Heating && spec.FlowM3hPerRoom <= 0)
-            { ShowError("Расход должен быть больше 0 м³/ч."); return; }
+            { ShowError("Расход должен быть больше 0 м³/ч."); return false; }
             if (!spec.ReplaceSameType && DuplicateInSelected(spec.SystemType, name))
-            { ShowError($"Система «{name}» уже есть в выбранных помещениях. Включите замену однотипных или смените имя."); return; }
+            { ShowError($"Система «{name}» уже есть в выбранных помещениях. Включите замену однотипных или смените имя."); return false; }
 
             var (assigned, skipped) = _presenter.AssignSystemToRooms(_roomFilter, spec);
             if (assigned == 0 && skipped == 0)
-            { ShowError("Ни одного помещения не выбрано."); return; }
+            { ShowError("Ни одного помещения не выбрано."); return false; }
 
-            DialogResult = true;
-            Close();
+            ErrorText.Visibility = Visibility.Collapsed;
+            return true;
         }
 
         private bool DuplicateInSelected(HVACSystemType type, string name) =>

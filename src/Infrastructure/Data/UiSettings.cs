@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using HVACLoadTerminals.Core.Services;
 
 namespace HVACLoadTerminals.Infrastructure.Data
@@ -38,6 +39,11 @@ namespace HVACLoadTerminals.Infrastructure.Data
         public bool LiveRecalc { get; set; } = false;
         /// <summary>RW8: показывать план уровня внизу главного окна (по умолчанию — только 🗺 модально).</summary>
         public bool ShowBottomPlan { get; set; } = false;
+
+        // ---- RW10: недавние файлы + автозагрузка ----
+        public List<string> RecentProjects { get; set; } = new List<string>();
+        public List<string> RecentSnapshots { get; set; } = new List<string>();
+        public bool AutoLoadLastProject { get; set; } = true;
 
         // ---- Глобальные правила размещения (модалка Сервис→Правила) ----
         public double MinWindowLengthRatio { get; set; } = 0.6;
@@ -118,6 +124,30 @@ namespace HVACLoadTerminals.Infrastructure.Data
 
             ReconcileColumns(RoomsGridColumnWidths, KnownRoomsColumns);
             ReconcileColumns(PlacementsGridColumnWidths, KnownPlacementsColumns);
+
+            // RW10: недавние — только существующие файлы, без дублей, максимум 10.
+            RecentProjects = PruneRecent(RecentProjects);
+            RecentSnapshots = PruneRecent(RecentSnapshots);
+        }
+
+        private static List<string> PruneRecent(List<string>? list)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var result = new List<string>();
+            foreach (var raw in list ?? new List<string>())
+            {
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+                try
+                {
+                    var full = Path.GetFullPath(raw);
+                    if (!File.Exists(full)) continue;
+                    if (seen.Add(full))
+                        result.Add(full);
+                }
+                catch { /* битый путь — пропустить */ }
+                if (result.Count >= 10) break;
+            }
+            return result;
         }
 
         private static void ReconcileColumns(
