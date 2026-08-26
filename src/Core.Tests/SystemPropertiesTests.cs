@@ -101,7 +101,7 @@ namespace HVACLoadTerminals.Core.Tests
 
             p.Calculate();
             Assert.All(p.LastRawPlacements,
-                x => Assert.Equal("d1", x.Device.Id)); // автоподбор выбирает D-500
+                x => Assert.Equal("d2", x.Device.Id)); // автоподбор для Fixed N=1: минимальный остаток 200-200=0 vs 500-200=300 → D-300
 
             p.SetSystemDeviceTypeId("П1", "d2");
             p.Calculate();
