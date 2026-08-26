@@ -121,9 +121,11 @@
                         <TextBlock Text="Система помещения" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"/>
                         <ComboBox x:Name="SystemCombo" Margin="0,4,0,4" DisplayMemberPath="Name" SelectionChanged="SystemCombo_SelectionChanged"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <Button Content="➕ Система…" Padding="6,3" Click="AddSystem_Click"
-                                    ToolTip="Добавить/изменить системы этого помещения (приток/вытяжка/кондиционирование)"/>
-                            <Button Content="▶ Рассчитать помещение" Padding="6,3" Click="RecalcRoom_Click"
+                            <Button Content="➕ Система (мастер)…" Padding="6,3" Click="AddSystem_Click"
+                                    ToolTip="Мастер: Тип→Класс→Производитель→Марка→Расчёт для этого помещения"/>
+                            <Button Content="📋 Все системы…" Padding="6,3" Click="AllSystems_Click"
+                                    ToolTip="Список систем помещения (добавить/удалить/расход)"/>
+                            <Button Content="▶ Рассчитать" Padding="6,3" Click="RecalcRoom_Click"
                                     ToolTip="Пересчитать расстановку и обновить превью"/>
                         </StackPanel>
 

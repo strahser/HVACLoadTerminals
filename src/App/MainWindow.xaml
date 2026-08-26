@@ -273,9 +273,9 @@
 
                                 <!-- Контекстная строка таблицы помещений -->
                                 <DockPanel Grid.Row="0" Margin="10,8,10,4">
-                                    <Button DockPanel.Dock="Right" Content="Системы…"
+                                    <Button DockPanel.Dock="Right" Content="Все системы…"
                                             Padding="6,2" Click="EditSystems_Click_Grid"
-                                            ToolTip="Показать системы первой выделенной комнаты"/>
+                                            ToolTip="Список систем первой выделенной комнаты (добавить/удалить/расход)"/>
                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                                                 VerticalAlignment="Center" Margin="0,0,8,0">
                                         <!-- UX-серия: поиск/фильтр по помещениям -->
@@ -294,34 +294,15 @@
                                     </TextBlock>
                                 </DockPanel>
 
-                                <!-- Назначение/включение: контекст уровня -->
-                                <WrapPanel Grid.Row="1" Margin="10,0,10,6">
-                                    <TextBlock Style="{StaticResource StepLabel}" Margin="0,0,3,0">Назначение:</TextBlock>
-                                    <TextBox x:Name="PurposeBox" Style="{StaticResource InputBox}" Width="90"
-                                             Text="Office"/>
-                                    <Button Command="{Binding ApplyPurposeCommand}"
-                                            CommandParameter="{Binding Text, ElementName=PurposeBox}"
-                                            Content="Применить"/>
-                                    <Button Command="{Binding IncludeLevelCommand}"
-                                            ToolTip="Отметить «Включено» у всех помещений выбранного уровня"
-                                            Content="☑ Уровень"/>
-                                    <Button Command="{Binding IncludeVisibleCommand}"
-                                            ToolTip="Включить помещения, видимые в таблице"
-                                            Content="☑ Видимые"/>
-                                    <Button Command="{Binding ExcludeVisibleCommand}"
-                                            ToolTip="Исключить помещения, видимые в таблице"
-                                            Content="☐ Видимые"/>
-                                </WrapPanel>
-
-                                <!-- UX-серия: строка контекста — уровень, счётчики, включение -->
-                                <DockPanel Grid.Row="2" Margin="10,0,10,4" LastChildFill="True">
+                                <!-- UX (п.4 промпта): выбор строк — простые «Выбрать все/Снять»;
+                                     включение в расчёт и назначение — через контекстное меню -->
+                                <DockPanel Grid.Row="1" Grid.RowSpan="2" Margin="10,0,10,4" LastChildFill="True">
                                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                                        <Button Content="☑ Включить видимые" Padding="8,1"
-                                                Command="{Binding IncludeVisibleCommand}"
-                                                ToolTip="Поставить чекбокс «Включено» у всех помещений, видимых в таблице (с учётом поиска/фильтра)"/>
-                                        <Button Content="☐ Исключить видимые" Padding="8,1"
-                                                Command="{Binding ExcludeVisibleCommand}"
-                                                ToolTip="Снять чекбокс «Включено» у видимых помещений"/>
+                                        <Button Content="Выбрать все" Padding="8,1"
+                                                Click="SelectAllRows_Click"
+                                                ToolTip="Выделить все видимые строки (Ctrl+A) — далее ПКМ: назначить систему, категорию, включить в расчёт"/>
+                                        <Button Content="Снять выделение" Padding="8,1"
+                                                Click="UnselectAllRows_Click"/>
                                     </StackPanel>
                                     <TextBlock Text="{Binding RoomsContextText}"
                                                Foreground="{StaticResource TextMuted}"
@@ -339,11 +320,15 @@
                                     <DataGrid.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="🔍 План помещения (стены 1..n)…" Click="OpenRoomDetail_Click" FontWeight="SemiBold"/>
-                                            <MenuItem Header="⚙ Системы помещения…" Click="EditSystems_Click_Context"/>
-                                            <MenuItem Header="➕ Назначить систему выделенным…" Click="AssignSystemFromContext_Click"/>
+                                            <MenuItem Header="🧙 Назначить систему выделенным… (мастер)" Click="AssignSystemFromContext_Click" FontWeight="SemiBold"/>
                                             <Separator/>
-                                            <MenuItem Header="☑ Включить" Click="ContextInclude_Click"/>
-                                            <MenuItem Header="☐ Исключить" Click="ContextExclude_Click"/>
+                                            <MenuItem Header="☑ Включить в расчёт" Click="ContextInclude_Click"/>
+                                            <MenuItem Header="☐ Исключить из расчёта" Click="ContextExclude_Click"/>
+                                            <MenuItem Header="🏷 Категория: Office" Click="ContextCategoryOffice_Click"
+                                                      ToolTip="Применить назначение «Office» к выделенным помещениям"/>
+                                            <Separator/>
+                                            <MenuItem Header="📋 Все системы первой комнаты…" Click="EditSystems_Click_Context"
+                                                      ToolTip="Список систем комнаты: добавить/удалить, правка расхода"/>
                                             <MenuItem Header="📌 Показать кривые на плане" Click="ContextShowOnPlan_Click"/>
                                             <MenuItem Header="↻ Сбросить привязку к стене" Click="ContextResetWall_Click" ToolTip="Сбросить WallIndex/WallOffset для систем выделенных помещений"/>
                                             <Separator/>
@@ -376,8 +361,9 @@
                                         <DataGridTemplateColumn Width="82">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <Button Content="Системы…" Padding="4,1"
-                                                            Click="EditSystems_Click"/>
+                                                    <Button Content="Система…" Padding="4,1"
+                                                            Click="WizardForRoom_Click"
+                                                            ToolTip="Мастер назначения системы этой комнате (Тип→Класс→Производитель→Марка)"/>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
@@ -685,8 +671,9 @@
                                     <TextBlock Text="{Binding Room.SystemsSummary}"
                                                Foreground="{StaticResource TextMuted}" FontSize="11"
                                                VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1" Content="Системы…" Padding="6,2"
-                                            Click="EditSystemsPanel_Click"/>
+                                    <Button Grid.Column="1" Content="Все системы…" Padding="6,2"
+                                            Click="EditSystemsPanel_Click"
+                                            ToolTip="Список систем этой комнаты (добавить/удалить/расход)"/>
                                 </Grid>
                                 <Grid Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>

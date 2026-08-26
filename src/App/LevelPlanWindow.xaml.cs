@@ -21,17 +21,10 @@ namespace HVACLoadTerminals.App
         private string? _selectedLevel;
         private string _selectedColorMode = "По системам";
         private bool _showLabels;
-        private bool _showCurves = true;
         private PlotModel? _plotModel;
 
         public IReadOnlyList<string> Levels => _main.Levels.ToList();
         public IReadOnlyList<string> ColorModes { get; } = new[] { "По k_ef", "По системам" };
-
-        public bool ShowCurves
-        {
-            get => _showCurves;
-            set { _showCurves = value; OnPropertyChanged(nameof(ShowCurves)); Rebuild(); }
-        }
 
         public string? SelectedLevel
         {
@@ -112,57 +105,8 @@ namespace HVACLoadTerminals.App
                 }
             }
 
-            // Кривые ограждений всех помещений уровня (уточнение владельца 2026-08-26:
-            // в окне уровня нужна визуализация кривых помещений — стены/окна, как в RoomDetail).
-            if (ShowCurves)
-            {
-                var levelRoomIds = snapshot.Rooms
-                    .Where(r => r.LevelName == SelectedLevel)
-                    .Select(r => r.Id)
-                    .ToHashSet();
-                var walls = snapshot.Walls
-                    .Where(w => w?.SpaceId != null && levelRoomIds.Contains(w.SpaceId))
-                    .ToList();
-                foreach (var wall in walls)
-                {
-                    var lc = wall.LocationCurve;
-                    bool external = wall.ResolvedExternal || wall.IsExternal || wall.ArIsExternal;
-                    var wl = new LineSeries
-                    {
-                        Color = external ? OxyColor.FromRgb(55, 71, 79) : OxyColor.FromRgb(176, 190, 197),
-                        StrokeThickness = external ? 4 : 2,
-                        Title = external ? "Наружная стена" : "Внутренняя стена"
-                    };
-                    wl.Points.Add(new DataPoint(lc.StartX * mm, lc.StartY * mm));
-                    wl.Points.Add(new DataPoint(lc.EndX * mm, lc.EndY * mm));
-                    model.Series.Add(wl);
-                }
-
-                var openingsByHost = snapshot.Openings
-                    .Where(o => o != null && o.EnclosureType is "Окно" or "Витраж")
-                    .ToLookup(o => o.HostWallId);
-                foreach (var wall in walls)
-                {
-                    var lc = wall.LocationCurve;
-                    double dx = lc.EndX - lc.StartX, dy = lc.EndY - lc.StartY;
-                    double len = Math.Sqrt(dx * dx + dy * dy);
-                    if (len <= 0) continue;
-                    foreach (var op in openingsByHost[wall.Id])
-                    {
-                        double half = Math.Min(op.Width, len) / 2 / len;
-                        double mx = (lc.StartX + lc.EndX) / 2, my = (lc.StartY + lc.EndY) / 2;
-                        var win = new LineSeries
-                        {
-                            Color = OxyColors.OrangeRed,
-                            StrokeThickness = 5,
-                            Title = "Окно"
-                        };
-                        win.Points.Add(new DataPoint((mx - dx * half) * mm, (my - dy * half) * mm));
-                        win.Points.Add(new DataPoint((mx + dx * half) * mm, (my + dy * half) * mm));
-                        model.Series.Add(win);
-                    }
-                }
-            }
+            // Кривые стен/окон — только в окне помещения (решение владельца 2026-08-26):
+            // окно уровня показывает чистый план уровня (контуры + приборы + подписи).
 
             // Приборы уровня.
             var rows = _main.Placements.Where(p => p.LevelName == SelectedLevel).ToList();

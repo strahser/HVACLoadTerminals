@@ -339,9 +339,28 @@ namespace HVACLoadTerminals.App
 
         private void AddSystem_Click(object sender, RoutedEventArgs e)
         {
+            // RW7: мастер назначения (Тип→Класс→Производитель→Марка) для этого помещения.
+            var ids = new HashSet<string> { _room.RoomId };
+            string before = _presenter.CaptureStateJson();
+            var win = new AssignSystemWizardWindow(_presenter, r => ids.Contains(r.RoomId)) { Owner = this };
+            win.ShowDialog();
+            if (_presenter.CaptureStateJson() == before) return; // ничего не назначено
+
+            // Пересобрать список систем
+            RefreshSystemsCombo();
+            _presenter.Calculate();
+            BuildPlot();
+        }
+
+        private void AllSystems_Click(object sender, RoutedEventArgs e)
+        {
             new SystemEditorWindow(_room) { Owner = this }.ShowDialog();
             _presenter.CommitRoomSystems(_room);
-            // Пересобрать список систем (могли добавиться П2/В2/К1…)
+            RefreshSystemsCombo();
+        }
+
+        private void RefreshSystemsCombo()
+        {
             var selectedName = _selectedSystem?.Name;
             SystemCombo.ItemsSource = null;
             SystemCombo.ItemsSource = _room.Systems;

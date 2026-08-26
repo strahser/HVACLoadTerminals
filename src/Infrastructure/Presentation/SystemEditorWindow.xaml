@@ -48,6 +48,8 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
             <Button x:Name="AddSupplyBtn" Click="AddSupply_Click" MinWidth="0">＋ Приток</Button>
             <Button x:Name="AddExhaustBtn" Click="AddExhaust_Click" MinWidth="0">＋ Вытяжка</Button>
+            <Button x:Name="AddFanCoilBtn" Click="AddFanCoil_Click" MinWidth="0">＋ Кондиционирование</Button>
+            <Button x:Name="AddHeatingBtn" Click="AddHeating_Click" MinWidth="0">＋ Отопление</Button>
             <Button x:Name="RemoveBtn" Click="Remove_Click" MinWidth="0">− Удалить</Button>
         </StackPanel>
 

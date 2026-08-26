@@ -49,6 +49,29 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             UpdateBalance();
         }
 
+        private void AddFanCoil_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            _working.Add(new SystemRow
+            {
+                Name = NextName("К", HVACSystemType.FanCoil),
+                Type = HVACSystemType.FanCoil,
+                FlowM3h = 200
+            });
+            UpdateBalance();
+        }
+
+        private void AddHeating_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            // Отопление — метаданные: расстановку считает движок от Q, расход не нужен.
+            _working.Add(new SystemRow
+            {
+                Name = NextName("ОТ", HVACSystemType.Heating),
+                Type = HVACSystemType.Heating,
+                FlowM3h = 0
+            });
+            UpdateBalance();
+        }
+
         private void Remove_Click(object sender, System.Windows.RoutedEventArgs e)
         {
             if (Grid.SelectedItem is SystemRow selected)
@@ -69,7 +92,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     errors.Add("пустое имя системы");
                 else if (!seen.Add(name))
                     errors.Add($"дубликат имени «{name}»");
-                if (s.FlowM3h <= 0)
+                if (s.FlowM3h <= 0 && s.Type != HVACSystemType.Heating)
                     errors.Add($"расход «{name}» должен быть > 0");
             }
             if (errors.Count > 0)

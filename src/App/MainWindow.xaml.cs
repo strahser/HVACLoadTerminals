@@ -238,17 +238,53 @@ namespace HVACLoadTerminals.App
 
         private void EditSystems_Click(object sender, RoutedEventArgs e)
         {
+            // RW7: кнопка в строке → мастер назначения для этой комнаты
             if ((sender as FrameworkElement)?.DataContext is RoomRow row)
-            {
-                string before = _vm.Workspace.CaptureStateJson();
-                _vm.PushUndo($"Системы {row.Number}");
-                new SystemEditorWindow(row) { Owner = this }.ShowDialog();
-                _vm.Workspace.CommitRoomSystems(row); // справочник систем проекта
-                _vm.PopUndoIfNoChange(before);
-                _vm.MarkDirty(); // UX-серия
-                if (_vm.Workspace.CaptureStateJson() != before)
-                    ShowToast($"Системы {row.Number} обновлены", () => _vm.Undo());
-            }
+                OpenAssignWizardForRooms(new[] { row });
+        }
+
+        /// <summary>RW7: мастер назначения систем для набора комнат
+        /// (Тип→Класс→Производитель→Марка→Расчёт/Геометрия + превью).</summary>
+        private void OpenAssignWizardForRooms(IReadOnlyList<RoomRow> rooms)
+        {
+            if (rooms.Count == 0) return;
+            var ids = rooms.Select(r => r.RoomId).ToHashSet();
+            string before = _vm.Workspace.CaptureStateJson();
+            _vm.PushUndo($"Назначение системы ({rooms.Count} помещ.)");
+            var win = new AssignSystemWizardWindow(_vm.Workspace, r => ids.Contains(r.RoomId)) { Owner = this };
+            win.ShowDialog();
+            _vm.PopUndoIfNoChange(before);
+            foreach (var r in rooms) _vm.Workspace.CommitRoomSystems(r);
+            _vm.MarkDirty();
+            _vm.Crm.RefreshPanels();
+            _vm.RoomsView.Refresh();
+            if (_vm.Workspace.CaptureStateJson() != before)
+                ShowToast($"Назначено {rooms.Count} помещ.", () => _vm.Undo());
+        }
+
+        private void WizardForRoom_Click(object sender, RoutedEventArgs e)
+        {
+            // Кнопка в строке таблицы — мастер для этой комнаты.
+            if ((sender as FrameworkElement)?.DataContext is RoomRow row)
+                OpenAssignWizardForRooms(new[] { row });
+        }
+
+        private void WizardForRoom_Context(object sender, RoutedEventArgs e)
+        {
+            var row = GetContextRoom();
+            if (row != null) OpenAssignWizardForRooms(new[] { row });
+        }
+
+        private void ContextCategoryOffice_Click(object sender, RoutedEventArgs e)
+        {
+            var rows = RoomsGrid.SelectedItems.OfType<RoomRow>().ToList();
+            if (rows.Count == 0) return;
+            string before = _vm.Workspace.CaptureStateJson();
+            _vm.PushUndo($"Категория Office ({rows.Count})");
+            foreach (var r in rows) r.Purpose = "Office";
+            _vm.PopUndoIfNoChange(before);
+            _vm.MarkDirty();
+            ShowToast($"Категория «Office» — {rows.Count} помещ.", () => _vm.Undo());
         }
 
         /// <summary>M2.3: «Системы…» из панели свойств помещения.</summary>
@@ -480,7 +516,7 @@ namespace HVACLoadTerminals.App
         private void UnselectAllRows_Click(object sender, RoutedEventArgs e) =>
             RoomsGrid?.UnselectAll();
 
-        /// <summary>«Системы…» для первой выделенной комнаты (строка контекста).</summary>
+        /// <summary>«Все системы…» первой выделенной комнаты — список/правка.</summary>
         private void EditSystems_Click_Grid(object sender, RoutedEventArgs e)
         {
             if (RoomsGrid?.SelectedItem is RoomRow row)
