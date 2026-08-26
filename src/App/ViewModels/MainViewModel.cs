@@ -425,6 +425,8 @@ namespace HVACLoadTerminals.App.ViewModels
             MarkDirty();
             RoomsView.Refresh();
             UpdateRoomCounts();
+            if (Workspace.CaptureStateJson() != before)
+                RequestToast($"Применено к {_selectedRoomIds.Count} помещ.", () => Undo());
         }
 
         // ---- M3.2: экспорт отчёта по уровню ----
@@ -612,6 +614,8 @@ namespace HVACLoadTerminals.App.ViewModels
             MarkDirty();
             RoomsView.Refresh();
             UpdateRoomCounts();
+            if (Workspace.CaptureStateJson() != before)
+                RequestToast($"Назначено {_selectedRoomIds.Count} помещ.", () => Undo());
         }
 
         /// <summary>M3.2: HTML-отчёт по текущему уровню (сцена+сводка+таблица).</summary>
@@ -666,6 +670,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 PushUndo($"Назначение «{p as string}»");
                 Workspace.ApplyPurpose(FilterVisible, p as string ?? "");
                 PopUndoIfNoChange(before);
+                if (Workspace.CaptureStateJson() != before)
+                    RequestToast($"Назначение «{p as string}» применено", () => Undo());
             });
             IncludeLevelCommand = new RelayCommand(_ =>
             {
@@ -675,6 +681,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 PushUndo($"Включить уровень {SelectedLevel}");
                 Workspace.IncludeLevel(SelectedLevel);
                 PopUndoIfNoChange(before);
+                if (Workspace.CaptureStateJson() != before)
+                    RequestToast($"Включён уровень {SelectedLevel}", () => Undo());
             });
             IncludeVisibleCommand = new RelayCommand(_ =>
             {
@@ -682,6 +690,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 PushUndo("Включить видимые");
                 Workspace.SetIncluded(FilterVisible, true);
                 PopUndoIfNoChange(before);
+                if (Workspace.CaptureStateJson() != before)
+                    RequestToast("Включены видимые", () => Undo());
             });
             ExcludeVisibleCommand = new RelayCommand(_ =>
             {
@@ -689,6 +699,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 PushUndo("Исключить видимые");
                 Workspace.SetIncluded(FilterVisible, false);
                 PopUndoIfNoChange(before);
+                if (Workspace.CaptureStateJson() != before)
+                    RequestToast("Исключены видимые", () => Undo());
             });
             IncludeOnlyVisibleCommand = new RelayCommand(_ =>
             {
@@ -696,6 +708,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 PushUndo("Только видимые");
                 Workspace.IncludeOnlyVisible(FilterVisible);
                 PopUndoIfNoChange(before);
+                if (Workspace.CaptureStateJson() != before)
+                    RequestToast("Оставлены только видимые", () => Undo());
             });
             CalculateCommand = new RelayCommand(_ => CalculateSafe());
             SaveProjectCommand = new RelayCommand(_ => SaveProject());
@@ -869,6 +883,10 @@ namespace HVACLoadTerminals.App.ViewModels
                 _uiSettings.PlacementsGridColumnWidths = new Dictionary<string, double>(placementsWidths, StringComparer.Ordinal);
             SaveUiSettings();
         }
+
+        // ---- Toast ----
+        public event Action<string, Action?>? ToastRequested;
+        public void RequestToast(string message, Action? onUndo = null) => ToastRequested?.Invoke(message, onUndo);
 
         // ---- Undo helpers ----
         public bool CanUndo => _undoStack.Count > 0;

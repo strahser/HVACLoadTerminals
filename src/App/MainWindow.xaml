@@ -126,7 +126,8 @@
         </Style>
     </Window.Resources>
 
-    <DockPanel>
+    <Grid>
+        <DockPanel Panel.ZIndex="0">
         <!-- ============ МЕНЮ (этап C: все мета-операции здесь) ============ -->
         <Menu DockPanel.Dock="Top" Background="#FFFFFF" Padding="4,2"
               BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
@@ -746,5 +747,13 @@
                 </DockPanel>
             </Border>
         </Grid>
-    </DockPanel>
+        </DockPanel>
+        <Border x:Name="ToastBorder" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,12" Background="#323232" CornerRadius="6" Padding="12,8" Visibility="Collapsed" Panel.ZIndex="100">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock x:Name="ToastText" Foreground="White" VerticalAlignment="Center" Margin="0,0,12,0" TextWrapping="Wrap" MaxWidth="400"/>
+                <Button x:Name="ToastUndoButton" Content="↶ Отменить" Padding="8,4" Click="ToastUndo_Click" Visibility="Collapsed" Background="#4A4A4A" Foreground="White" BorderBrush="#5A5A5A"/>
+                <Button Content="×" Padding="6,2" Margin="6,0,0,0" Click="ToastClose_Click" Background="Transparent" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

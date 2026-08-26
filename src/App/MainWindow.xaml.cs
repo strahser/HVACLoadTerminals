@@ -17,6 +17,8 @@ namespace HVACLoadTerminals.App
             "HVAC Terminals · Расстановка приборов по снимку помещений";
 
         private readonly MainViewModel _vm;
+        private readonly System.Windows.Threading.DispatcherTimer _toastTimer;
+        private Action? _toastUndoAction;
 
         public MainWindow()
         {
@@ -44,7 +46,36 @@ namespace HVACLoadTerminals.App
                 else if (e.PropertyName == nameof(MainViewModel.PropsPanelWidth) && _vm.ShowPropsPanel)
                     PropsColumn.Width = new GridLength(_vm.PropsPanelWidth, GridUnitType.Pixel);
             };
+            _vm.ToastRequested += ShowToast;
+            _toastTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            _toastTimer.Tick += (s, e) => HideToast();
         }
+
+        private void ShowToast(string message, Action? onUndo)
+        {
+            ToastText.Text = message;
+            _toastUndoAction = onUndo;
+            ToastUndoButton.Visibility = onUndo != null ? Visibility.Visible : Visibility.Collapsed;
+            ToastBorder.Visibility = Visibility.Visible;
+            _toastTimer.Stop();
+            _toastTimer.Start();
+        }
+
+        private void HideToast()
+        {
+            _toastTimer.Stop();
+            ToastBorder.Visibility = Visibility.Collapsed;
+            _toastUndoAction = null;
+        }
+
+        private void ToastUndo_Click(object sender, RoutedEventArgs e)
+        {
+            var action = _toastUndoAction;
+            HideToast();
+            action?.Invoke();
+        }
+
+        private void ToastClose_Click(object sender, RoutedEventArgs e) => HideToast();
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
@@ -215,6 +246,8 @@ namespace HVACLoadTerminals.App
                 _vm.Workspace.CommitRoomSystems(row); // справочник систем проекта
                 _vm.PopUndoIfNoChange(before);
                 _vm.MarkDirty(); // UX-серия
+                if (_vm.Workspace.CaptureStateJson() != before)
+                    ShowToast($"Системы {row.Number} обновлены", () => _vm.Undo());
             }
         }
 
@@ -231,6 +264,8 @@ namespace HVACLoadTerminals.App
                 _vm.PopUndoIfNoChange(before);
                 _vm.Crm.RefreshPanels(); // сводка систем могла измениться
                 _vm.MarkDirty(); // UX-серия
+                if (_vm.Workspace.CaptureStateJson() != before)
+                    ShowToast($"Системы {room.Number} обновлены", () => _vm.Undo());
             }
         }
 
@@ -308,6 +343,8 @@ namespace HVACLoadTerminals.App
                 _vm.PopUndoIfNoChange(before);
                 _vm.MarkDirty();
                 _vm.Workspace.Calculate();
+                if (_vm.Workspace.CaptureStateJson() != before)
+                    ShowToast($"Привязка {row.Number} сохранена", () => _vm.Undo());
             }
             else
             {
@@ -332,6 +369,8 @@ namespace HVACLoadTerminals.App
             _vm.Workspace.CommitRoomSystems(row);
             _vm.PopUndoIfNoChange(before);
             _vm.MarkDirty();
+            if (_vm.Workspace.CaptureStateJson() != before)
+                ShowToast($"Системы {row.Number} обновлены", () => _vm.Undo());
         }
 
         private void AssignSystemFromContext_Click(object sender, RoutedEventArgs e)
@@ -354,6 +393,8 @@ namespace HVACLoadTerminals.App
             foreach (RoomRow r in rows) r.IsIncluded = true;
             _vm.PopUndoIfNoChange(before);
             _vm.MarkDirty();
+            if (_vm.Workspace.CaptureStateJson() != before)
+                ShowToast($"Включено {rows.Count} помещ.", () => _vm.Undo());
         }
 
         private void ContextExclude_Click(object sender, RoutedEventArgs e)
@@ -365,6 +406,8 @@ namespace HVACLoadTerminals.App
             foreach (RoomRow r in rows) r.IsIncluded = false;
             _vm.PopUndoIfNoChange(before);
             _vm.MarkDirty();
+            if (_vm.Workspace.CaptureStateJson() != before)
+                ShowToast($"Исключено {rows.Count} помещ.", () => _vm.Undo());
         }
 
         private void ContextShowOnPlan_Click(object sender, RoutedEventArgs e)
@@ -393,7 +436,10 @@ namespace HVACLoadTerminals.App
             _vm.PopUndoIfNoChange(before);
             _vm.MarkDirty();
             _vm.Workspace.Calculate();
-            MessageBox.Show($"Сброшена привязка к стене у {rows.Count} помещ.", "Сброс", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (_vm.Workspace.CaptureStateJson() != before)
+                ShowToast($"Сброшена привязка у {rows.Count} помещ.", () => _vm.Undo());
+            else
+                MessageBox.Show($"Сброшена привязка к стене у {rows.Count} помещ.", "Сброс", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ContextCopyNumber_Click(object sender, RoutedEventArgs e)
@@ -445,6 +491,8 @@ namespace HVACLoadTerminals.App
                 _vm.Workspace.CommitRoomSystems(row);
                 _vm.PopUndoIfNoChange(before);
                 _vm.MarkDirty(); // UX-серия
+                if (_vm.Workspace.CaptureStateJson() != before)
+                    ShowToast($"Системы {row.Number} обновлены", () => _vm.Undo());
             }
         }
 
