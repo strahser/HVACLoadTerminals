@@ -550,6 +550,20 @@ namespace HVACLoadTerminals.App.ViewModels
             }
         }
 
+        /// <summary>RW8: план уровня внизу главного окна (по умолчанию скрыт — вызов 🗺 модально).</summary>
+        public bool ShowBottomPlan
+        {
+            get => _showBottomPlan;
+            set
+            {
+                if (_showBottomPlan == value) return;
+                _showBottomPlan = value;
+                OnPropertyChanged(nameof(ShowBottomPlan));
+                SaveUiSettings();
+            }
+        }
+        private bool _showBottomPlan;
+
         public CeilingCountRule[] CountRules { get; } =
             Enum.GetValues(typeof(CeilingCountRule)).Cast<CeilingCountRule>().ToArray();
 
@@ -795,6 +809,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 _treePanelWidth = s.TreePanelWidth;
                 _propsPanelWidth = s.PropsPanelWidth;
                 Workspace.LiveRecalc = s.LiveRecalc;
+                _showBottomPlan = s.ShowBottomPlan;
 
                 // Глобальные правила размещения
                 Workspace.MinWindowLengthRatio = s.MinWindowLengthRatio;
@@ -815,6 +830,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 OnPropertyChanged(nameof(TreePanelWidth));
                 OnPropertyChanged(nameof(PropsPanelWidth));
                 OnPropertyChanged(nameof(LiveRecalc));
+                OnPropertyChanged(nameof(ShowBottomPlan));
                 OnPropertyChanged(nameof(MinLengthRatio));
                 OnPropertyChanged(nameof(SupplyRule));
                 OnPropertyChanged(nameof(ExhaustRule));
@@ -844,6 +860,7 @@ namespace HVACLoadTerminals.App.ViewModels
                 _uiSettings.TreePanelWidth = _treePanelWidth;
                 _uiSettings.PropsPanelWidth = _propsPanelWidth;
                 _uiSettings.LiveRecalc = Workspace.LiveRecalc;
+                _uiSettings.ShowBottomPlan = _showBottomPlan;
                 _uiSettings.MinWindowLengthRatio = Workspace.MinWindowLengthRatio;
                 _uiSettings.SupplyRule = Workspace.SupplyRule;
                 _uiSettings.ExhaustRule = Workspace.ExhaustRule;

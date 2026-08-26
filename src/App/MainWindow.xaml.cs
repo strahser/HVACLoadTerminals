@@ -546,8 +546,9 @@ namespace HVACLoadTerminals.App
 
         private void LevelPlan_Click(object sender, RoutedEventArgs e)
         {
+            // RW8: план уровня — модальное окно
             var win = new LevelPlanWindow(_vm, _vm.SelectedLevel) { Owner = this };
-            win.Show();
+            win.ShowDialog();
         }
 
         private void QuickCatalog_Click(object sender, RoutedEventArgs e)

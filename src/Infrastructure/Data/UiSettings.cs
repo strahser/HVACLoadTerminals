@@ -36,6 +36,8 @@ namespace HVACLoadTerminals.Infrastructure.Data
         public string SelectedColorMode { get; set; } = "По k_ef";
         public string RoomFilterMode { get; set; } = "Все помещения";
         public bool LiveRecalc { get; set; } = false;
+        /// <summary>RW8: показывать план уровня внизу главного окна (по умолчанию — только 🗺 модально).</summary>
+        public bool ShowBottomPlan { get; set; } = false;
 
         // ---- Глобальные правила размещения (модалка Сервис→Правила) ----
         public double MinWindowLengthRatio { get; set; } = 0.6;

@@ -169,6 +169,9 @@
                 <MenuItem Header="Подписи комнат на плане" IsCheckable="True"
                           IsChecked="{Binding ShowRoomLabels}"/>
                 <Separator/>
+                <MenuItem Header="План уровня внизу" IsCheckable="True"
+                          IsChecked="{Binding ShowBottomPlan}"
+                          ToolTip="Показывать план уровня под таблицей (по умолчанию — модальное окно 🗺)"/>
                 <MenuItem Header="Менеджер уровней…" Click="Levels_Click" ToolTip="Сводка по уровням: помещения, площадь, нагрузки, вкл/без систем"/>
             </MenuItem>
             <MenuItem Header="_Экспорт">
@@ -249,12 +252,12 @@
                           VerticalAlignment="Stretch" Background="Transparent"
                           Visibility="{Binding ShowTreePanel, Converter={StaticResource BoolToVis}}"/>
 
-            <!-- Центр: сверху список помещений (+приборы табом), снизу план -->
+            <!-- Центр: список помещений (+приборы табом); план уровня — по опции Вид▸«План уровня внизу» или модально 🗺 -->
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="1.35*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Верх: табы Помещения | Приборы -->
@@ -294,15 +297,16 @@
                                     </TextBlock>
                                 </DockPanel>
 
-                                <!-- UX (п.4 промпта): выбор строк — простые «Выбрать все/Снять»;
-                                     включение в расчёт и назначение — через контекстное меню -->
+                                <!-- UX (п.4 промпта): кнопки управляют ЧЕКБОКСОМ «Включено»;
+                                     выделение строк — Ctrl+A / ПКМ (для массовых операций) -->
                                 <DockPanel Grid.Row="1" Grid.RowSpan="2" Margin="10,0,10,4" LastChildFill="True">
                                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                                        <Button Content="Выбрать все" Padding="8,1"
-                                                Click="SelectAllRows_Click"
-                                                ToolTip="Выделить все видимые строки (Ctrl+A) — далее ПКМ: назначить систему, категорию, включить в расчёт"/>
-                                        <Button Content="Снять выделение" Padding="8,1"
-                                                Click="UnselectAllRows_Click"/>
+                                        <Button Content="Включить все" Padding="8,1"
+                                                Command="{Binding IncludeVisibleCommand}"
+                                                ToolTip="Поставить чекбокс «Включено» у всех видимых помещений (с учётом поиска/фильтра)"/>
+                                        <Button Content="Снять все" Padding="8,1"
+                                                Command="{Binding ExcludeVisibleCommand}"
+                                                ToolTip="Снять чекбокс «Включено» у всех видимых помещений"/>
                                     </StackPanel>
                                     <TextBlock Text="{Binding RoomsContextText}"
                                                Foreground="{StaticResource TextMuted}"
@@ -460,13 +464,15 @@
                     </TabItem>
                 </TabControl>
 
+                <!-- Низ: ПЛАН уровня — только по опции Вид▸«План уровня внизу» (по умолчанию скрыт, вызов 🗺 модально) -->
                 <GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch"
-                              VerticalAlignment="Center" Background="Transparent"/>
-
-                <!-- Низ: ПЛАН уровня -->
-                <Border Grid.Row="2" Background="{StaticResource PanelBg}"
+                              VerticalAlignment="Center" Background="Transparent"
+                              Visibility="{Binding ShowBottomPlan, Converter={StaticResource BoolToVis}}"/>
+                <Border Grid.Row="2" Height="430" VerticalAlignment="Top"
+                        Background="{StaticResource PanelBg}"
                         BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                        CornerRadius="6">
+                        CornerRadius="6"
+                        Visibility="{Binding ShowBottomPlan, Converter={StaticResource BoolToVis}}">
                     <DockPanel Margin="4">
                         <DockPanel DockPanel.Dock="Top" Margin="2,2,2,6">
                             <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}"
