@@ -16,6 +16,7 @@
     <Window.InputBindings>
         <KeyBinding Modifiers="Control" Key="O" Command="{Binding OpenSnapshotCommand}"/>
         <KeyBinding Modifiers="Control" Key="S" Command="{Binding SaveProjectCommand}"/>
+        <KeyBinding Modifiers="Control" Key="Z" Command="{Binding UndoCommand}"/>
         <KeyBinding Key="F5" Command="{Binding CalculateCommand}"/>
     </Window.InputBindings>
 
@@ -137,6 +138,8 @@
                 <MenuItem Header="Выход" Click="Exit_Click"/>
             </MenuItem>
             <MenuItem Header="_Правка">
+                <MenuItem Header="↶ Отменить  (Ctrl+Z)" Command="{Binding UndoCommand}" ToolTip="{Binding UndoStatus}"/>
+                <Separator/>
                 <MenuItem Header="Рассчитать  (F5)" FontWeight="SemiBold"
                           Command="{Binding CalculateCommand}"/>
                 <Separator/>

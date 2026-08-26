@@ -32,6 +32,12 @@ namespace HVACLoadTerminals.App.ViewModels
         private UiSettings _uiSettings = new UiSettings();
         private bool _suppressUiSave;
 
+        // ---- Undo для массовых операций (снимок ссылок до → «Отменить») ----
+        private readonly Stack<UndoEntry> _undoStack = new Stack<UndoEntry>();
+        private const int MaxUndo = 20;
+        private class UndoEntry { public string Json = ""; public string Label = ""; public DateTime At = DateTime.UtcNow; }
+        private bool _isRestoringUndo;
+
         public ObservableCollection<PlacementRow> Placements { get; } =
             new ObservableCollection<PlacementRow>();
 
@@ -405,12 +411,15 @@ namespace HVACLoadTerminals.App.ViewModels
                 StatusMessage = "Выделите помещения в таблице (Ctrl/Shift)";
                 return;
             }
+            string before = Workspace.CaptureStateJson();
+            PushUndo($"Массовые оверрайды ({_selectedRoomIds.Count} помещ.)");
             var vm = new MassApplyViewModel(this);
             var window = new MassApplyWindow(vm)
             {
                 Owner = System.Windows.Application.Current?.MainWindow
             };
             window.ShowDialog();
+            PopUndoIfNoChange(before);
             Crm.RefreshPanels(); // сводка/панели могли измениться без пересчёта
             // UX-серия: массовая правка — грязное состояние + свежий список/счётчики.
             MarkDirty();
@@ -573,6 +582,8 @@ namespace HVACLoadTerminals.App.ViewModels
         /// выделенным помещениям.</summary>
         public ICommand AssignSystemCommand { get; }
 
+        public ICommand UndoCommand { get; }
+
         private void OpenAssignSystem()
         {
             if (_selectedRoomIds.Count == 0)
@@ -580,11 +591,14 @@ namespace HVACLoadTerminals.App.ViewModels
                 StatusMessage = "Выделите помещения в таблице (Ctrl/Shift)";
                 return;
             }
+            string before = Workspace.CaptureStateJson();
+            PushUndo($"Назначение системы ({_selectedRoomIds.Count} помещ.)");
             var ids = new HashSet<string>(_selectedRoomIds);
             var owner = System.Windows.Application.Current?.MainWindow;
             var window = new AssignSystemWindow(
                 Workspace, row => ids.Contains(row.RoomId)) { Owner = owner };
             window.ShowDialog();
+            PopUndoIfNoChange(before);
             Crm.RefreshPanels();
             // UX-серия: назначение систем — грязное состояние + свежий список/счётчики.
             MarkDirty();
@@ -639,19 +653,42 @@ namespace HVACLoadTerminals.App.ViewModels
                 }
             });
             ApplyPurposeCommand = new RelayCommand(p =>
-                Workspace.ApplyPurpose(FilterVisible, p as string ?? ""));
+            {
+                string before = Workspace.CaptureStateJson();
+                PushUndo($"Назначение «{p as string}»");
+                Workspace.ApplyPurpose(FilterVisible, p as string ?? "");
+                PopUndoIfNoChange(before);
+            });
             IncludeLevelCommand = new RelayCommand(_ =>
             {
                 if (SelectedLevel.Length == 0)
                     return;
+                string before = Workspace.CaptureStateJson();
+                PushUndo($"Включить уровень {SelectedLevel}");
                 Workspace.IncludeLevel(SelectedLevel);
+                PopUndoIfNoChange(before);
             });
             IncludeVisibleCommand = new RelayCommand(_ =>
-                Workspace.SetIncluded(FilterVisible, true));
+            {
+                string before = Workspace.CaptureStateJson();
+                PushUndo("Включить видимые");
+                Workspace.SetIncluded(FilterVisible, true);
+                PopUndoIfNoChange(before);
+            });
             ExcludeVisibleCommand = new RelayCommand(_ =>
-                Workspace.SetIncluded(FilterVisible, false));
+            {
+                string before = Workspace.CaptureStateJson();
+                PushUndo("Исключить видимые");
+                Workspace.SetIncluded(FilterVisible, false);
+                PopUndoIfNoChange(before);
+            });
             IncludeOnlyVisibleCommand = new RelayCommand(_ =>
-                Workspace.IncludeOnlyVisible(FilterVisible));
+            {
+                string before = Workspace.CaptureStateJson();
+                PushUndo("Только видимые");
+                Workspace.IncludeOnlyVisible(FilterVisible);
+                PopUndoIfNoChange(before);
+            });
             CalculateCommand = new RelayCommand(_ => CalculateSafe());
             SaveProjectCommand = new RelayCommand(_ => SaveProject());
             LoadProjectCommand = new RelayCommand(_ => LoadProject());
@@ -663,6 +700,7 @@ namespace HVACLoadTerminals.App.ViewModels
             EditCatalogCommand = new RelayCommand(_ => EditCatalog());
             ApplyMassCommand = new RelayCommand(_ => ApplyMass(), _ => HasSelectedRooms);
             AssignSystemCommand = new RelayCommand(_ => OpenAssignSystem(), _ => HasSelectedRooms);
+            UndoCommand = new RelayCommand(_ => Undo(), _ => CanUndo);
             ExportReportCommand = new RelayCommand(_ => ExportLevelReport(), _ =>
                 Placements.Count > 0);
 
@@ -796,6 +834,74 @@ namespace HVACLoadTerminals.App.ViewModels
             if (placementsWidths != null)
                 _uiSettings.PlacementsGridColumnWidths = new Dictionary<string, double>(placementsWidths, StringComparer.Ordinal);
             SaveUiSettings();
+        }
+
+        // ---- Undo helpers ----
+        public bool CanUndo => _undoStack.Count > 0;
+        public string UndoLabel => _undoStack.Count > 0 ? _undoStack.Peek().Label : "Отменить";
+        public string UndoStatus => _undoStack.Count > 0 ? $"↶ {_undoStack.Peek().Label}" : "Нет действий для отмены";
+
+        public void PushUndo(string label)
+        {
+            if (_isRestoringUndo) return;
+            try
+            {
+                string json = Workspace.CaptureStateJson();
+                _undoStack.Push(new UndoEntry { Json = json, Label = label, At = DateTime.UtcNow });
+                if (_undoStack.Count > MaxUndo)
+                {
+                    var keep = _undoStack.Take(MaxUndo).ToArray();
+                    _undoStack.Clear();
+                    for (int i = keep.Length - 1; i >= 0; i--) _undoStack.Push(keep[i]);
+                }
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(UndoLabel));
+                OnPropertyChanged(nameof(UndoStatus));
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+                AppLogger.Info($"Undo push: {label} stack={_undoStack.Count}");
+            }
+            catch (Exception ex) { AppLogger.Error("PushUndo failed", ex); }
+        }
+
+        public void PopUndoIfNoChange(string beforeJson)
+        {
+            try
+            {
+                string afterJson = Workspace.CaptureStateJson();
+                if (beforeJson == afterJson && _undoStack.Count > 0)
+                {
+                    _undoStack.Pop();
+                    OnPropertyChanged(nameof(CanUndo));
+                    OnPropertyChanged(nameof(UndoLabel));
+                    OnPropertyChanged(nameof(UndoStatus));
+                    System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+                }
+            }
+            catch { }
+        }
+
+        public void Undo()
+        {
+            if (_undoStack.Count == 0) return;
+            var entry = _undoStack.Pop();
+            try
+            {
+                _isRestoringUndo = true;
+                Workspace.RestoreStateFromJson(entry.Json);
+                MarkDirty();
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(UndoLabel));
+                OnPropertyChanged(nameof(UndoStatus));
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+                StatusMessage = $"↶ Отменено: {entry.Label}";
+                AppLogger.Info($"Undo pop: {entry.Label}");
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Ошибка отмены: " + ex.Message;
+                AppLogger.Error("Undo failed", ex);
+            }
+            finally { _isRestoringUndo = false; }
         }
 
         private void CalculateSafe()

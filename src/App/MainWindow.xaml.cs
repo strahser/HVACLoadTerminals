@@ -208,8 +208,11 @@ namespace HVACLoadTerminals.App
         {
             if ((sender as FrameworkElement)?.DataContext is RoomRow row)
             {
+                string before = _vm.Workspace.CaptureStateJson();
+                _vm.PushUndo($"Системы {row.Number}");
                 new SystemEditorWindow(row) { Owner = this }.ShowDialog();
                 _vm.Workspace.CommitRoomSystems(row); // справочник систем проекта
+                _vm.PopUndoIfNoChange(before);
                 _vm.MarkDirty(); // UX-серия
             }
         }
@@ -220,8 +223,11 @@ namespace HVACLoadTerminals.App
             var room = _vm.Crm.SelectedRoom.Room;
             if (room != null)
             {
+                string before = _vm.Workspace.CaptureStateJson();
+                _vm.PushUndo($"Системы {room.Number}");
                 new SystemEditorWindow(room) { Owner = this }.ShowDialog();
                 _vm.Workspace.CommitRoomSystems(room); // справочник систем проекта
+                _vm.PopUndoIfNoChange(before);
                 _vm.Crm.RefreshPanels(); // сводка систем могла измениться
                 _vm.MarkDirty(); // UX-серия
             }
@@ -290,13 +296,21 @@ namespace HVACLoadTerminals.App
                 MessageBox.Show($"Контур помещения {row.Number} не найден в снимке.", "План помещения", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+            string before = _vm.Workspace.CaptureStateJson();
+            _vm.PushUndo($"План помещения {row.Number}");
             var win = new RoomDetailWindow(row, snapRoom, _vm.Workspace) { Owner = this };
-            if (win.ShowDialog() == true)
+            bool? res = win.ShowDialog();
+            if (res == true)
             {
                 // Привязка к стене сохранена в SystemRow — помечаем dirty и обновляем план
                 _vm.Workspace.CommitRoomSystems(row);
+                _vm.PopUndoIfNoChange(before);
                 _vm.MarkDirty();
                 _vm.Workspace.Calculate();
+            }
+            else
+            {
+                _vm.PopUndoIfNoChange(before);
             }
         }
 
@@ -311,8 +325,11 @@ namespace HVACLoadTerminals.App
         {
             var row = GetContextRoom();
             if (row == null) return;
+            string before = _vm.Workspace.CaptureStateJson();
+            _vm.PushUndo($"Системы {row.Number}");
             new SystemEditorWindow(row) { Owner = this }.ShowDialog();
             _vm.Workspace.CommitRoomSystems(row);
+            _vm.PopUndoIfNoChange(before);
             _vm.MarkDirty();
         }
 
@@ -329,15 +346,23 @@ namespace HVACLoadTerminals.App
 
         private void ContextInclude_Click(object sender, RoutedEventArgs e)
         {
-            foreach (RoomRow r in RoomsGrid.SelectedItems.OfType<RoomRow>().ToList())
-                r.IsIncluded = true;
+            var rows = RoomsGrid.SelectedItems.OfType<RoomRow>().ToList();
+            if (rows.Count == 0) return;
+            string before = _vm.Workspace.CaptureStateJson();
+            _vm.PushUndo($"Включить ({rows.Count})");
+            foreach (RoomRow r in rows) r.IsIncluded = true;
+            _vm.PopUndoIfNoChange(before);
             _vm.MarkDirty();
         }
 
         private void ContextExclude_Click(object sender, RoutedEventArgs e)
         {
-            foreach (RoomRow r in RoomsGrid.SelectedItems.OfType<RoomRow>().ToList())
-                r.IsIncluded = false;
+            var rows = RoomsGrid.SelectedItems.OfType<RoomRow>().ToList();
+            if (rows.Count == 0) return;
+            string before = _vm.Workspace.CaptureStateJson();
+            _vm.PushUndo($"Исключить ({rows.Count})");
+            foreach (RoomRow r in rows) r.IsIncluded = false;
+            _vm.PopUndoIfNoChange(before);
             _vm.MarkDirty();
         }
 
@@ -353,6 +378,8 @@ namespace HVACLoadTerminals.App
         {
             var rows = RoomsGrid.SelectedItems.OfType<RoomRow>().ToList();
             if (rows.Count == 0) return;
+            string before = _vm.Workspace.CaptureStateJson();
+            _vm.PushUndo($"Сброс привязки ({rows.Count})");
             foreach (var r in rows)
             {
                 foreach (var s in r.Systems)
@@ -362,6 +389,7 @@ namespace HVACLoadTerminals.App
                 }
             }
             foreach (var r in rows) _vm.Workspace.CommitRoomSystems(r);
+            _vm.PopUndoIfNoChange(before);
             _vm.MarkDirty();
             _vm.Workspace.Calculate();
             MessageBox.Show($"Сброшена привязка к стене у {rows.Count} помещ.", "Сброс", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -410,8 +438,11 @@ namespace HVACLoadTerminals.App
         {
             if (RoomsGrid?.SelectedItem is RoomRow row)
             {
+                string before = _vm.Workspace.CaptureStateJson();
+                _vm.PushUndo($"Системы {row.Number}");
                 new SystemEditorWindow(row) { Owner = this }.ShowDialog();
                 _vm.Workspace.CommitRoomSystems(row);
+                _vm.PopUndoIfNoChange(before);
                 _vm.MarkDirty(); // UX-серия
             }
         }

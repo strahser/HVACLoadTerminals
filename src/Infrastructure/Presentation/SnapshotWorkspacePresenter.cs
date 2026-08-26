@@ -766,15 +766,55 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     new Newtonsoft.Json.Converters.StringEnumConverter()));
         }
 
+        public string CaptureStateJson()
+        {
+            var dto = BuildDto();
+            return Newtonsoft.Json.JsonConvert.SerializeObject(dto,
+                Newtonsoft.Json.Formatting.Indented,
+                new Newtonsoft.Json.Converters.StringEnumConverter());
+        }
+
+        public void RestoreStateFromJson(string json)
+        {
+            var dto = Newtonsoft.Json.JsonConvert.DeserializeObject<ProjectDto>(json)
+                ?? throw new System.IO.InvalidDataException("Состояние проекта повреждено");
+            LoadFromDto(dto, isRestore: true);
+        }
+
+        private ProjectDto BuildDto() => new ProjectDto
+        {
+            SnapshotPath = _snapshotPath,
+            Rooms = Rooms.ToList(),
+            Placements = _lastPlacementRows,
+            ProjectSystems = _projectSystems.ToList(),
+            SupplyPattern = SupplyPattern,
+            ExhaustPattern = ExhaustPattern,
+            SingleRule = SingleDeviceRule,
+            CatalogPath = CatalogPath,
+            CatalogVersion = CatalogVersion
+        };
+
         public void LoadProject(string path)
         {
             string json = System.IO.File.ReadAllText(path);
             var dto = Newtonsoft.Json.JsonConvert.DeserializeObject<ProjectDto>(json)
                 ?? throw new System.IO.InvalidDataException("Файл проекта повреждён");
+            LoadFromDto(dto, isRestore: false);
+        }
 
-            _snapshotPath = dto.SnapshotPath ?? "";
-            if (System.IO.File.Exists(_snapshotPath))
-                _snapshot = _loader.LoadFromFile(_snapshotPath);
+        private void LoadFromDto(ProjectDto dto, bool isRestore = false)
+        {
+            if (!isRestore)
+            {
+                _snapshotPath = dto.SnapshotPath ?? "";
+                if (System.IO.File.Exists(_snapshotPath))
+                    _snapshot = _loader.LoadFromFile(_snapshotPath);
+            }
+            else
+            {
+                // Restore: snapshot file не перечитываем, только состояние презентера
+                _snapshotPath = dto.SnapshotPath ?? _snapshotPath;
+            }
 
             // U2.1: patterns round-trip; legacy files keep the owner defaults.
             SupplyPattern = dto.SupplyPattern ?? WallPattern.LongSide;
