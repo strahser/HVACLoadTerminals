@@ -90,6 +90,15 @@ namespace HVACLoadTerminals.Core.Services
         /// <summary>Заглубление от чистого потолка, мм — вместо CeilingOffsetMm
         /// типоразмера при расчёте высоты установки. null = по типоразмеру.</summary>
         public double? CeilingOffsetOverrideMm { get; set; }
+
+        // ---- RoomDetailWindow: wall-specific размещение ----
+
+        /// <summary>Индекс стены для размещения вдоль конкретной кривой (0-based, null = паттерн/сетка).
+        /// Нумерация UI 1..n совпадает с порядком вершин Polygon2D.</summary>
+        public int? TargetWallIndex { get; set; }
+
+        /// <summary>Смещение от выбранной стены, мм (null = использовать EdgeOffsetOverrideMm).</summary>
+        public double? TargetWallOffsetMm { get; set; }
     }
 
     /// <summary>Placements plus human-readable warnings for one room.</summary>
@@ -194,6 +203,17 @@ namespace HVACLoadTerminals.Core.Services
             }
 
             // --- geometry: inward offset, then grid ---
+            // RoomDetailWindow: wall-specific размещение вдоль выбранной стены (нумерация 1..n)
+            if (options.TargetWallIndex.HasValue)
+            {
+                var wallResult = TryPlaceAlongWall(
+                    boundary, requiredFlow, count, optionLabel, mountHeightMm,
+                    device, roomId, systemName, options, warnings);
+                if (wallResult != null)
+                    return wallResult;
+                warnings.Add("Настенная привязка неприменима — использован паттерн/сетка");
+            }
+
             // P1: отступ типоразмера (wall_offset прототипа) приоритетнее общего;
             // M2.2: оверрайд отступа системы — выше обоих.
             double clearanceMm = options.EdgeOffsetOverrideMm
@@ -311,6 +331,117 @@ namespace HVACLoadTerminals.Core.Services
                 Placements = Array.Empty<DevicePlacement>(),
                 Warnings = new[] { message }
             };
+
+        /// <summary>Wall-specific размещение: вдоль выбранной стены (нумерация 1..n) со смещением.
+        /// Возвращает null если индекс вне диапазона или длина вырождена — фолбэк на общий паттерн/сетку.</summary>
+        private CeilingPlacementResult? TryPlaceAlongWall(
+            Polygon2D boundary,
+            double requiredFlow,
+            int count,
+            string optionLabel,
+            double mountHeightMm,
+            TerminalDevice device,
+            string roomId,
+            string systemName,
+            CeilingPlacementOptions options,
+            List<string> warnings)
+        {
+            if (!options.TargetWallIndex.HasValue)
+                return null;
+            int idx = options.TargetWallIndex.Value;
+            var edges = RoomGeometryAnalyzer.GetEdges(boundary);
+            if (idx < 0 || idx >= edges.Count)
+                return null;
+            var wallEdge = edges[idx];
+            if (wallEdge.Length <= 1e-9)
+                return null;
+
+            double clearanceMm = options.TargetWallOffsetMm
+                ?? options.EdgeOffsetOverrideMm
+                ?? (device.WallOffsetMm > 0 ? device.WallOffsetMm : options.WallClearanceMm);
+            double clearanceFt = LengthUnitConverter.MmToUnits(clearanceMm);
+
+            var n = wallEdge.InwardNormal;
+            var offsetStart = new Point2D(wallEdge.Start.X + n.X * clearanceFt, wallEdge.Start.Y + n.Y * clearanceFt);
+            var offsetEnd = new Point2D(wallEdge.End.X + n.X * clearanceFt, wallEdge.End.Y + n.Y * clearanceFt);
+            double len = Math.Sqrt(Math.Pow(offsetEnd.X - offsetStart.X, 2) + Math.Pow(offsetEnd.Y - offsetStart.Y, 2));
+            if (len <= 1e-9)
+                return null;
+
+            var offsetEdge = new EdgeInfo
+            {
+                Index = wallEdge.Index,
+                Start = offsetStart,
+                End = offsetEnd,
+                Length = len,
+                Direction = new Point2D((offsetEnd.X - offsetStart.X) / len, (offsetEnd.Y - offsetStart.Y) / len),
+                InwardNormal = n,
+                MidPoint = new Point2D((offsetStart.X + offsetEnd.X) / 2.0, (offsetStart.Y + offsetEnd.Y) / 2.0)
+            };
+
+            List<Point2D> points;
+            double rowRotation = Math.Atan2(n.Y, n.X);
+            if (count == 1)
+            {
+                // SingleRule: Corner = начало.offset ребра, Center = середина.offset ребра
+                points = new List<Point2D>(1);
+                points.Add(options.SingleRule == SingleRule.Corner ? offsetEdge.Start : offsetEdge.MidPoint);
+            }
+            else
+            {
+                points = DistributeAlongEdge(offsetEdge, count, options, warnings);
+            }
+
+            var placements = new List<DevicePlacement>(points.Count);
+            foreach (var p in points)
+            {
+                Point2D valid;
+                if (boundary.ContainsPoint(p))
+                {
+                    valid = p;
+                }
+                else
+                {
+                    var c = boundary.Center;
+                    double dx = c.X - p.X, dy = c.Y - p.Y;
+                    double dlen = Math.Sqrt(dx * dx + dy * dy);
+                    if (dlen < 1e-9) continue;
+                    double nudge = LengthUnitConverter.MmToUnits(1) / dlen;
+                    valid = new Point2D(p.X + dx * nudge, p.Y + dy * nudge);
+                    if (!boundary.ContainsPoint(valid))
+                        continue;
+                }
+
+                bool rotated = count > 1;
+                placements.Add(new DevicePlacement(device, valid, rotated ? rowRotation : 0, roomId, systemName)
+                {
+                    CalculationOption = optionLabel,
+                    MountHeightMm = mountHeightMm
+                });
+            }
+
+            if (placements.Count < count)
+                warnings.Add($"Размещено {placements.Count} из {count} вдоль стены {idx + 1}");
+
+            if (requiredFlow > 0 && placements.Count > 0)
+            {
+                double perDevice = requiredFlow / placements.Count;
+                foreach (var pl in placements)
+                    pl.CalculatedFlowM3h = perDevice;
+            }
+
+            if (requiredFlow > 0 && placements.Count * device.MaxFlowRate + 1e-9 < requiredFlow)
+            {
+                warnings.Add($"Расход приборов ({placements.Count * device.MaxFlowRate:F0} м³/ч) меньше требуемого ({requiredFlow:F0} м³/ч)");
+            }
+
+            return new CeilingPlacementResult
+            {
+                Placements = placements,
+                Warnings = warnings,
+                SelectedEdge = offsetEdge
+            };
+        }
 
         /// <summary>
         /// U2.1: point for a single device per <see cref="SingleRule"/> —

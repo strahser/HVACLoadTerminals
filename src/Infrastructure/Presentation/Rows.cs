@@ -148,6 +148,15 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// H потолка − offset (аналог ceiling_offset прототипа).</summary>
         public double? CeilingOffsetOverrideMm { get; set; }
 
+        // ---- RoomDetailWindow: привязка к конкретной стене (нумерация кривых 1..n) ----
+        /// <summary>Индекс стены для wall-specific размещения (0-based, null = авто/паттерн).
+        /// В UI отображается как 1-based. Сохраняется в проекте (per-room).</summary>
+        public int? WallIndex { get; set; }
+
+        /// <summary>Смещение от выбранной стены, мм (null = использовать EdgeOffsetOverrideMm/дефолт).
+        /// Имеет смысл только когда <see cref="WallIndex"/> задан.</summary>
+        public double? WallOffsetMm { get; set; }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

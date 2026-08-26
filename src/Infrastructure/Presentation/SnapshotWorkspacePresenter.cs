@@ -1088,7 +1088,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         private CeilingPlacementOptions SystemCeilingOptions(SystemRow system)
         {
             bool supply = system.Type == HVACSystemType.Supply;
-            return new CeilingPlacementOptions
+            var opts = new CeilingPlacementOptions
             {
                 CountRule = system.CountRuleOverride ?? (supply ? SupplyRule : ExhaustRule),
                 FixedCount = Math.Max(1, system.FixedCountOverride ?? FixedSupplyCount),
@@ -1097,8 +1097,16 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
                 // M2.2: отступы системы — высший приоритет движка.
                 EdgeOffsetOverrideMm = system.EdgeOffsetOverrideMm,
-                CeilingOffsetOverrideMm = system.CeilingOffsetOverrideMm
+                CeilingOffsetOverrideMm = system.CeilingOffsetOverrideMm,
+
+                // RoomDetailWindow: wall-specific
+                TargetWallIndex = system.WallIndex,
+                TargetWallOffsetMm = system.WallOffsetMm
             };
+            // Если привязка к стене задана, паттерн игнорируется — фолбэк на wall-specific ветку.
+            if (opts.TargetWallIndex.HasValue)
+                opts.Pattern = WallPattern.CeilingGrid;
+            return opts;
         }
 
         /// <summary>M2.1: каталог, суженный до закреплённого за системой типоразмера;

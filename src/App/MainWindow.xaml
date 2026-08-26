@@ -326,7 +326,32 @@
                                           Margin="6,0,6,6" BorderThickness="1"
                                           SelectionMode="Extended" SelectionUnit="FullRow"
                                           x:Name="RoomsGrid"
-                                          SelectionChanged="RoomsGrid_SelectionChanged">
+                                          SelectionChanged="RoomsGrid_SelectionChanged"
+                                          PreviewMouseRightButtonDown="RoomsGrid_PreviewMouseRightButtonDown"
+                                          MouseDoubleClick="RoomsGrid_MouseDoubleClick">
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="🔍 План помещения (стены 1..n)…" Click="OpenRoomDetail_Click" FontWeight="SemiBold"/>
+                                            <MenuItem Header="⚙ Системы помещения…" Click="EditSystems_Click_Context"/>
+                                            <MenuItem Header="➕ Назначить систему выделенным…" Click="AssignSystemFromContext_Click"/>
+                                            <Separator/>
+                                            <MenuItem Header="☑ Включить" Click="ContextInclude_Click"/>
+                                            <MenuItem Header="☐ Исключить" Click="ContextExclude_Click"/>
+                                            <MenuItem Header="📌 Показать кривые на плане" Click="ContextShowOnPlan_Click"/>
+                                            <MenuItem Header="↻ Сбросить привязку к стене" Click="ContextResetWall_Click" ToolTip="Сбросить WallIndex/WallOffset для систем выделенных помещений"/>
+                                            <Separator/>
+                                            <MenuItem Header="📋 Копировать">
+                                                <MenuItem Header="Копировать номер" Click="ContextCopyNumber_Click"/>
+                                                <MenuItem Header="Копировать имя" Click="ContextCopyName_Click"/>
+                                                <MenuItem Header="Копировать S_ID" Click="ContextCopyId_Click"/>
+                                                <MenuItem Header="Копировать сводку систем" Click="ContextCopySystems_Click"/>
+                                            </MenuItem>
+                                            <MenuItem Header="📋 Копировать параметры" Click="ContextCopySystemParams_Click" ToolTip="Копирует WallIndex/WallOffset первой системы для вставки"/>
+                                            <Separator/>
+                                            <MenuItem Header="Выделить все видимые" Click="SelectAllRows_Click"/>
+                                            <MenuItem Header="Снять выделение" Click="UnselectAllRows_Click"/>
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
                                     <DataGrid.Columns>
                                         <DataGridCheckBoxColumn Header="☑"
                                             Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}"

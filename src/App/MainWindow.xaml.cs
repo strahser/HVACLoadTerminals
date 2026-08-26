@@ -240,6 +240,163 @@ namespace HVACLoadTerminals.App
             _vm.SetSelectedRooms(RoomsGrid.SelectedItems);
         }
 
+        private void RoomsGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // Двойной клик по строке — быстрое открытие плана помещения
+            var row = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
+            if (row?.DataContext is RoomRow)
+                OpenRoomDetail_Click(sender, e);
+        }
+
+        private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T typed) return typed;
+                child = System.Windows.Media.VisualTreeHelper.GetParent(child);
+            }
+            return null;
+        }
+
+        private void RoomsGrid_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // ПКМ по строке — выделить её перед открытием контекстного меню
+            var row = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
+            if (row != null && row.DataContext is RoomRow)
+            {
+                if (!row.IsSelected)
+                {
+                    // Ctrl не нажат — одиночный выбор
+                    if ((System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) == 0 &&
+                        (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Shift) == 0)
+                        RoomsGrid.SelectedItems.Clear();
+                    row.IsSelected = true;
+                }
+            }
+        }
+
+        // ---- RoomDetailWindow: отдельное окно отрисовки одного помещения с нумерацией стен ----
+        private void OpenRoomDetail_Click(object sender, RoutedEventArgs e)
+        {
+            var row = GetContextRoom() ?? RoomsGrid?.SelectedItem as RoomRow;
+            if (row == null)
+            {
+                MessageBox.Show("Выделите помещение в таблице.", "План помещения", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var snapRoom = _vm.Workspace.FindSnapshotRoom(row.RoomId);
+            if (snapRoom == null)
+            {
+                MessageBox.Show($"Контур помещения {row.Number} не найден в снимке.", "План помещения", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var win = new RoomDetailWindow(row, snapRoom, _vm.Workspace) { Owner = this };
+            if (win.ShowDialog() == true)
+            {
+                // Привязка к стене сохранена в SystemRow — помечаем dirty и обновляем план
+                _vm.Workspace.CommitRoomSystems(row);
+                _vm.MarkDirty();
+                _vm.Workspace.Calculate();
+            }
+        }
+
+        private RoomRow? GetContextRoom()
+        {
+            // Пытаемся взять DataContext элемента, по которому открыт ContextMenu
+            if (RoomsGrid?.SelectedItem is RoomRow sel) return sel;
+            return null;
+        }
+
+        private void EditSystems_Click_Context(object sender, RoutedEventArgs e)
+        {
+            var row = GetContextRoom();
+            if (row == null) return;
+            new SystemEditorWindow(row) { Owner = this }.ShowDialog();
+            _vm.Workspace.CommitRoomSystems(row);
+            _vm.MarkDirty();
+        }
+
+        private void AssignSystemFromContext_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_vm.HasSelectedRooms)
+            {
+                MessageBox.Show("Выделите помещения.", "Назначить систему", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            if (_vm.AssignSystemCommand.CanExecute(null))
+                _vm.AssignSystemCommand.Execute(null);
+        }
+
+        private void ContextInclude_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (RoomRow r in RoomsGrid.SelectedItems.OfType<RoomRow>().ToList())
+                r.IsIncluded = true;
+            _vm.MarkDirty();
+        }
+
+        private void ContextExclude_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (RoomRow r in RoomsGrid.SelectedItems.OfType<RoomRow>().ToList())
+                r.IsIncluded = false;
+            _vm.MarkDirty();
+        }
+
+        private void ContextShowOnPlan_Click(object sender, RoutedEventArgs e)
+        {
+            _vm.ShowEnclosureCurves = true;
+            // План уже подсвечивает выбранные помещения через _selectedRoomIds
+            MessageBox.Show("Кривые ограждений включены. Выделенные помещения подсвечены синим, их стены — толще, окна — оранжевым.",
+                "Показать на плане", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void ContextResetWall_Click(object sender, RoutedEventArgs e)
+        {
+            var rows = RoomsGrid.SelectedItems.OfType<RoomRow>().ToList();
+            if (rows.Count == 0) return;
+            foreach (var r in rows)
+            {
+                foreach (var s in r.Systems)
+                {
+                    s.WallIndex = null;
+                    s.WallOffsetMm = null;
+                }
+            }
+            foreach (var r in rows) _vm.Workspace.CommitRoomSystems(r);
+            _vm.MarkDirty();
+            _vm.Workspace.Calculate();
+            MessageBox.Show($"Сброшена привязка к стене у {rows.Count} помещ.", "Сброс", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void ContextCopyNumber_Click(object sender, RoutedEventArgs e)
+        {
+            var rows = RoomsGrid.SelectedItems.OfType<RoomRow>().ToList();
+            Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(r => r.Number)));
+        }
+        private void ContextCopyName_Click(object sender, RoutedEventArgs e)
+        {
+            var rows = RoomsGrid.SelectedItems.OfType<RoomRow>().ToList();
+            Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(r => r.Name)));
+        }
+        private void ContextCopyId_Click(object sender, RoutedEventArgs e)
+        {
+            var rows = RoomsGrid.SelectedItems.OfType<RoomRow>().ToList();
+            Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(r => r.RoomId)));
+        }
+        private void ContextCopySystems_Click(object sender, RoutedEventArgs e)
+        {
+            var rows = RoomsGrid.SelectedItems.OfType<RoomRow>().ToList();
+            Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(r => $"{r.Number}. {r.Name}: {r.SystemsSummary}")));
+        }
+        private void ContextCopySystemParams_Click(object sender, RoutedEventArgs e)
+        {
+            var row = GetContextRoom();
+            if (row?.Systems.FirstOrDefault() is SystemRow s)
+            {
+                string txt = $"{s.Name} wall={s.WallIndex?.ToString() ?? "auto"} offset={s.WallOffsetMm?.ToString() ?? "auto"}";
+                Clipboard.SetText(txt);
+            }
+        }
+
         // ---- Этап C: пункты меню, требующие доступа к гриду/окну ----
 
         private void SelectAllRows_Click(object sender, RoutedEventArgs e) =>
