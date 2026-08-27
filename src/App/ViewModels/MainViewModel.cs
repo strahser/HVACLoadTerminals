@@ -1605,15 +1605,26 @@ namespace HVACLoadTerminals.App.ViewModels
             };
 
             // U2.1: подсветка сторон, выбранных паттернами массовой расстановки
-            // (цвет = цвет системы; толще контура комнаты).
+            // (цвет = цвет системы; тонкие линии — подсказка, не основной план).
             foreach (var edge in Workspace.LastPatternEdges)
             {
                 if (edge.LevelName != SelectedLevel)
                     continue;
-                var sc = colorBySystem.TryGetValue(edge.SystemName, out var sc2)
-                    ? sc2 : Colors.Purple;
+                // Определяем цвет по типу системы (П* = приток, В* = вытяжка, К* = кондиционер, ОТ* = отопление)
+                string sysName = edge.SystemName ?? "";
+                SColor sc;
+                if (sysName.StartsWith("ОТ", StringComparison.OrdinalIgnoreCase))
+                    sc = Colors.Orange;
+                else if (sysName.StartsWith("П", StringComparison.OrdinalIgnoreCase))
+                    sc = Colors.Red;
+                else if (sysName.StartsWith("В", StringComparison.OrdinalIgnoreCase))
+                    sc = Colors.Green;
+                else if (sysName.StartsWith("К", StringComparison.OrdinalIgnoreCase))
+                    sc = Colors.Blue;
+                else
+                    sc = colorBySystem.TryGetValue(sysName, out var sc2) ? sc2 : Colors.Gray;
                 plan.AddLine(edge.Start.X * mmPerFoot, edge.Start.Y * mmPerFoot,
-                    edge.End.X * mmPerFoot, edge.End.Y * mmPerFoot, sc, 5);
+                    edge.End.X * mmPerFoot, edge.End.Y * mmPerFoot, sc, 2);
             }
 
             var rows = Placements

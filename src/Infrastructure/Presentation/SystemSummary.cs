@@ -109,5 +109,14 @@ public class AssignSystemSpec
     /// <summary>Для 1 помещения: привязка к стене 1..n; null=авто.</summary>
     public int? WallIndex { get; set; }
     public double? WallOffsetMm { get; set; }
+
+    /// <summary>Отступ от стены, мм (null = по типоразмеру).</summary>
+    public double? EdgeOffsetOverrideMm { get; set; }
+
+    /// <summary>Смещение сетки по X, мм.</summary>
+    public double OffsetXMm { get; set; }
+
+    /// <summary>Смещение сетки по Y, мм.</summary>
+    public double OffsetYMm { get; set; }
 }
 }

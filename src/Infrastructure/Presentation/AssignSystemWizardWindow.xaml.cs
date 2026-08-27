@@ -127,8 +127,13 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 }
             }
             catch { _syncing = false; }
+            PopulateEditCombo();
             RebuildPreview();
         }
+
+        private void PopulateEditCombo() { }
+
+        private void EditSystem_Changed(object sender, SelectionChangedEventArgs e) { }
 
         private void FillWallCombo()
         {
@@ -329,14 +334,15 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 plan.AddRoom("preview", pts, null,
                     new ScottPlot.Color(255, 255, 255, 190), Colors.Black, 2f);
 
-                // нумерация стен 1..n
+                // нумерация стен + длины
                 try
                 {
                     var wallEdges = RoomGeometryAnalyzer.GetEdges(poly);
                     for (int i = 0; i < wallEdges.Count; i++)
                     {
                         var mid = wallEdges[i].MidPoint;
-                        plan.AddText((i + 1).ToString(),
+                        double lenMm = LengthUnitConverter.UnitsToMm(wallEdges[i].Length);
+                        plan.AddText($"{i + 1}\n{lenMm:F0}мм",
                             mid.X * mm, mid.Y * mm,
                             fg: Colors.White, bg: new ScottPlot.Color(45, 108, 223),
                             size: 10, bold: true);
@@ -354,13 +360,19 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         : _catalog.Where(d => d.SystemType == SelectedType && d.MaxFlowRate > 0).ToList());
                     if (candidates.Count > 0)
                     {
+                        // Выбор устройства: приоритет k_ef (загрузка → 1.0), tiebreak — min N.
                         var best = candidates.OrderBy(d =>
                         {
-                            int byArea = d.ServiceAreaM2 > 0
-                                ? (int)Math.Ceiling(roomRow.Area / d.ServiceAreaM2) : 0;
-                            int byFlow = (int)Math.Ceiling(flow / Math.Max(1, d.MaxFlowRate));
-                            return Math.Max(byArea, byFlow);
-                        }).First();
+                            int n = Math.Max(
+                                d.ServiceAreaM2 > 0 ? (int)Math.Ceiling(roomRow.Area / d.ServiceAreaM2) : 0,
+                                (int)Math.Ceiling(flow / Math.Max(1, d.MaxFlowRate)));
+                            double kef = n > 0 && d.MaxFlowRate > 0
+                                ? (flow / (double)n) / d.MaxFlowRate : 0;
+                            // Чем ближе к 1.0 — тем лучше (invert: 1-|1-kef|).
+                            return -(1.0 - Math.Abs(1.0 - kef));
+                        }).ThenBy(d => Math.Max(
+                            d.ServiceAreaM2 > 0 ? (int)Math.Ceiling(roomRow.Area / d.ServiceAreaM2) : 0,
+                            (int)Math.Ceiling(flow / Math.Max(1, d.MaxFlowRate)))).First();
                         int byArea = best.ServiceAreaM2 > 0
                             ? (int)Math.Ceiling(roomRow.Area / best.ServiceAreaM2) : 0;
                         count = CmbRule.SelectedIndex switch
@@ -406,12 +418,17 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                                 1 => WallPattern.LongSide,
                                 2 => WallPattern.ShortSide,
                                 3 => WallPattern.CeilingGrid,
-                                _ => WallPattern.LongSide
+                                // FanCoil/кондиционер — по центру (CeilingGrid)
+                                _ => SelectedType == HVACSystemType.FanCoil
+                                    ? WallPattern.CeilingGrid
+                                    : WallPattern.LongSide
                             },
                             SingleRule = CmbSingleRule.SelectedIndex == 1 ? SingleRule.Corner : SingleRule.Center,
                             EdgeOffsetOverrideMm = ParseNum(TxtEdgeOffset.Text) is > 0 ? ParseNum(TxtEdgeOffset.Text) : null,
                             TargetWallIndex = wallIdx,
-                            TargetWallOffsetMm = wallOff
+                            TargetWallOffsetMm = wallOff,
+                            OffsetXMm = ParseNum(TxtOffsetX.Text),
+                            OffsetYMm = ParseNum(TxtOffsetY.Text)
                         };
                         var res = new CeilingPlacementService().PlaceForRoom(
                             roomRow.RoomId, poly, flow, roomRow.Area,
@@ -561,7 +578,10 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 },
                 ReplaceSameType = ChkReplace.IsChecked == true,
                 WallIndex = _presenter.Rooms.Count(_roomFilter) == 1 && CmbWall.SelectedIndex > 0 ? CmbWall.SelectedIndex - 1 : null,
-                WallOffsetMm = _presenter.Rooms.Count(_roomFilter) == 1 && CmbWall.SelectedIndex > 0 ? (ParseNum(TxtWallOffset.Text) is > 0 ? ParseNum(TxtWallOffset.Text) : null) : null
+                WallOffsetMm = _presenter.Rooms.Count(_roomFilter) == 1 && CmbWall.SelectedIndex > 0 ? (ParseNum(TxtWallOffset.Text) is > 0 ? ParseNum(TxtWallOffset.Text) : null) : null,
+                EdgeOffsetOverrideMm = ParseNum(TxtEdgeOffset.Text) is > 0 ? ParseNum(TxtEdgeOffset.Text) : null,
+                OffsetXMm = ParseNum(TxtOffsetX.Text),
+                OffsetYMm = ParseNum(TxtOffsetY.Text)
             };
             // Fixed: если меньше расчётного — берём расчётный
             if (spec.CountRuleOverride == CeilingCountRule.Fixed && spec.FixedCountOverride is int fixedN)

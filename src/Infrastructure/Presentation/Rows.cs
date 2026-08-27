@@ -224,7 +224,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
         /// <summary>M0.1: k_ef для таблицы — «—» вместо 0, когда коэффициент
         /// неприменим (отопление или у типоразмера не задан паспортный расход).</summary>
-        public string KEfText => KEf > 0 ? KEf.ToString("F2") : "—";
+        public string KEfText => double.IsNaN(KEf) || KEf <= 0 ? "—" : KEf.ToString("F2");
 
         /// <summary>P2: правило количества (словарь прототипа):
         /// device_area / minimum_terminals / directive_length / directive_terminals.</summary>
@@ -241,7 +241,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// «ok» (0.6–0.9 норма), «high» (&gt;0.9 перегруз); пусто — неприменимо.
         /// </summary>
         public string KefStatus =>
-            KEf <= 0 ? "" : KEf < 0.6 ? "low" : KEf > 0.9 ? "high" : "ok";
+            double.IsNaN(KEf) || KEf <= 0 ? "" : KEf < 0.6 ? "low" : KEf > 0.9 ? "high" : "ok";
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) =>

@@ -31,6 +31,14 @@ namespace HVACLoadTerminals.App
             public string CountText { get; set; } = "";
             public string DeviceText { get; set; } = "";
             public string KefText { get; set; } = "";
+            public string LoadPerDeviceText { get; set; } = "";
+            public string Warnings { get; set; } = "";
+            public string DetailsSteps { get; set; } = "";
+            public string Rule { get; set; } = "";
+            public int DetailCount { get; set; }
+            public double DetailFlowPerDevice { get; set; }
+            public double DetailKef { get; set; }
+            public string DetailDevice { get; set; } = "";
         }
 
         public RoomDetailWindow(RoomRow room, SnapshotRoom snapRoom, SnapshotWorkspacePresenter presenter)
@@ -121,12 +129,13 @@ namespace HVACLoadTerminals.App
             var pts = _polygon.Vertices.Select(v => new Point2D(v.X * mmPerFoot, v.Y * mmPerFoot)).ToList();
             plan.AddRoom("room", pts, null, new ScottPlot.Color(255, 255, 255, 255), Colors.Black, 2f);
 
-            // Нумерация стен + выделение выбранной стены
+            // Нумерация стен + длины + выделение выбранной стены
             for (int i = 0; i < _edges.Count; i++)
             {
                 var e = _edges[i];
                 var mid = e.MidPoint;
-                plan.AddText((i + 1).ToString(),
+                double lenMm = LengthUnitConverter.UnitsToMm(e.Length);
+                plan.AddText($"{i + 1}\n{lenMm:F0}мм",
                     mid.X * mmPerFoot, mid.Y * mmPerFoot,
                     fg: Colors.White, bg: new ScottPlot.Color(45, 108, 223),
                     size: 11, bold: true);
@@ -183,11 +192,20 @@ namespace HVACLoadTerminals.App
             {
                 var palette = new[] { Colors.Red, Colors.Green, Colors.Blue, Colors.Purple, Colors.Orange, Colors.Teal, Colors.Brown };
                 int idx = 0, total = 0;
+                // Координация: каждая последующая система избегает позиций предыдущей.
+                var placedPositions = new List<Point2D>();
                 foreach (var sys in _room.Systems ?? new List<SystemRow>())
                 {
                     if (!sys.IsIncluded) continue;
-                    var pl = BuildPreviewPlacementsForSystem(sys, useWallCombo: false);
+                    // Координация: избегаем позиций уже размещённых систем.
+                    Point2D? avoid = null;
+                    if (placedPositions.Count > 0)
+                    {
+                        avoid = placedPositions.Last();
+                    }
+                    var pl = BuildPreviewPlacementsForSystem(sys, useWallCombo: false, avoid);
                     if (pl == null || pl.Count == 0) continue;
+                    placedPositions.AddRange(pl);
                     var col = palette[idx++ % palette.Length];
                     plan.AddMarkers(pl.Select(p => p.X * mmPerFoot).ToList(),
                         pl.Select(p => p.Y * mmPerFoot).ToList(), col, 5);
@@ -236,7 +254,7 @@ namespace HVACLoadTerminals.App
             {
                 CountRule = _selectedSystem.CountRuleOverride ?? _presenter.SupplyRule,
                 FixedCount = _selectedSystem.FixedCountOverride ?? 2,
-                Pattern = _selectedSystem.PatternOverride ?? WallPattern.LongSide,
+                Pattern = _selectedSystem.PatternOverride ?? (_selectedSystem.Type == HVACSystemType.Supply ? _presenter.SupplyPattern : _presenter.ExhaustPattern),
                 SingleRule = _selectedSystem.SingleRuleOverride ?? SingleRule.Center,
                 EdgeOffsetOverrideMm = _selectedSystem.EdgeOffsetOverrideMm,
                 CeilingOffsetOverrideMm = _selectedSystem.CeilingOffsetOverrideMm,
@@ -255,7 +273,7 @@ namespace HVACLoadTerminals.App
             return res.Placements.Select(p => p.Position).ToList();
         }
 
-        private List<Point2D>? BuildPreviewPlacementsForSystem(SystemRow sys, bool useWallCombo)
+        private List<Point2D>? BuildPreviewPlacementsForSystem(SystemRow sys, bool useWallCombo, Point2D? avoidPoint = null)
         {
             if (sys == null || _polygon == null) return null;
 
@@ -283,14 +301,17 @@ namespace HVACLoadTerminals.App
             double? wallOff = sys.WallOffsetMm;
             var opts = new CeilingPlacementOptions
             {
-                CountRule = sys.CountRuleOverride ?? _presenter.SupplyRule,
+                CountRule = sys.CountRuleOverride ?? (sys.Type == HVACSystemType.Supply ? _presenter.SupplyRule : _presenter.ExhaustRule),
                 FixedCount = sys.FixedCountOverride ?? 2,
-                Pattern = sys.PatternOverride ?? WallPattern.LongSide,
+                Pattern = sys.PatternOverride ?? (sys.Type == HVACSystemType.FanCoil
+                    ? WallPattern.CeilingGrid
+                    : sys.Type == HVACSystemType.Supply ? _presenter.SupplyPattern : _presenter.ExhaustPattern),
                 SingleRule = sys.SingleRuleOverride ?? SingleRule.Center,
                 EdgeOffsetOverrideMm = sys.EdgeOffsetOverrideMm,
                 CeilingOffsetOverrideMm = sys.CeilingOffsetOverrideMm,
                 TargetWallIndex = wallIdx,
                 TargetWallOffsetMm = wallOff,
+                AvoidPoint = avoidPoint,
                 RoomHeightMm = _snapRoom != null && _snapRoom.UpperLimitOffset > 0 ? LengthUnitConverter.UnitsToMm(_snapRoom.UpperLimitOffset) : 0
             };
             double area = _room.Area > 0 ? _room.Area : _polygon.Area * LengthUnitConverter.MmPerFoot / 1_000_000.0;
@@ -318,7 +339,7 @@ namespace HVACLoadTerminals.App
                 var sysCatalog = catalog.Where(d => d.SystemType == sys.Type && d.MaxFlowRate > 0).ToList();
                 if (sysCatalog.Count == 0 && sys.Type != HVACSystemType.Heating)
                 {
-                    rows.Add(new SummaryRow { SystemName = sys.Name, FlowText = $"{sys.FlowM3h:F0}", CountText = "—", DeviceText = "нет прибора", KefText = "—" });
+                    rows.Add(new SummaryRow { SystemName = sys.Name, FlowText = $"{sys.FlowM3h:F0}", CountText = "—", DeviceText = "нет прибора", KefText = "—", Warnings = "!", Rule = "Нет приборов в каталоге" });
                     continue;
                 }
                 if (sys.Type == HVACSystemType.Heating)
@@ -328,6 +349,11 @@ namespace HVACLoadTerminals.App
                         .ToList();
                     string heatDevText = "отопление";
                     string countText = "—";
+                    string loadPerDev = "—";
+                    string warnings = "";
+                    string steps = "";
+                    int detailCount = 0;
+                    double detailLoadPerDev = 0;
                     if (heatCat.Count > 0 && _polygon != null && _room.HeatingW > 0)
                     {
                         try
@@ -336,20 +362,43 @@ namespace HVACLoadTerminals.App
                                 _snapRoom, _polygon,
                                 _presenter.GetRoomOpenings(_room.RoomId), Array.Empty<SnapshotWall>(),
                                 _room.HeatingW, heatCat, new HeatingPlacementOptions());
-                            countText = heatRes.Placements.Count > 0 ? heatRes.Placements.Count.ToString() : "—";
+                            detailCount = heatRes.Placements.Count;
+                            countText = detailCount > 0 ? detailCount.ToString() : "—";
                             var heatDev = heatCat.First();
                             heatDevText = $"{heatDev.Manufacturer} {heatDev.TypeName}".Trim();
+                            if (detailCount > 0)
+                            {
+                                detailLoadPerDev = _room.HeatingW / detailCount;
+                                loadPerDev = $"{detailLoadPerDev:F0} Вт";
+                            }
+                            warnings = heatRes.Warnings.Count > 0 ? "⚠" : "";
+                            steps = $"Нагрузка: {_room.HeatingW:F0} Вт\n" +
+                                    $"Устройство: {heatDevText}\n" +
+                                    $"Мощность прибора: {heatDev.HeatingCapacityW} Вт\n" +
+                                    $"N = {detailCount}\n" +
+                                    $"Нагр/прибор: {loadPerDev}\n" +
+                                    (heatRes.Warnings.Count > 0 ? $"Предупреждения:\n  {string.Join("\n  ", heatRes.Warnings)}" : "Предупреждений нет");
                         }
-                        catch { }
+                        catch { steps = "Ошибка расчёта отопления"; }
                     }
-                    rows.Add(new SummaryRow { SystemName = sys.Name, FlowText = $"{_room.HeatingW:F0} Вт", CountText = countText, DeviceText = heatDevText, KefText = "—" });
+                    rows.Add(new SummaryRow
+                    {
+                        SystemName = sys.Name, FlowText = $"{_room.HeatingW:F0} Вт",
+                        CountText = countText, DeviceText = heatDevText, KefText = "—",
+                        LoadPerDeviceText = loadPerDev, Warnings = warnings,
+                        DetailsSteps = steps, Rule = "По нагрузке (отопление)",
+                        DetailCount = detailCount, DetailFlowPerDevice = detailLoadPerDev,
+                        DetailKef = 0, DetailDevice = heatDevText
+                    });
                     continue;
                 }
                 var opts = new CeilingPlacementOptions
                 {
-                    CountRule = sys.CountRuleOverride ?? _presenter.SupplyRule,
+                    CountRule = sys.CountRuleOverride ?? (sys.Type == HVACSystemType.Supply ? _presenter.SupplyRule : _presenter.ExhaustRule),
                     FixedCount = sys.FixedCountOverride ?? 2,
-                    Pattern = sys.PatternOverride ?? WallPattern.LongSide,
+                    Pattern = sys.PatternOverride ?? (sys.Type == HVACSystemType.FanCoil
+                        ? WallPattern.CeilingGrid
+                        : sys.Type == HVACSystemType.Supply ? _presenter.SupplyPattern : _presenter.ExhaustPattern),
                     SingleRule = sys.SingleRuleOverride ?? SingleRule.Center,
                     EdgeOffsetOverrideMm = sys.EdgeOffsetOverrideMm,
                     CeilingOffsetOverrideMm = sys.CeilingOffsetOverrideMm,
@@ -361,8 +410,37 @@ namespace HVACLoadTerminals.App
                 var res = _ceilingService.PlaceForRoom(_room.RoomId, _polygon!, sys.FlowM3h, area, sys.Type, sysCatalog, sys.Name, opts);
                 var dev = sysCatalog.FirstOrDefault(d => d.Id == sys.DeviceTypeId) ?? sysCatalog.FirstOrDefault();
                 string devText = dev != null ? $"{dev.Manufacturer} {dev.TypeName}".Trim() : "(авто)";
-                string kef = (dev != null && res.Placements.Count > 0) ? $"{sys.FlowM3h / res.Placements.Count / Math.Max(1, dev.MaxFlowRate):F2}" : "—";
-                rows.Add(new SummaryRow { SystemName = sys.Name, FlowText = $"{sys.FlowM3h:F0}", CountText = res.Placements.Count.ToString(), DeviceText = devText, KefText = kef });
+                double kefVal = (dev != null && res.Placements.Count > 0) ? sys.FlowM3h / res.Placements.Count / Math.Max(1, dev.MaxFlowRate) : 0;
+                string kef = kefVal > 0 ? $"{kefVal:F2}" : "—";
+                string loadPerDev2 = res.Placements.Count > 0 ? $"{sys.FlowM3h / res.Placements.Count:F0} м³/ч" : "—";
+                string warnStr = res.Warnings.Count > 0 ? "⚠" : "";
+                string ruleLabel = opts.CountRule switch
+                {
+                    CeilingCountRule.ByArea => "По площади",
+                    CeilingCountRule.ByFlow => "По расходу",
+                    CeilingCountRule.Fixed => $"Фикс. N={opts.FixedCount}",
+                    CeilingCountRule.ByLength => "По длине стороны",
+                    _ => "Авто (max площадь, расход)"
+                };
+                string detailSteps = $"Расход: {sys.FlowM3h:F0} м³/ч\n" +
+                    $"Площадь: {area:F1} м²\n" +
+                    $"Устройство: {devText}\n" +
+                    $"Правило: {ruleLabel}\n" +
+                    $"N = {res.Placements.Count}\n" +
+                    $"Расход/прибор: {loadPerDev2}\n" +
+                    $"k_ef = {kef}\n" +
+                    (res.Warnings.Count > 0 ? $"Предупреждения:\n  {string.Join("\n  ", res.Warnings)}" : "Предупреждений нет");
+                rows.Add(new SummaryRow
+                {
+                    SystemName = sys.Name, FlowText = $"{sys.FlowM3h:F0}",
+                    CountText = res.Placements.Count.ToString(), DeviceText = devText,
+                    KefText = kef, LoadPerDeviceText = loadPerDev2,
+                    Warnings = warnStr, DetailsSteps = detailSteps,
+                    Rule = ruleLabel,
+                    DetailCount = res.Placements.Count,
+                    DetailFlowPerDevice = res.Placements.Count > 0 ? sys.FlowM3h / res.Placements.Count : 0,
+                    DetailKef = kefVal, DetailDevice = devText
+                });
             }
             SummaryGrid.ItemsSource = rows;
         }
@@ -390,6 +468,18 @@ namespace HVACLoadTerminals.App
             new SystemEditorWindow(_room) { Owner = this }.ShowDialog();
             _presenter.CommitRoomSystems(_room);
             RefreshSystemsCombo();
+        }
+
+        private void Details_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button btn && btn.Tag is SummaryRow row)
+            {
+                var win = new CalculationDetailWindow(
+                    row.SystemName, row.DetailDevice, row.Rule,
+                    row.DetailCount, row.DetailFlowPerDevice, row.DetailKef,
+                    row.DetailsSteps) { Owner = this };
+                win.ShowDialog();
+            }
         }
 
         private void RefreshSystemsCombo()

@@ -37,16 +37,8 @@ namespace HVACLoadTerminals.Core.Tests
 
             Assert.Equal(2, result.Placements.Count);
             Assert.Empty(result.Warnings);
-
-            // All points inside the room, mutual distance respects the minimum.
-            var room = RectRoom();
-            Assert.All(result.Placements,
-                p => Assert.True(room.ContainsPoint(p.Position)));
-
-            var d = result.Placements[0].Position - result.Placements[1].Position;
-            double minDistMm = LengthUnitConverter.UnitsToMm(
-                Math.Sqrt(d.X * d.X + d.Y * d.Y));
-            Assert.True(minDistMm >= 999, $"distance {minDistMm} mm");
+            TestGeometry.AssertAllInside(RectRoom(), result.Placements);
+            TestGeometry.AssertMinDistance(result.Placements, 999 * Ft);
         }
 
         [Fact]
@@ -80,8 +72,9 @@ namespace HVACLoadTerminals.Core.Tests
 
             Assert.True(result.Placements.Count >= 4,
                 $"expected ≥4, got {result.Placements.Count}");
-            Assert.All(result.Placements, p =>
-                Assert.True(RectRoom().ContainsPoint(p.Position)));
+            TestGeometry.AssertAllInside(RectRoom(), result.Placements);
+            TestGeometry.AssertMinDistance(result.Placements, 600 * Ft);
+            TestGeometry.AssertTotalFlow(2400, result.Placements);
         }
 
         [Fact]
@@ -105,8 +98,9 @@ namespace HVACLoadTerminals.Core.Tests
 
             // Area 36 m² → ceil/20 = 2; flow 1600/400 = 4 → max is 4.
             Assert.Equal(4, result.Placements.Count);
-            Assert.All(result.Placements, p =>
-                Assert.True(polygon.ContainsPoint(p.Position)));
+            TestGeometry.AssertAllInside(polygon, result.Placements);
+            // Min distance between any two devices ≥ 800 mm.
+            TestGeometry.AssertMinDistance(result.Placements, 800 * Ft);
         }
 
         [Fact]

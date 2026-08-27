@@ -29,8 +29,8 @@ namespace HVACLoadTerminals.Core.Tests
 
         public void Dispose()
         {
-            if (File.Exists(_snapshotPath)) File.Delete(_snapshotPath);
-            if (File.Exists(_catalogPath)) File.Delete(_catalogPath);
+            try { if (File.Exists(_snapshotPath)) File.Delete(_snapshotPath); } catch { }
+            try { if (File.Exists(_catalogPath)) File.Delete(_catalogPath); } catch { }
         }
 
         private SnapshotWorkspacePresenter CreateTwoLevels()

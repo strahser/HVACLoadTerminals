@@ -503,6 +503,37 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             return (assigned, skipped);
         }
 
+        /// <summary>Обновить существующую систему (по имени) во всех выбранных помещениях.</summary>
+        public int UpdateSystemInRooms(Func<RoomRow, bool> roomFilter, string systemName, AssignSystemSpec spec)
+        {
+            if (spec == null || string.IsNullOrEmpty(systemName)) return 0;
+            string name = (spec.Name ?? "").Trim();
+            bool needsFlow = spec.SystemType != HVACSystemType.Heating;
+            int updated = 0;
+            foreach (var room in Rooms.Where(roomFilter))
+            {
+                var systems = room.Systems ?? new List<SystemRow>();
+                var existing = systems.FirstOrDefault(s => s.Name == systemName);
+                if (existing == null) continue;
+                existing.Name = name;
+                existing.Type = spec.SystemType;
+                existing.FlowM3h = needsFlow ? Math.Round(spec.FlowM3hPerRoom, 1) : 0;
+                existing.DeviceTypeId = spec.DeviceTypeId;
+                existing.CountRuleOverride = spec.CountRuleOverride;
+                existing.FixedCountOverride = spec.FixedCountOverride;
+                existing.PatternOverride = spec.PatternOverride;
+                existing.SingleRuleOverride = spec.SingleRuleOverride;
+                existing.EdgeOffsetOverrideMm = spec.EdgeOffsetOverrideMm;
+                existing.WallIndex = spec.WallIndex;
+                existing.WallOffsetMm = spec.WallOffsetMm;
+                room.RefreshSystemSummary();
+                updated++;
+            }
+            if (updated > 0)
+                RaiseStatusOnly($"Система «{name}»: обновлена в {updated} помещ.");
+            return updated;
+        }
+
         /// <summary>Оверрайды первой найденной строки системы → в справочник
         /// (справочник — авторитетный источник для новых комнат и модалок).</summary>
         private void SyncCatalogOverrides(string name)

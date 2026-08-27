@@ -103,19 +103,13 @@
 
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2.2*"/>
+                <ColumnDefinition Width="280"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="340"/>
+                <ColumnDefinition Width="3*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- План -->
-            <Border Grid.Column="0" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Margin="8">
-                <ScottPlot:WpfPlot x:Name="PlanPlot" Background="White"/>
-            </Border>
-            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent"/>
-
-            <!-- Панель настроек -->
-            <Border Grid.Column="2" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Margin="0,8,8,8">
+            <!-- Правая панель: настройки + сводка -->
+            <Border Grid.Column="0" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Margin="8,8,0,8">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10,8,10,8">
                         <TextBlock Text="Фильтр превью (все/одна):" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,2,0,2"/>
@@ -140,9 +134,19 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="70"/>
                                 <DataGridTextColumn Header="Σ расход" Binding="{Binding FlowText}" Width="70"/>
-                                <DataGridTextColumn Header="N" Binding="{Binding CountText}" Width="40"/>
+                                <DataGridTextColumn Header="N" Binding="{Binding CountText}" Width="30"/>
+                                <DataGridTextColumn Header="Нагр/прибор" Binding="{Binding LoadPerDeviceText}" Width="70"/>
                                 <DataGridTextColumn Header="Марка" Binding="{Binding DeviceText}" Width="*"/>
-                                <DataGridTextColumn Header="k_ef" Binding="{Binding KefText}" Width="50"/>
+                                <DataGridTextColumn Header="k_ef" Binding="{Binding KefText}" Width="40"/>
+                                <DataGridTextColumn Header="⚠" Binding="{Binding Warnings}" Width="30"/>
+                                <DataGridTemplateColumn Header="Детали" Width="50">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="…" Padding="2,1" FontSize="11" Click="Details_Click"
+                                                    ToolTip="Детали расчёта" Tag="{Binding}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
 
@@ -150,16 +154,22 @@
 
                         <TextBlock Text="Подсказка" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"/>
                         <TextBlock Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" LineHeight="15" Margin="0,2,0,0">
-                            <Run Text="• Выберите стену 1 и смещение 500 → диффузоры встанут линией на 500мм от стены 1."/><LineBreak/>
-                            <Run Text="• «Авто» — используется общий паттерн (длинная/короткая сторона, сетка)."/><LineBreak/>
-                            <Run Text="• Центр — одиночный прибор в середине выбранной стены (или в центре помещения при Авто)."/><LineBreak/>
-                            <Run Text="• Сетка и офсет-зона (пунктир) перестраиваются живо."/>
+                            <Run Text="• Выберите систему в фильтре — покажется превью размещения этой системы."/><LineBreak/>
+                            <Run Text="• «Все системы» — все приборы помещения разными цветами."/><LineBreak/>
+                            <Run Text="• Серый пунктир — зона отступа от стен (офсет)."/><LineBreak/>
+                            <Run Text="• Для правки привязки к стене используйте Мастер назначения систем."/>
                         </TextBlock>
 
                         <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,10,0,8"/>
                         <TextBlock x:Name="PreviewInfoText" Foreground="{StaticResource PrimaryDarkBrush}" FontSize="11" TextWrapping="Wrap" FontWeight="SemiBold"/>
                     </StackPanel>
                 </ScrollViewer>
+            </Border>
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent"/>
+
+            <!-- План -->
+            <Border Grid.Column="2" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Margin="0,8,8,8">
+                <ScottPlot:WpfPlot x:Name="PlanPlot" Background="White"/>
             </Border>
         </Grid>
     </DockPanel>

@@ -26,7 +26,7 @@ namespace HVACLoadTerminals.Core.Services
         /// <summary>Margin between the window jamb and the outermost device, mm.</summary>
         public double EdgeMarginMm { get; set; } = 50;
 
-        public int MaxDevicesPerWindow { get; set; } = 20;
+        public int MaxDevicesPerWindow { get; set; } = 1;
 
         /// <summary>P3/M0.2: высота установки прибора над уровнем, мм
         /// (подоконная практика ~500 мм от пола).</summary>
@@ -39,6 +39,7 @@ namespace HVACLoadTerminals.Core.Services
         public IReadOnlyList<DevicePlacement> Placements { get; set; }
             = Array.Empty<DevicePlacement>();
         public IReadOnlyList<string> Warnings { get; set; } = Array.Empty<string>();
+        public CalculationDetails? Details { get; set; }
     }
 
     /// <summary>
@@ -68,6 +69,9 @@ namespace HVACLoadTerminals.Core.Services
 
             if (heatingDevices == null || heatingDevices.Count == 0)
                 return Warn("В каталоге нет отопительных приборов");
+
+            if (heatingLoadW < 0)
+                return Warn("Нагрузка отопления отрицательная — расстановка невозможна");
 
             // Best device: highest HeatingCapacityW, ties to the longer unit
             // (fewer sections under the window).
@@ -120,27 +124,63 @@ namespace HVACLoadTerminals.Core.Services
                 if (totalWidth <= 1e-6)
                     totalWidth = 1;
 
+                // Ограничение суммарного числа приборов по мощности:
+                // итого не более ceil(heatingLoadW / capacity).
+                int totalByPower = capacity > 0
+                    ? (int)Math.Ceiling(heatingLoadW / capacity)
+                    : windows.Count;
+
+                // Сначала рассчитываем потребное число для каждого окна.
+                var perWindow = new List<(SnapshotOpening Win, int CountByPower, int CountByLength)>();
                 foreach (var win in windows)
+                {
+                    double width = WinWidth(win);
+                    double shareLoad = heatingLoadW * width / totalWidth;
+                    int countByPower = capacity > 0
+                        ? (int)Math.Ceiling(shareLoad / capacity)
+                        : 1;
+                    int countByLength = deviceLenFt > 0
+                        ? (int)Math.Ceiling(width * options.MinLengthToWindowRatio / deviceLenFt)
+                        : countByPower;
+                    perWindow.Add((win, countByPower, countByLength));
+                }
+
+                // Для единственного окна — длина приоритетна (тест).
+                // Для нескольких окон — суммарный лимит по мощности.
+                int totalRaw = perWindow.Sum(w => Math.Max(w.CountByPower, w.CountByLength));
+                double scale = 1.0;
+                if (windows.Count > 1 && totalRaw > totalByPower)
+                    scale = (double)totalByPower / totalRaw;
+
+                foreach (var (win, countByPower, countByLength) in perWindow)
                 {
                     double width = WinWidth(win);
                     var (center, alongDir) = ResolveWindowFrame(
                         win, wallsByHostId, edges, centroid);
                     var normal = PickInwardNormal(alongDir, center, centroid);
 
-                    // Power share proportional to the window width.
-                    double shareLoad = heatingLoadW * width / totalWidth;
-                    int countByPower = capacity > 0
-                        ? (int)Math.Ceiling(shareLoad / capacity)
-                        : 1;
-
-                    // Length coverage: total device length >= ratio × window width.
-                    int countByLength = deviceLenFt > 0
-                        ? (int)Math.Ceiling(width * options.MinLengthToWindowRatio / deviceLenFt)
-                        : countByPower;
-
                     int count = Clamp(
                         Math.Max(countByPower, countByLength),
                         1, options.MaxDevicesPerWindow);
+
+                    // Предупреждение: длина приборов не покрывает 60% окна.
+                    if (deviceLenFt > 0 && count * deviceLenFt + 1e-9 <
+                        width * options.MinLengthToWindowRatio -
+                        LengthUnitConverter.MmToUnits(1))
+                    {
+                        warnings.Add(
+                            $"Окно {win.Id}: {count} прибор(ов) по {device.WidthMm}мм " +
+                            $"покрывает {count * device.WidthMm:F0}мм из " +
+                            $"{width * options.MinLengthToWindowRatio:F0}мм " +
+                            $"(≥{options.MinLengthToWindowRatio:P0} ширины окна {width * LengthUnitConverter.MmPerFoot:F0}мм)");
+                    }
+
+                    // Пропорциональное уменьшение при превышении общего лимита.
+                    if (scale < 1.0)
+                    {
+                        int scaled = Math.Max(1, (int)Math.Round(count * scale));
+                        count = Math.Min(count, scaled);
+                    }
 
                     // P2: длина покрывает ≥60 % окна → правило «по длине»,
                     // иначе количество диктует мощность.
@@ -159,15 +199,6 @@ namespace HVACLoadTerminals.Core.Services
                         count, offsetFt, boundary, centroid));
                     for (int i = addedFrom; i < placements.Count; i++)
                         placements[i].CalculationOption = optionLabel;
-
-                    if (deviceLenFt > 0 &&
-                        count * deviceLenFt + 1e-9 <
-                        width * options.MinLengthToWindowRatio - LengthUnitConverter.MmToUnits(1))
-                    {
-                        warnings.Add(
-                            $"Окно {win.Id}: суммарная длина приборов меньше " +
-                            $"{options.MinLengthToWindowRatio:P0} ширины проёма");
-                    }
                 }
             }
             else

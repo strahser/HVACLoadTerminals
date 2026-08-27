@@ -18,7 +18,7 @@ namespace HVACLoadTerminals.Core.Tests
 
         public void Dispose()
         {
-            if (File.Exists(_path)) File.Delete(_path);
+            try { if (File.Exists(_path)) File.Delete(_path); } catch { }
         }
 
         [Fact]

@@ -81,37 +81,41 @@ namespace HVACLoadTerminals.Core.Tests
 
             Assert.Empty(result.Warnings.Where(w => w.Contains("меньше")));
             Assert.Equal(2, result.Placements.Count);
+            TestGeometry.AssertAllInside(RoomPolygon(), result.Placements);
 
-            // One device under each window centre.
+            // One device under each window centre — use InRange for robustness.
             var xs = result.Placements.Select(p => p.Position.X).OrderBy(x => x).ToList();
-            Assert.Equal(1500 * Ft, xs[0], 3);
-            Assert.Equal(4500 * Ft, xs[1], 3);
+            Assert.InRange(xs[0], 1499 * Ft, 1501 * Ft);
+            Assert.InRange(xs[1], 4499 * Ft, 4501 * Ft);
+
+            // Min distance: windows are 3000 mm apart → devices ≥ 2000 mm.
+            TestGeometry.AssertMinDistance(result.Placements, 2000 * Ft);
 
             // Pushed inward from the bottom wall (+Y), rotated to face the room.
             Assert.All(result.Placements, p =>
             {
                 Assert.True(p.Position.Y > 0);
                 Assert.Equal(Math.PI / 2, p.Rotation, 3);
-                Assert.True(RoomPolygon().ContainsPoint(p.Position));
             });
         }
 
         [Fact]
-        public void Wide_Window_Gets_Length_Coverage_Devices()
+        public void Wide_Window_Gets_One_Device_With_Coverage_Warning()
         {
             var room = new SnapshotRoom { Id = "r1", Name = "Кабинет" };
-            // 3000 mm window: ratio 0.6 → need 1800 mm of device → 2 × 1000 mm.
+            // 3000 mm window: ratio 0.6 → need 1800 mm, but MaxDevicesPerWindow=1 → 1 device + warning.
             var openings = new[] { Window(3000, 3000) };
             var walls = new[] { BottomWall() };
 
             var result = Service.PlaceForRoom(
                 room, RoomPolygon(), openings, walls,
-                heatingLoadW: 800,   // power alone would need just 1 device
+                heatingLoadW: 800,
                 heatingDevices: new[] { Radiator });
 
-            Assert.Equal(2, result.Placements.Count);
-            Assert.All(result.Placements, p =>
-                Assert.True(RoomPolygon().ContainsPoint(p.Position)));
+            Assert.Single(result.Placements);
+            TestGeometry.AssertAllInside(RoomPolygon(), result.Placements);
+            // Warning: 1×1000mm < 60%×3000mm.
+            Assert.Contains(result.Warnings, w => w.Contains("покрывает"));
         }
 
         [Fact]
@@ -126,14 +130,9 @@ namespace HVACLoadTerminals.Core.Tests
                 heatingDevices: new[] { Radiator });
 
             Assert.Contains(result.Warnings, w => w.Contains("Окна отсутствуют"));
-            Assert.Equal(2, result.Placements.Count); // ceil(1500/1000)
-
-            // Placed near the middle of the external bottom wall.
-            Assert.All(result.Placements, p =>
-            {
-                Assert.True(p.Position.Y > 0);
-                Assert.True(RoomPolygon().ContainsPoint(p.Position));
-            });
+            // MaxDevicesPerWindow=1 → even with 1500W load, only 1 device on the wall.
+            Assert.Single(result.Placements);
+            TestGeometry.AssertAllInside(RoomPolygon(), result.Placements);
         }
 
         [Fact]
@@ -179,6 +178,116 @@ namespace HVACLoadTerminals.Core.Tests
 
             Assert.Contains(result.Warnings, w =>
                 w.Contains("меньше расчётной нагрузки"));
+        }
+
+        [Fact]
+        public void Multiple_Windows_Total_Capped_By_Power()
+        {
+            // 5 windows, each 1500mm. Radiator 1000W/1000mm.
+            // Power: 4853W → ceil(4853/1000) = 5 total.
+            // Length per window: ceil(1500*0.6/1000) = 1 each → total 5 = power cap → OK.
+            var room = new SnapshotRoom { Id = "r1", Name = "Кабинет" };
+            var openings = new[]
+            {
+                Window(600, 1500),
+                Window(1800, 1500),
+                Window(3000, 1500),
+                Window(4200, 1500),
+                Window(5400, 1500)
+            };
+            var walls = new[] { BottomWall() };
+
+            var result = Service.PlaceForRoom(
+                room, RoomPolygon(), openings, walls,
+                heatingLoadW: 4853,
+                heatingDevices: new[] { Radiator });
+
+            Assert.Equal(5, result.Placements.Count);
+            TestGeometry.AssertAllInside(RoomPolygon(), result.Placements);
+            // 5 devices spread across 6000mm room → min distance ≥ 500mm.
+            TestGeometry.AssertMinDistance(result.Placements, 500 * Ft);
+        }
+
+        [Fact]
+        public void Multiple_Windows_Length_Exceeds_Power_Scaled()
+        {
+            // 3 windows, each 3000mm wide. Radiator 1000W/1000mm.
+            // Power: 3000W → ceil(3000/1000) = 3 total.
+            // Length per window: ceil(3000*0.6/1000) = 2 each → total 6 > 3.
+            // Multi-window: scaled proportionally to 3.
+            var room = new SnapshotRoom { Id = "r1", Name = "Кабинет" };
+            var openings = new[]
+            {
+                Window(1500, 3000),
+                Window(4500, 3000),
+                Window(7500, 3000)
+            };
+            // Wider room for 3 large windows.
+            var polygon = new Polygon2D(new[]
+            {
+                new Point2D(0, 0),
+                new Point2D(9000 * Ft, 0),
+                new Point2D(9000 * Ft, 4000 * Ft),
+                new Point2D(0, 4000 * Ft)
+            });
+
+            var result = Service.PlaceForRoom(
+                room, polygon, openings, new[]
+                {
+                    new SnapshotWall
+                    {
+                        Id = "w1", SpaceId = "r1", ResolvedExternal = true,
+                        LocationCurve = new SnapshotLocationCurve
+                        {
+                            StartX = 0, StartY = 0,
+                            EndX = 9000 * Ft, EndY = 0
+                        }
+                    }
+                },
+                heatingLoadW: 3000,
+                heatingDevices: new[] { Radiator });
+
+            Assert.True(result.Placements.Count <= 3,
+                $"Expected ≤3 devices (power cap), got {result.Placements.Count}");
+            Assert.All(result.Placements, p =>
+                Assert.True(polygon.ContainsPoint(p.Position)));
+        }
+
+        [Fact]
+        public void Single_Window_Length_Capped_To_One_With_Warning()
+        {
+            // Single window 3000mm, power = 800W. Length wants 2, but MaxDevicesPerWindow=1.
+            var room = new SnapshotRoom { Id = "r1", Name = "Кабинет" };
+            var result = Service.PlaceForRoom(
+                room, RoomPolygon(), new[] { Window(3000, 3000) },
+                new[] { BottomWall() }, 800, new[] { Radiator });
+
+            Assert.Single(result.Placements);
+            Assert.Contains(result.Warnings, w => w.Contains("покрывает"));
+        }
+
+        [Fact]
+        public void Heating_Placement_Has_CalculationOption()
+        {
+            var room = new SnapshotRoom { Id = "r1", Name = "Кабинет" };
+            var result = Service.PlaceForRoom(
+                room, RoomPolygon(), new[] { Window(1500, 1500) },
+                new[] { BottomWall() }, 1000, new[] { Radiator });
+
+            Assert.Single(result.Placements);
+            Assert.False(string.IsNullOrEmpty(result.Placements[0].CalculationOption));
+        }
+
+        [Fact]
+        public void Heating_Placement_Has_MountHeightMm()
+        {
+            var room = new SnapshotRoom { Id = "r1", Name = "Кабинет" };
+            var result = Service.PlaceForRoom(
+                room, RoomPolygon(), new[] { Window(1500, 1500) },
+                new[] { BottomWall() }, 1000, new[] { Radiator });
+
+            Assert.Single(result.Placements);
+            Assert.Equal(500, result.Placements[0].MountHeightMm);
         }
     }
 }

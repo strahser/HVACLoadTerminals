@@ -1,0 +1,45 @@
+<Window x:Class="HVACLoadTerminals.App.CalculationDetailWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Детали расчёта"
+        Height="400" Width="500"
+        WindowStartupLocation="CenterOwner"
+        Background="#F4F6F9">
+    <Window.Resources>
+        <SolidColorBrush x:Key="PanelBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#D5DBE3"/>
+        <SolidColorBrush x:Key="TextDark" Color="#212B36"/>
+        <SolidColorBrush x:Key="TextMuted" Color="#637381"/>
+    </Window.Resources>
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,1,0,0" Padding="10,7">
+            <Button Content="Закрыть" HorizontalAlignment="Right" Padding="14,6" Click="Close_Click"/>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="16,12">
+            <StackPanel>
+                <TextBlock x:Name="TitleText" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextDark}" Margin="0,0,0,8"/>
+                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Устройство:" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"/>
+                <TextBlock x:Name="DeviceText" Foreground="{StaticResource TextMuted}" FontSize="12" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Правило расчёта:" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"/>
+                <TextBlock x:Name="RuleText" Foreground="{StaticResource TextMuted}" FontSize="12" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Количество (N):" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"/>
+                <TextBlock x:Name="CountText" Foreground="{StaticResource TextMuted}" FontSize="12" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Расход на прибор:" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"/>
+                <TextBlock x:Name="FlowPerDevText" Foreground="{StaticResource TextMuted}" FontSize="12" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Коэффициент эффективности (k_ef):" FontWeight="SemiBold" Foreground="{StaticResource TextDark}"/>
+                <TextBlock x:Name="KefText" Foreground="{StaticResource TextMuted}" FontSize="12" Margin="0,0,0,8"/>
+
+                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,4,0,8"/>
+                <TextBlock Text="Ход расчёта:" FontWeight="SemiBold" Foreground="{StaticResource TextDark}" Margin="0,0,0,4"/>
+                <TextBlock x:Name="StepsText" Foreground="{StaticResource TextDark}" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

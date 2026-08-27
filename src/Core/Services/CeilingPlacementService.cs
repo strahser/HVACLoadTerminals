@@ -106,11 +106,29 @@ namespace HVACLoadTerminals.Core.Services
         /// <summary>IC5.7/RW11: если pattern==ShortSide и длина короткой стороны >1500мм — минимум 2 прибора.</summary>
         public bool ShortSideTwoIfLongerThan1500 { get; set; } = false;
 
+        /// <summary>Смещение сетки приборов по X, мм (внутри контура).</summary>
+        public double OffsetXMm { get; set; } = 0;
+
+        /// <summary>Смещение сетки приборов по Y, мм (внутри контура).</summary>
+        public double OffsetYMm { get; set; } = 0;
+
         /// <summary>Координация систем для максимального разноса (K1/G1/G3): точка
         /// (units), от которой новая система должна быть максимально удалена —
         /// обычно позиция уже размещённого прибора другой системы (приток → вытяжка).
         /// Выбор стены паттерна сдвигается на противоположную. null = обычный выбор.</summary>
         public Point2D? AvoidPoint { get; set; }
+    }
+
+    /// <summary>Детали расчёта для отображения в UI.</summary>
+    public class CalculationDetails
+    {
+        public string Rule { get; set; } = "";
+        public string DeviceInfo { get; set; } = "";
+        public int Count { get; set; }
+        public double FlowPerDevice { get; set; }
+        public double Kef { get; set; }
+        public string Explanation { get; set; } = "";
+        public List<string> Steps { get; set; } = new List<string>();
     }
 
     /// <summary>Placements plus human-readable warnings for one room.</summary>
@@ -123,6 +141,9 @@ namespace HVACLoadTerminals.Core.Services
         /// <summary>U2.1: wall edge chosen by the mass pattern (null for grid/center) —
         /// used by hosts to highlight the side on the plan.</summary>
         public EdgeInfo? SelectedEdge { get; set; }
+
+        /// <summary>Детали расчёта для отображения в UI.</summary>
+        public CalculationDetails? Details { get; set; }
     }
 
     /// <summary>
@@ -151,6 +172,12 @@ namespace HVACLoadTerminals.Core.Services
                 return Warn("Помещение без контура — расстановка невозможна");
 
             var warnings = new List<string>();
+
+            // Входы: расход и площадь должны быть неотрицательными.
+            if (requiredFlow < 0)
+                return Warn("Расход отрицательный — расстановка невозможна");
+            if (roomAreaM2 < 0)
+                return Warn("Площадь помещения отрицательная — расстановка невозможна");
 
             var devices = (ceilingDevices ?? Array.Empty<TerminalDevice>())
                 .Where(d => d != null && d.SystemType == systemType && d.MaxFlowRate > 0)
@@ -327,6 +354,14 @@ namespace HVACLoadTerminals.Core.Services
             else
             {
                 points = GridPoints(offsetPolygon, count, options);
+            }
+
+            // Применить смещение X,Y если задано.
+            if (Math.Abs(options.OffsetXMm) > 1e-6 || Math.Abs(options.OffsetYMm) > 1e-6)
+            {
+                double ox = LengthUnitConverter.MmToUnits(options.OffsetXMm);
+                double oy = LengthUnitConverter.MmToUnits(options.OffsetYMm);
+                points = points.Select(p => new Point2D(p.X + ox, p.Y + oy)).ToList();
             }
 
             var placements = new List<DevicePlacement>(points.Count);
