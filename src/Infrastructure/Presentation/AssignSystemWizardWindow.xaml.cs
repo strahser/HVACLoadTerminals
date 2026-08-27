@@ -8,8 +8,9 @@ using System.Windows.Controls;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
-using OxyPlot;
-using OxyPlot.Series;
+using HVACLoadTerminals.Infrastructure.Visualization;
+using ScottPlot;
+using ScottPlot.WPF;
 
 namespace HVACLoadTerminals.Infrastructure.Presentation
 {
@@ -33,13 +34,6 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             ("Кондиционирование (фанкойл)", HVACSystemType.FanCoil),
             ("Отопление (нагрузка Q из оценки)", HVACSystemType.Heating)
         };
-
-        private PlotModel? _previewModel;
-        public PlotModel? PreviewModel
-        {
-            get => _previewModel;
-            private set { _previewModel = value; OnPropertyChanged(nameof(PreviewModel)); }
-        }
 
         private readonly ObservableCollection<WizardSummaryRow> _summaryRows = new();
         public ObservableCollection<WizardSummaryRow> SummaryRows => _summaryRows;
@@ -321,21 +315,20 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 var rawPoly = snap?.ToPolygon();
                 if (roomRow == null || snap == null || rawPoly == null)
                 {
-                    PreviewModel = EmptyPlot("Нет выбранного помещения для превью");
-                    PreviewInfoText.Text = "";
+                    var empty = new ScottPlotPlan(PreviewPlot.Plot);
+                    empty.Clear();
+                    try { PreviewPlot.Refresh(); } catch { }
+                    PreviewInfoText.Text = "Нет выбранного помещения для превью";
                     return;
                 }
                 var poly = PolygonSanitizer.MergeCollinear(rawPoly);
                 double mm = LengthUnitConverter.MmPerFoot;
-                var model = new PlotModel { Background = OxyColors.White };
-                model.Axes.Add(new OxyPlot.Axes.LinearAxis { Position = OxyPlot.Axes.AxisPosition.Bottom, IsAxisVisible = false });
-                model.Axes.Add(new OxyPlot.Axes.LinearAxis { Position = OxyPlot.Axes.AxisPosition.Left, IsAxisVisible = false });
+                var plan = new ScottPlotPlan(PreviewPlot.Plot);
+                plan.Clear();
+                var pts = poly.Vertices.Select(v => new Point2D(v.X * mm, v.Y * mm)).ToList();
+                plan.AddRoom("preview", pts, null,
+                    new ScottPlot.Color(255, 255, 255, 190), Colors.Black, 2f);
 
-                var contour = new LineSeries { Color = OxyColors.Black, StrokeThickness = 2 };
-                foreach (var v in poly.Vertices)
-                    contour.Points.Add(new DataPoint(v.X * mm, v.Y * mm));
-                contour.Points.Add(contour.Points[0]);
-                model.Series.Add(contour);
                 // нумерация стен 1..n
                 try
                 {
@@ -343,19 +336,10 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     for (int i = 0; i < wallEdges.Count; i++)
                     {
                         var mid = wallEdges[i].MidPoint;
-                        model.Annotations.Add(new OxyPlot.Annotations.TextAnnotation
-                        {
-                            Text = (i + 1).ToString(),
-                            TextPosition = new DataPoint(mid.X * mm, mid.Y * mm),
-                            FontSize = 10,
-                            FontWeight = 600,
-                            TextColor = OxyColors.White,
-                            Background = OxyColor.FromRgb(45, 108, 223),
-                            Stroke = OxyColors.Transparent,
-                            Padding = new OxyThickness(3),
-                            TextHorizontalAlignment = OxyPlot.HorizontalAlignment.Center,
-                            TextVerticalAlignment = OxyPlot.VerticalAlignment.Middle
-                        });
+                        plan.AddText((i + 1).ToString(),
+                            mid.X * mm, mid.Y * mm,
+                            fg: Colors.White, bg: new ScottPlot.Color(45, 108, 223),
+                            size: 10, bold: true);
                     }
                 }
                 catch { }
@@ -438,16 +422,11 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         if (res.SelectedEdge != null)
                         {
                             var e = res.SelectedEdge;
-                            var edge = new LineSeries { Color = OxyColors.Red, StrokeThickness = 3 };
-                            edge.Points.Add(new DataPoint(e.Start.X * mm, e.Start.Y * mm));
-                            edge.Points.Add(new DataPoint(e.End.X * mm, e.End.Y * mm));
-                            model.Series.Add(edge);
+                            plan.AddLine(e.Start.X * mm, e.Start.Y * mm,
+                                e.End.X * mm, e.End.Y * mm, Colors.Red, 3);
                         }
-                        var sc = new ScatterSeries
-                        { MarkerType = MarkerType.Circle, MarkerSize = 5, MarkerFill = OxyColors.Red };
-                        foreach (var p in res.Placements)
-                            sc.Points.Add(new ScatterPoint(p.Position.X * mm, p.Position.Y * mm));
-                        model.Series.Add(sc);
+                        plan.AddMarkers(res.Placements.Select(p => p.Position.X * mm).ToList(),
+                            res.Placements.Select(p => p.Position.Y * mm).ToList(), Colors.Red, 5);
                         var effDev = device ?? best;
                         PreviewInfoText.Text =
                             $"{roomRow.Number}. {roomRow.Name} · {TxtName.Text}: {res.Placements.Count} шт" +
@@ -461,7 +440,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         string deviceText = effDev != null ? $"{effDev.Manufacturer} {effDev.TypeName}".Trim() : "(автоподбор)";
                         string kefText = effDev != null && res.Placements.Count > 0 ? $"{flow / res.Placements.Count / Math.Max(1, effDev.MaxFlowRate):F2}" : "—";
                         _summaryRows.Add(new WizardSummaryRow { SystemName = TxtName.Text.Trim(), TotalFlowText = totalFlowText, CountText = res.Placements.Count.ToString(), DeviceText = deviceText, KefText = kefText });
-                        PreviewModel = model;
+                        plan.FitAll();
+                        try { PreviewPlot.Refresh(); } catch { }
                         return;
                     }
                 }
@@ -477,19 +457,13 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 PreviewInfoText.Text = SelectedType == HVACSystemType.Heating
                     ? "Отопление расставляется движком по окнам от нагрузки Q."
                     : "Задайте расход > 0 для превью.";
-                PreviewModel = model;
+                plan.FitAll();
+                try { PreviewPlot.Refresh(); } catch { }
             }
             catch (Exception ex)
             {
                 PreviewInfoText.Text = "Превью: " + ex.Message;
             }
-        }
-
-        private static PlotModel EmptyPlot(string message)
-        {
-            var p = new PlotModel();
-            p.Title = message;
-            return p;
         }
 
         // ---------- события UI ----------

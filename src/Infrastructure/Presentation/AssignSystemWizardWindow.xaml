@@ -1,7 +1,7 @@
 <Window x:Class="HVACLoadTerminals.Infrastructure.Presentation.AssignSystemWizardWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:oxy="http://oxyplot.org/wpf"
+        xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         Title="Назначение системы — мастер v2.1 (таблица+стена N=1)"
         Height="680" Width="1080"
         WindowStartupLocation="CenterOwner"
@@ -195,7 +195,7 @@
                     </DataGrid>
                     <TextBlock DockPanel.Dock="Bottom" x:Name="PreviewInfoText" FontSize="11"
                                Foreground="{StaticResource PrimaryDarkBrush}" TextWrapping="Wrap" Margin="2,6,2,0"/>
-                    <oxy:PlotView Model="{Binding PreviewModel}"/>
+                    <ScottPlot:WpfPlot x:Name="PreviewPlot" Background="White"/>
                 </DockPanel>
             </Border>
         </Grid>

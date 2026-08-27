@@ -7,9 +7,10 @@ using System.Windows;
 using HVACLoadTerminals.App.ViewModels;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Services;
+using HVACLoadTerminals.Infrastructure.Visualization;
 using Newtonsoft.Json;
-using OxyPlot;
-using OxyPlot.Series;
+using ScottPlot;
+using ScottPlot.WPF;
 
 namespace HVACLoadTerminals.App
 {
@@ -18,9 +19,6 @@ namespace HVACLoadTerminals.App
         private readonly MainViewModel _vm;
         private readonly string _profilesDir;
         private bool _syncing;
-
-        private PlotModel? _previewModel;
-        public PlotModel? PreviewModel { get => _previewModel; set { _previewModel = value; OnPropertyChanged(nameof(PreviewModel)); } }
 
         public PlacementRulesWindow(MainViewModel vm)
         {
@@ -90,37 +88,30 @@ namespace HVACLoadTerminals.App
                 // Use room area 60m2
                 var res = svc.PlaceForRoom("preview", poly, 1200, 60, HVACSystemType.Supply, new[] { device }, "П1", opts);
 
-                var model = new PlotModel { Title = $"Превью: {res.Placements.Count} шт, k_ef {(res.Placements.Count>0? (1200.0/res.Placements.Count/500).ToString("F2"):"—")}", Background = OxyColors.White };
-                model.Axes.Add(new OxyPlot.Axes.LinearAxis { Position = OxyPlot.Axes.AxisPosition.Bottom, Title = "X, мм" });
-                model.Axes.Add(new OxyPlot.Axes.LinearAxis { Position = OxyPlot.Axes.AxisPosition.Left, Title = "Y, мм" });
+                var plan = new ScottPlotPlan(PreviewPlot.Plot);
+                plan.Clear();
                 double mmPerFoot = LengthUnitConverter.MmPerFoot;
-                var contour = new LineSeries { Color = OxyColors.Black, StrokeThickness = 1.5, Title = "Контур" };
-                foreach (var v in poly.Vertices) contour.Points.Add(new DataPoint(v.X * mmPerFoot, v.Y * mmPerFoot));
-                contour.Points.Add(contour.Points[0]);
-                model.Series.Add(contour);
+                // Контур
+                var cpts = poly.Vertices.Select(v => new Point2D(v.X * mmPerFoot, v.Y * mmPerFoot)).ToList();
+                plan.AddRoom("preview", cpts, null, new ScottPlot.Color(255, 255, 255, 220), Colors.Black, 1.5f);
                 // Offset zone
                 var off = new PolygonOffsetService().OffsetInward(poly, LengthUnitConverter.MmToUnits(500));
                 if (off != null && off.Count >= 3)
-                {
-                    var offSeries = new LineSeries { Color = OxyColors.Gray, StrokeThickness = 1, LineStyle = LineStyle.Dash, Title = "Зона 500мм" };
-                    foreach (var p in off) offSeries.Points.Add(new DataPoint(p.X * mmPerFoot, p.Y * mmPerFoot));
-                    offSeries.Points.Add(offSeries.Points[0]);
-                    model.Series.Add(offSeries);
-                }
+                    plan.AddDashedPolygon(off
+                        .Select(p => new Point2D(p.X * mmPerFoot, p.Y * mmPerFoot)).ToList(),
+                        Colors.Gray, 1);
                 if (res.SelectedEdge != null)
                 {
                     var e = res.SelectedEdge;
-                    var edgeLine = new LineSeries { Color = OxyColors.Red, StrokeThickness = 3, Title = "Сторона" };
-                    edgeLine.Points.Add(new DataPoint(e.Start.X * mmPerFoot, e.Start.Y * mmPerFoot));
-                    edgeLine.Points.Add(new DataPoint(e.End.X * mmPerFoot, e.End.Y * mmPerFoot));
-                    model.Series.Add(edgeLine);
+                    plan.AddLine(e.Start.X * mmPerFoot, e.Start.Y * mmPerFoot,
+                        e.End.X * mmPerFoot, e.End.Y * mmPerFoot, Colors.Red, 3);
                 }
-                var scatter = new ScatterSeries { MarkerType = MarkerType.Circle, MarkerSize = 5, MarkerFill = OxyColors.Red, Title = "Приборы" };
-                foreach (var pl in res.Placements) scatter.Points.Add(new ScatterPoint(pl.Position.X * mmPerFoot, pl.Position.Y * mmPerFoot));
-                model.Series.Add(scatter);
+                plan.AddMarkers(res.Placements.Select(p => p.Position.X * mmPerFoot).ToList(),
+                    res.Placements.Select(p => p.Position.Y * mmPerFoot).ToList(), Colors.Red, 5);
                 // Info
                 StatusText.Text = $"Доля {ratio:F2} · v={velocity:F1} м/с · {res.Warnings.Count} варнингов";
-                PreviewModel = model;
+                plan.FitAll();
+                try { PreviewPlot.Refresh(); } catch { }
             }
             catch (Exception ex)
             {
@@ -130,7 +121,7 @@ namespace HVACLoadTerminals.App
 
         private void RatioSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (_syncing) return;
+            if (_syncing || RatioBox == null) return;
             RatioBox.Text = e.NewValue.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
             BuildPreview();
         }
@@ -149,7 +140,7 @@ namespace HVACLoadTerminals.App
         }
         private void VelocitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (_syncing) return;
+            if (_syncing || VelocityBox == null) return;
             VelocityBox.Text = e.NewValue.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
             BuildPreview();
         }

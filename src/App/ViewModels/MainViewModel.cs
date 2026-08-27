@@ -15,9 +15,8 @@ using HVACLoadTerminals.Core.Services;
 using HVACLoadTerminals.Infrastructure.Data;
 using HVACLoadTerminals.Infrastructure.Presentation;
 using HVACLoadTerminals.Infrastructure.Visualization;
-using OxyPlot;
-using OxyPlot.Annotations;
-using OxyPlot.Series;
+using Colors = ScottPlot.Colors;
+using SColor = ScottPlot.Color;
 
 namespace HVACLoadTerminals.App.ViewModels
 {
@@ -875,11 +874,13 @@ namespace HVACLoadTerminals.App.ViewModels
         /// <summary>M3.2: HTML-отчёт по текущему уровню (сцена+сводка+таблица).</summary>
         public ICommand ExportReportCommand { get; }
 
-        private PlotModel? _plotModel;
-        public PlotModel? PlotModel
+        private ScottPlotPlan? _planPlot;
+        /// <summary>План уровня на ScottPlot (нижняя панель при UseCanvasPlan=false;
+        /// хост перерисовывает себя при смене значения).</summary>
+        public ScottPlotPlan? PlanPlot
         {
-            get => _plotModel;
-            set { _plotModel = value; OnPropertyChanged(nameof(PlotModel)); }
+            get => _planPlot;
+            set { _planPlot = value; OnPropertyChanged(nameof(PlanPlot)); }
         }
 
         public MainViewModel()
@@ -1521,38 +1522,21 @@ namespace HVACLoadTerminals.App.ViewModels
 
         private void PlotLevelCore()
         {
-            // IC1: ветвление Canvas vs OxyPlot
+            // IC1: ветвление Canvas vs ScottPlot-план.
             if (UseCanvasPlan)
             {
                 try { RebuildPlanItems(); } catch (Exception ex) { AppLogger.Error("RebuildPlanItems failed", ex); }
-                // OxyPlot не строим — план рисует Canvas; оставляем старый PlotModel для совместимости LevelPlanWindow
-                // Но если снимка нет — очищаем PlanItems уже, PlotModel можно оставить пустым
+                // План рисует Canvas; ScottPlot-план строим только как запасной хост.
                 if (Workspace.CurrentSnapshot == null)
-                {
-                    PlotModel = new PlotModel { Title = $"Расстановка — {SelectedLevel}", Background = OxyColors.White };
-                }
+                    PlanPlot = null;
                 return;
             }
 
             var snapshot = Workspace.CurrentSnapshot;
-            var model = new PlotModel
-            {
-                Title = $"Расстановка — {SelectedLevel}",
-                PlotType = PlotType.XY,
-                Background = OxyColors.White
-            };
-            model.Axes.Add(new OxyPlot.Axes.LinearAxis
-            {
-                Position = OxyPlot.Axes.AxisPosition.Bottom, Title = "X, мм"
-            });
-            model.Axes.Add(new OxyPlot.Axes.LinearAxis
-            {
-                Position = OxyPlot.Axes.AxisPosition.Left, Title = "Y, мм"
-            });
-
+            var plan = new ScottPlotPlan();
             if (snapshot == null)
             {
-                PlotModel = model;
+                PlanPlot = null;
                 return;
             }
 
@@ -1568,17 +1552,8 @@ namespace HVACLoadTerminals.App.ViewModels
                 var polygon = room.ToPolygon();
                 if (polygon == null)
                     continue;
-                bool isSelected = selectedIds.Contains(room.Id ?? "");
-                var line = new LineSeries
-                {
-                    Color = isSelected ? OxyColors.DodgerBlue : OxyColors.LightSlateGray,
-                    StrokeThickness = isSelected ? 4 : 1,
-                    Title = $"{room.Number}. {room.Name}"
-                };
-                foreach (var v in polygon.Vertices)
-                    line.Points.Add(new DataPoint(v.X * mmPerFoot, v.Y * mmPerFoot));
-                line.Points.Add(line.Points[0]);
-                model.Series.Add(line);
+                var pts = polygon.Vertices.Select(v => new Point2D(v.X * mmPerFoot, v.Y * mmPerFoot)).ToList();
+                plan.AddRoom(room.Id ?? "", pts, null);
             }
 
             // Требование 9: кривые ограждений — только у выделенных помещений.
@@ -1593,16 +1568,10 @@ namespace HVACLoadTerminals.App.ViewModels
                 {
                     var lc = wall.LocationCurve;
                     bool external = wall.ResolvedExternal || wall.IsExternal || wall.ArIsExternal;
-                    var wallLine = new LineSeries
-                    {
-                        Color = external ? OxyColor.FromRgb(55, 71, 79)
-                                         : OxyColor.FromRgb(176, 190, 197),
-                        StrokeThickness = external ? 5 : 2.5,
-                        Title = external ? "Наружная стена" : "Внутренняя стена"
-                    };
-                    wallLine.Points.Add(new DataPoint(lc.StartX * mmPerFoot, lc.StartY * mmPerFoot));
-                    wallLine.Points.Add(new DataPoint(lc.EndX * mmPerFoot, lc.EndY * mmPerFoot));
-                    model.Series.Add(wallLine);
+                    plan.AddLine(lc.StartX * mmPerFoot, lc.StartY * mmPerFoot,
+                        lc.EndX * mmPerFoot, lc.EndY * mmPerFoot,
+                        external ? new SColor(55, 71, 79) : new SColor(176, 190, 197),
+                        external ? 5 : 2.5);
                 }
 
                 var openingsByHost = snapshot.Openings
@@ -1621,26 +1590,18 @@ namespace HVACLoadTerminals.App.ViewModels
                         double half = Math.Min(opening.Width, len) / 2 / len;
                         double mx = (lc.StartX + lc.EndX) / 2;
                         double my = (lc.StartY + lc.EndY) / 2;
-                        var winLine = new LineSeries
-                        {
-                            Color = OxyColors.OrangeRed,
-                            StrokeThickness = 6,
-                            Title = "Окно"
-                        };
-                        winLine.Points.Add(new DataPoint(
-                            (mx - dx * half) * mmPerFoot, (my - dy * half) * mmPerFoot));
-                        winLine.Points.Add(new DataPoint(
-                            (mx + dx * half) * mmPerFoot, (my + dy * half) * mmPerFoot));
-                        model.Series.Add(winLine);
+                        plan.AddLine((mx - dx * half) * mmPerFoot, (my - dy * half) * mmPerFoot,
+                            (mx + dx * half) * mmPerFoot, (my + dy * half) * mmPerFoot,
+                            new SColor(255, 69, 0), 6);
                     }
                 }
             }
 
-            var colorBySystem = new Dictionary<string, OxyColor>
+            var colorBySystem = new Dictionary<string, SColor>
             {
-                ["Отопление"] = OxyColors.Orange,
-                ["Приток"] = OxyColors.Red,
-                ["Вытяжка"] = OxyColors.Green
+                ["Отопление"] = Colors.Orange,
+                ["Приток"] = Colors.Red,
+                ["Вытяжка"] = Colors.Green
             };
 
             // U2.1: подсветка сторон, выбранных паттернами массовой расстановки
@@ -1649,17 +1610,10 @@ namespace HVACLoadTerminals.App.ViewModels
             {
                 if (edge.LevelName != SelectedLevel)
                     continue;
-                var sideLine = new LineSeries
-                {
-                    Color = colorBySystem.TryGetValue(edge.SystemName, out var sc)
-                        ? sc : OxyColors.Purple,
-                    StrokeThickness = 5,
-                    LineStyle = LineStyle.Solid,
-                    Title = $"Сторона: {edge.SystemName}"
-                };
-                sideLine.Points.Add(new DataPoint(edge.Start.X * mmPerFoot, edge.Start.Y * mmPerFoot));
-                sideLine.Points.Add(new DataPoint(edge.End.X * mmPerFoot, edge.End.Y * mmPerFoot));
-                model.Series.Add(sideLine);
+                var sc = colorBySystem.TryGetValue(edge.SystemName, out var sc2)
+                    ? sc2 : Colors.Purple;
+                plan.AddLine(edge.Start.X * mmPerFoot, edge.Start.Y * mmPerFoot,
+                    edge.End.X * mmPerFoot, edge.End.Y * mmPerFoot, sc, 5);
             }
 
             var rows = Placements
@@ -1671,72 +1625,43 @@ namespace HVACLoadTerminals.App.ViewModels
                 // классов + палитра для именованных П1/П2/В1…
                 var palette = new[]
                 {
-                    OxyColors.Red, OxyColors.Green, OxyColors.Blue,
-                    OxyColors.Purple, OxyColors.HotPink, OxyColors.Teal,
-                    OxyColors.Brown, OxyColors.Olive, OxyColors.SteelBlue
+                    Colors.Red, Colors.Green, Colors.Blue,
+                    Colors.Purple, Colors.HotPink, Colors.Teal,
+                    Colors.Brown, Colors.Olive, Colors.SteelBlue
                 };
-                var bySystem = new Dictionary<string, OxyColor>();
+                var bySystem = new Dictionary<string, SColor>();
                 int idx = 0;
                 foreach (var name in rows.Select(p => p.SystemName).Distinct())
                 {
                     bySystem[name] = name == "Отопление"
-                        ? OxyColors.Orange
+                        ? Colors.Orange
                         : palette[idx++ % palette.Length];
                 }
 
                 foreach (var group in rows.GroupBy(p => p.SystemName))
-                {
-                    var scatter = new ScatterSeries
-                    {
-                        MarkerType = MarkerType.Circle,
-                        MarkerSize = 6,
-                        MarkerFill = bySystem[group.Key],
-                        Title = $"{group.Key} · {group.Count()} шт"
-                    };
-                    foreach (var p in group)
-                        scatter.Points.Add(new ScatterPoint(p.X, p.Y));
-                    model.Series.Add(scatter);
-                }
+                    plan.AddMarkers(group.Select(p => p.X).ToList(),
+                        group.Select(p => p.Y).ToList(), bySystem[group.Key], 6);
             }
             else
             {
                 // U3.1: k_ef цветом на плане по порогам <0.6 / 0.6–0.9 / >0.9.
                 // Отопление (k_ef неприменимо) остаётся оранжевым; приборы без k_ef — серые.
-                var colorByKefStatus = new Dictionary<string, OxyColor>
+                var colorByKefStatus = new Dictionary<string, SColor>
                 {
-                    ["low"] = OxyColor.FromRgb(230, 126, 34),   // недогруз <0.6
-                    ["ok"] = OxyColor.FromRgb(30, 142, 62),     // норма 0.6–0.9
-                    ["high"] = OxyColor.FromRgb(217, 48, 37)    // перегруз >0.9
+                    ["low"] = new SColor(230, 126, 34),   // недогруз <0.6
+                    ["ok"] = new SColor(30, 142, 62),     // норма 0.6–0.9
+                    ["high"] = new SColor(217, 48, 37)    // перегруз >0.9
                 };
-                string kefLabel(string status) => status switch
-                {
-                    "low" => "недогруз (<0.6)",
-                    "ok" => "норма (0.6–0.9)",
-                    "high" => "перегруз (>0.9)",
-                    _ => ""
-                };
-
                 foreach (var group in rows.GroupBy(p =>
                              p.SystemName == "Отопление" ? "" : p.KefStatus))
                 {
                     string status = group.Key;
                     bool isHeatingGroup = group.All(p => p.SystemName == "Отопление");
-                    var scatter = new ScatterSeries
-                    {
-                        MarkerType = MarkerType.Circle,
-                        MarkerSize = 6,
-                        MarkerFill =
-                            status.Length == 0 && isHeatingGroup
-                                ? OxyColors.Orange
-                                : colorByKefStatus.TryGetValue(status, out var kc)
-                                    ? kc : OxyColors.Blue,
-                        Title = status.Length == 0
-                            ? (isHeatingGroup ? "Отопление" : "Приток/Вытяжка · без k_ef")
-                            : $"Приток/Вытяжка · k_ef {kefLabel(status)}"
-                    };
-                    foreach (var p in group)
-                        scatter.Points.Add(new ScatterPoint(p.X, p.Y));
-                    model.Series.Add(scatter);
+                    var sc = status.Length == 0 && isHeatingGroup
+                        ? Colors.Orange
+                        : colorByKefStatus.TryGetValue(status, out var kc) ? kc : Colors.Blue;
+                    plan.AddMarkers(group.Select(p => p.X).ToList(),
+                        group.Select(p => p.Y).ToList(), sc, 6);
                 }
             }
 
@@ -1758,22 +1683,13 @@ namespace HVACLoadTerminals.App.ViewModels
                     if (roomFlow > 0)
                         label += $"\n{roomFlow:F0} м³/ч";
 
-                    model.Annotations.Add(new TextAnnotation
-                    {
-                        Text = label,
-                        TextPosition = new DataPoint(
-                            polygon.Center.X * mmPerFoot, polygon.Center.Y * mmPerFoot),
-                        TextHorizontalAlignment = OxyPlot.HorizontalAlignment.Center,
-                        TextVerticalAlignment = OxyPlot.VerticalAlignment.Middle,
-                        FontSize = 9,
-                        TextColor = OxyColors.Black,
-                        Stroke = OxyColors.Transparent,
-                        Background = OxyColor.FromArgb(160, 255, 255, 255)
-                    });
+                    plan.AddText(label, polygon.Center.X * mmPerFoot, polygon.Center.Y * mmPerFoot, size: 9);
                 }
             }
 
-            PlotModel = model;
+            plan.FitAll();
+            plan.SetSelectedRooms(selectedIds);
+            PlanPlot = plan;
         }
 
         // ------------------------------------------------------------------

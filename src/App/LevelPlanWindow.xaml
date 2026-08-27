@@ -1,7 +1,7 @@
 <Window x:Class="HVACLoadTerminals.App.LevelPlanWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:oxy="http://oxyplot.org/wpf"
+        xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         Title="Визуализация уровня — план и приборы"
         Height="720" Width="1000"
         WindowStartupLocation="CenterOwner"
@@ -18,7 +18,9 @@
         <Border DockPanel.Dock="Top" Background="{StaticResource PanelBg}"
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10,6">
             <DockPanel>
-                <Button DockPanel.Dock="Right" Content="Закрыть" Click="Close_Click"/>
+                <Button DockPanel.Dock="Right" Content="Закрыть" Click="Close_Click" Margin="8,0,0,0"/>
+                <Button DockPanel.Dock="Right" Content="Весь этаж" Click="FitAll_Click"
+                        ToolTip="Вернуть обзор всего этажа (после зума к помещению)"/>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Уровень:" VerticalAlignment="Center" Margin="0,0,4,0"
                                Foreground="{StaticResource TextMuted}"/>
@@ -30,12 +32,40 @@
                               Width="130" VerticalContentAlignment="Center"/>
                     <CheckBox Content="Подписи комнат" IsChecked="{Binding ShowLabels}"
                               VerticalAlignment="Center" Margin="16,0,0,0"/>
+                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="12,2" VerticalAlignment="Stretch"/>
+                    <ItemsControl ItemsSource="{Binding LegendItems}" VerticalAlignment="Center" Margin="8,0,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
+                                    <Ellipse Width="10" Height="10" Margin="0,0,4,0"
+                                             Fill="{Binding Brush}"/>
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"
+                                               Foreground="{StaticResource TextDark}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
+            </DockPanel>
+        </Border>
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBg}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10,6">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding StatusText}"
+                           Foreground="{StaticResource TextDark}" FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="Клик — выбрать помещение · Двойной клик — зум к помещению · Колесо — масштаб · Drag — панорама"
+                           Foreground="{StaticResource TextMuted}"/>
             </DockPanel>
         </Border>
         <Border Margin="8" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1" CornerRadius="6">
-            <oxy:PlotView Model="{Binding PlotModel}"/>
+            <ScottPlot:WpfPlot x:Name="PlanPlot" Background="White"/>
         </Border>
     </DockPanel>
 </Window>

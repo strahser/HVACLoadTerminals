@@ -8,9 +8,9 @@ using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
 using HVACLoadTerminals.Infrastructure.Presentation;
-using OxyPlot;
-using OxyPlot.Annotations;
-using OxyPlot.Series;
+using HVACLoadTerminals.Infrastructure.Visualization;
+using ScottPlot;
+using ScottPlot.WPF;
 
 namespace HVACLoadTerminals.App
 {
@@ -23,13 +23,6 @@ namespace HVACLoadTerminals.App
         private Polygon2D? _polygon;
         private IReadOnlyList<EdgeInfo> _edges = Array.Empty<EdgeInfo>();
         private readonly CeilingPlacementService _ceilingService = new CeilingPlacementService();
-
-        private PlotModel? _plotModel;
-        public PlotModel? PlotModel
-        {
-            get => _plotModel;
-            set { _plotModel = value; OnPropertyChanged(nameof(PlotModel)); }
-        }
 
         public class SummaryRow
         {
@@ -50,11 +43,6 @@ namespace HVACLoadTerminals.App
 
             TitleText.Text = $"Помещение {room.Number} — {room.Name}";
             SubtitleText.Text = $"Уровень: {room.LevelName} · S={room.Area:F1} м² · систем: {room.Systems.Count}";
-
-            // Системы
-            SystemCombo.ItemsSource = room.Systems;
-            if (room.Systems.Count > 0)
-                SystemCombo.SelectedIndex = 0;
 
             // SingleRule — только отображение в SingleRuleText
             try { _polygon = _snapRoom.ToPolygon(); } catch { _polygon = null; }
@@ -84,9 +72,7 @@ namespace HVACLoadTerminals.App
 
         private void LoadSelectedSystem()
         {
-            _selectedSystem = SystemCombo.SelectedItem as SystemRow;
-            if (_selectedSystem == null) return;
-            // только отображение — правка в мастере
+            _selectedSystem = null;
             UpdateWallInfo();
         }
 
@@ -121,61 +107,33 @@ namespace HVACLoadTerminals.App
 
         private void BuildPlot()
         {
-            var model = new PlotModel
-            {
-                Title = $"План — {_room.Number}. {_room.Name}",
-                Background = OxyColors.White
-            };
-            model.Axes.Add(new OxyPlot.Axes.LinearAxis { Position = OxyPlot.Axes.AxisPosition.Bottom, Title = "X, мм" });
-            model.Axes.Add(new OxyPlot.Axes.LinearAxis { Position = OxyPlot.Axes.AxisPosition.Left, Title = "Y, мм" });
-
+            var plan = new ScottPlotPlan(PlanPlot.Plot);
+            plan.Clear();
             if (_polygon == null || _edges.Count == 0)
             {
-                PlotModel = model;
                 PreviewInfoText.Text = "Нет контура для отображения.";
+                try { PlanPlot.Refresh(); } catch { }
                 return;
             }
 
             double mmPerFoot = LengthUnitConverter.MmPerFoot;
             // Контур
-            var contour = new LineSeries { Color = OxyColors.Black, StrokeThickness = 2, Title = "Контур" };
-            foreach (var v in _polygon.Vertices)
-                contour.Points.Add(new DataPoint(v.X * mmPerFoot, v.Y * mmPerFoot));
-            contour.Points.Add(contour.Points[0]);
-            model.Series.Add(contour);
+            var pts = _polygon.Vertices.Select(v => new Point2D(v.X * mmPerFoot, v.Y * mmPerFoot)).ToList();
+            plan.AddRoom("room", pts, null, new ScottPlot.Color(255, 255, 255, 255), Colors.Black, 2f);
 
-            // Нумерация стен
+            // Нумерация стен + выделение выбранной стены
             for (int i = 0; i < _edges.Count; i++)
             {
                 var e = _edges[i];
                 var mid = e.MidPoint;
-                model.Annotations.Add(new TextAnnotation
-                {
-                    Text = (i + 1).ToString(),
-                    TextPosition = new DataPoint(mid.X * mmPerFoot, mid.Y * mmPerFoot),
-                    FontSize = 11,
-                    FontWeight = 600,
-                    TextColor = OxyColors.White,
-                    Background = OxyColor.FromRgb(45, 108, 223),
-                    Stroke = OxyColors.Transparent,
-                    Padding = new OxyThickness(4),
-                    TextHorizontalAlignment = OxyPlot.HorizontalAlignment.Center,
-                    TextVerticalAlignment = OxyPlot.VerticalAlignment.Middle
-                });
-                // Выделение выбранной стены (из SystemRow.WallIndex)
+                plan.AddText((i + 1).ToString(),
+                    mid.X * mmPerFoot, mid.Y * mmPerFoot,
+                    fg: Colors.White, bg: new ScottPlot.Color(45, 108, 223),
+                    size: 11, bold: true);
                 bool isSelectedWall = _selectedSystem != null && _selectedSystem.WallIndex == i;
                 if (isSelectedWall)
-                {
-                    var wallLine = new LineSeries
-                    {
-                        Color = OxyColors.Red,
-                        StrokeThickness = 4,
-                        Title = $"Стена {i + 1} (выбрана)"
-                    };
-                    wallLine.Points.Add(new DataPoint(e.Start.X * mmPerFoot, e.Start.Y * mmPerFoot));
-                    wallLine.Points.Add(new DataPoint(e.End.X * mmPerFoot, e.End.Y * mmPerFoot));
-                    model.Series.Add(wallLine);
-                }
+                    plan.AddLine(e.Start.X * mmPerFoot, e.Start.Y * mmPerFoot,
+                        e.End.X * mmPerFoot, e.End.Y * mmPerFoot, Colors.Red, 4);
             }
 
             // Офсет-полигон (равномерный, для справки) — пунктир
@@ -187,17 +145,13 @@ namespace HVACLoadTerminals.App
                 var offsetPts = offsetService.OffsetInward(_polygon, clearanceFt);
                 if (offsetPts != null && offsetPts.Count >= 3)
                 {
-                    var offsetSeries = new LineSeries
-                    {
-                        Color = OxyColors.Gray,
-                        StrokeThickness = 1.2,
-                        LineStyle = LineStyle.Dash,
-                        Title = $"Офсет {uniformMm:F0}мм"
-                    };
-                    foreach (var p in offsetPts)
-                        offsetSeries.Points.Add(new DataPoint(p.X * mmPerFoot, p.Y * mmPerFoot));
-                    offsetSeries.Points.Add(offsetSeries.Points[0]);
-                    model.Series.Add(offsetSeries);
+                    plan.AddDashedPolygon(offsetPts
+                        .Select(p => new Point2D(p.X * mmPerFoot, p.Y * mmPerFoot)).ToList(),
+                        new ScottPlot.Color(180, 180, 180), 1.0);
+                    var cx = offsetPts.Average(p => p.X) * mmPerFoot;
+                    var cy = offsetPts.Average(p => p.Y) * mmPerFoot;
+                    plan.AddText($"офсет {uniformMm:F0}мм", cx, cy,
+                        fg: new ScottPlot.Color(140, 140, 140), size: 7);
                 }
             }
             catch (Exception ex)
@@ -217,16 +171,8 @@ namespace HVACLoadTerminals.App
                     var n = e.InwardNormal;
                     var s = new Point2D(e.Start.X + n.X * offFt, e.Start.Y + n.Y * offFt);
                     var t = new Point2D(e.End.X + n.X * offFt, e.End.Y + n.Y * offFt);
-                    var offLine = new LineSeries
-                    {
-                        Color = OxyColor.FromRgb(230, 126, 34),
-                        StrokeThickness = 3,
-                        LineStyle = LineStyle.Dash,
-                        Title = $"Линия размещения (отступ {offMm:F0}мм)"
-                    };
-                    offLine.Points.Add(new DataPoint(s.X * mmPerFoot, s.Y * mmPerFoot));
-                    offLine.Points.Add(new DataPoint(t.X * mmPerFoot, t.Y * mmPerFoot));
-                    model.Series.Add(offLine);
+                    plan.AddDashedLine(s.X * mmPerFoot, s.Y * mmPerFoot,
+                        t.X * mmPerFoot, t.Y * mmPerFoot, new ScottPlot.Color(230, 126, 34), 3);
                 }
             }
 
@@ -235,7 +181,7 @@ namespace HVACLoadTerminals.App
             bool showAll = FilterCombo == null || FilterCombo.SelectedIndex <= 0 || filterName == "— Все системы —";
             if (showAll)
             {
-                var palette = new[] { OxyColors.Red, OxyColors.Green, OxyColors.Blue, OxyColors.Purple, OxyColors.Orange, OxyColors.Teal, OxyColors.Brown };
+                var palette = new[] { Colors.Red, Colors.Green, Colors.Blue, Colors.Purple, Colors.Orange, Colors.Teal, Colors.Brown };
                 int idx = 0, total = 0;
                 foreach (var sys in _room.Systems ?? new List<SystemRow>())
                 {
@@ -243,9 +189,11 @@ namespace HVACLoadTerminals.App
                     var pl = BuildPreviewPlacementsForSystem(sys, useWallCombo: false);
                     if (pl == null || pl.Count == 0) continue;
                     var col = palette[idx++ % palette.Length];
-                    var sc = new ScatterSeries { MarkerType = MarkerType.Circle, MarkerSize = 5, MarkerFill = col, Title = $"{sys.Name} — {pl.Count} шт" };
-                    foreach (var p in pl) sc.Points.Add(new ScatterPoint(p.X * mmPerFoot, p.Y * mmPerFoot));
-                    model.Series.Add(sc);
+                    plan.AddMarkers(pl.Select(p => p.X * mmPerFoot).ToList(),
+                        pl.Select(p => p.Y * mmPerFoot).ToList(), col, 5);
+                    for (int i = 0; i < pl.Count; i++)
+                        plan.AddText(sys.Name, pl[i].X * mmPerFoot, pl[i].Y * mmPerFoot - 120,
+                            fg: col, size: 8, bold: true);
                     total += pl.Count;
                 }
                 PreviewInfoText.Text = total > 0 ? $"Превью всех систем: {total} приборов" : "Нет приборов для превью (проверьте расходы/каталог)";
@@ -258,9 +206,11 @@ namespace HVACLoadTerminals.App
                     var preview = BuildPreviewPlacementsForSystem(target, useWallCombo: true);
                     if (preview != null && preview.Count > 0)
                     {
-                        var scatter = new ScatterSeries { MarkerType = MarkerType.Circle, MarkerSize = 5, MarkerFill = OxyColors.Red, Title = $"{target.Name} — {preview.Count} шт" };
-                        foreach (var p in preview) scatter.Points.Add(new ScatterPoint(p.X * mmPerFoot, p.Y * mmPerFoot));
-                        model.Series.Add(scatter);
+                        plan.AddMarkers(preview.Select(p => p.X * mmPerFoot).ToList(),
+                            preview.Select(p => p.Y * mmPerFoot).ToList(), Colors.Red, 5);
+                        for (int i = 0; i < preview.Count; i++)
+                            plan.AddText(target.Name, preview[i].X * mmPerFoot, preview[i].Y * mmPerFoot - 120,
+                                fg: Colors.Red, size: 8, bold: true);
                         PreviewInfoText.Text = $"Превью: {target.Name} — {preview.Count} прибора(ов) вдоль стены {(target.WallIndex.HasValue ? (target.WallIndex.Value + 1).ToString() : "авто")}.";
                     }
                     else
@@ -270,7 +220,8 @@ namespace HVACLoadTerminals.App
                 }
             }
             UpdateSummary();
-            PlotModel = model;
+            plan.FitAll();
+            try { PlanPlot.Refresh(); } catch { }
         }
 
         private List<Point2D>? BuildPreviewPlacements()
@@ -307,7 +258,24 @@ namespace HVACLoadTerminals.App
         private List<Point2D>? BuildPreviewPlacementsForSystem(SystemRow sys, bool useWallCombo)
         {
             if (sys == null || _polygon == null) return null;
-            if (sys.FlowM3h <= 0 && sys.Type != HVACSystemType.Heating) return null;
+
+            // Отопление: отдельный движок по нагрузке (FlowM3h для отопления = 0)
+            if (sys.Type == HVACSystemType.Heating)
+            {
+                if (_room.HeatingW <= 0) return null;
+                var heatCat = _presenter.GetCatalog()
+                    .Where(d => d.SystemType == HVACSystemType.Heating && (d.HeatingCapacityW > 0 || d.MaxFlowRate > 0))
+                    .ToList();
+                if (heatCat.Count == 0) return null;
+                var heatRes = new HeatingPlacementService().PlaceForRoom(
+                    _snapRoom, _polygon,
+                    _presenter.GetRoomOpenings(_room.RoomId), Array.Empty<SnapshotWall>(),
+                    _room.HeatingW, heatCat, new HeatingPlacementOptions());
+                if (heatRes.Placements.Count == 0) return null;
+                return heatRes.Placements.Select(p => p.Position).ToList();
+            }
+
+            if (sys.FlowM3h <= 0) return null;
             var catalog = _presenter.GetCatalog();
             var sysCatalog = catalog.Where(d => d.SystemType == sys.Type && d.MaxFlowRate > 0).ToList();
             if (sysCatalog.Count == 0 && sys.Type != HVACSystemType.Heating) return null;
@@ -331,15 +299,12 @@ namespace HVACLoadTerminals.App
             return res.Placements.Select(p => p.Position).ToList();
         }
 
-        private void SystemCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            _selectedSystem = SystemCombo.SelectedItem as SystemRow;
-            LoadSelectedSystem();
-            BuildPlot();
-        }
-
         private void FilterCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
+            _selectedSystem = FilterCombo.SelectedItem is string name && name != "— Все системы —"
+                ? _room.Systems.FirstOrDefault(s => s.Name == name)
+                : null;
+            UpdateWallInfo();
             BuildPlot();
         }
 
@@ -358,7 +323,26 @@ namespace HVACLoadTerminals.App
                 }
                 if (sys.Type == HVACSystemType.Heating)
                 {
-                    rows.Add(new SummaryRow { SystemName = sys.Name, FlowText = $"{_room.HeatingW:F0} Вт", CountText = "—", DeviceText = "отопление", KefText = "—" });
+                    var heatCat = catalog
+                        .Where(d => d.SystemType == HVACSystemType.Heating && (d.HeatingCapacityW > 0 || d.MaxFlowRate > 0))
+                        .ToList();
+                    string heatDevText = "отопление";
+                    string countText = "—";
+                    if (heatCat.Count > 0 && _polygon != null && _room.HeatingW > 0)
+                    {
+                        try
+                        {
+                            var heatRes = new HeatingPlacementService().PlaceForRoom(
+                                _snapRoom, _polygon,
+                                _presenter.GetRoomOpenings(_room.RoomId), Array.Empty<SnapshotWall>(),
+                                _room.HeatingW, heatCat, new HeatingPlacementOptions());
+                            countText = heatRes.Placements.Count > 0 ? heatRes.Placements.Count.ToString() : "—";
+                            var heatDev = heatCat.First();
+                            heatDevText = $"{heatDev.Manufacturer} {heatDev.TypeName}".Trim();
+                        }
+                        catch { }
+                    }
+                    rows.Add(new SummaryRow { SystemName = sys.Name, FlowText = $"{_room.HeatingW:F0} Вт", CountText = countText, DeviceText = heatDevText, KefText = "—" });
                     continue;
                 }
                 var opts = new CeilingPlacementOptions
@@ -410,29 +394,8 @@ namespace HVACLoadTerminals.App
 
         private void RefreshSystemsCombo()
         {
-            var selectedName = _selectedSystem?.Name;
-            SystemCombo.ItemsSource = null;
-            SystemCombo.ItemsSource = _room.Systems;
-            if (_room.Systems.Count > 0)
-                SystemCombo.SelectedItem =
-                    _room.Systems.FirstOrDefault(s => s.Name == selectedName) ?? _room.Systems[0];
             SubtitleText.Text = $"Уровень: {_room.LevelName} · S={_room.Area:F1} м² · систем: {_room.Systems.Count}";
             BuildFilterCombo();
-        }
-
-        private void RecalcRoom_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                _presenter.Calculate();
-                BuildPlot();
-                PreviewInfoText.Text += " · пересчитано";
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка расчёта: " + ex.Message, "Расчёт помещения",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
         }
 
         private void Apply_Click(object sender, RoutedEventArgs e)

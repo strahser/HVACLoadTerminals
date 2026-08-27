@@ -4,10 +4,12 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using HVACLoadTerminals.App.ViewModels;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Infrastructure.Presentation;
 using Microsoft.Extensions.DependencyInjection;
+using ScottPlot;
 
 namespace HVACLoadTerminals.App
 {
@@ -45,6 +47,8 @@ namespace HVACLoadTerminals.App
                     TreeColumn.Width = new GridLength(_vm.TreePanelWidth, GridUnitType.Pixel);
                 else if (e.PropertyName == nameof(MainViewModel.PropsPanelWidth) && _vm.ShowPropsPanel)
                     PropsColumn.Width = new GridLength(_vm.PropsPanelWidth, GridUnitType.Pixel);
+                else if (e.PropertyName == nameof(MainViewModel.PlanPlot))
+                    HostMainPlan();
             };
             _vm.ToastRequested += ShowToast;
             _toastTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
@@ -67,7 +71,196 @@ namespace HVACLoadTerminals.App
                     };
                 }
                 catch (Exception ex) { AppLogger.Error("PlanCanvas hook failed", ex); }
+
+                HookMainPlanInteraction();
             };
+        }
+
+        // ---------- Интерактив нижнего ScottPlot-плана (MainPlanPlot) ----------
+        // Клик — выбор помещения (Ctrl — добавить/убрать), двойной клик — план
+        // помещения (модально), ПКМ — контекстное меню как в таблице, hover — подсветка.
+        private bool _mainPlanHooked;
+        private Point? _mainPlanDown;
+        private string? _mainPlanHover;
+
+        private void HookMainPlanInteraction()
+        {
+            if (_mainPlanHooked) return;
+            _mainPlanHooked = true;
+            MainPlanPlot.MouseDown += MainPlan_MouseDown;
+            MainPlanPlot.MouseUp += MainPlan_MouseUp;
+            MainPlanPlot.MouseMove += MainPlan_MouseMove;
+            MainPlanPlot.MouseLeave += MainPlan_MouseLeave;
+            MainPlanPlot.MouseDoubleClick += MainPlan_MouseDoubleClick;
+            MainPlanPlot.MouseRightButtonUp += MainPlan_MouseRightButtonUp;
+        }
+
+        private Coordinates MainPlanToWorld(Point pos)
+        {
+            try
+            {
+                return MainPlanPlot.Plot.GetCoordinates(new Pixel(pos.X, pos.Y),
+                    MainPlanPlot.Plot.Axes.Bottom, MainPlanPlot.Plot.Axes.Left);
+            }
+            catch
+            {
+                return new Coordinates(double.NaN, double.NaN);
+            }
+        }
+
+        private void MainPlan_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            _mainPlanDown = e.ChangedButton == MouseButton.Left ? e.GetPosition(MainPlanPlot) : (Point?)null;
+        }
+
+        private void MainPlan_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != MouseButton.Left || _mainPlanDown == null)
+                return;
+            var up = e.GetPosition(MainPlanPlot);
+            bool click = Math.Abs(up.X - _mainPlanDown.Value.X) < 6 &&
+                         Math.Abs(up.Y - _mainPlanDown.Value.Y) < 6;
+            _mainPlanDown = null;
+            var p = _vm.PlanPlot;
+            if (p == null) return;
+            if (!click)
+            {
+                // Пан — обновить hover.
+                MainPlan_UpdateHover(p.HitTest(MainPlanToWorld(up)));
+                return;
+            }
+            var hit = p.HitTest(MainPlanToWorld(up));
+            if (hit != null)
+            {
+                bool ctrl = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+                var ids = ctrl ? new List<string>(_vm.SelectedRoomIds) : new List<string>();
+                if (ctrl)
+                {
+                    if (ids.Contains(hit)) ids.Remove(hit); else ids.Add(hit);
+                }
+                else
+                {
+                    ids.Add(hit);
+                }
+                ApplyGridSelection(ids);
+            }
+            else
+            {
+                ApplyGridSelection(Array.Empty<string>());
+            }
+        }
+
+        private void MainPlan_UpdateHover(string? hit)
+        {
+            var p = _vm.PlanPlot;
+            if (p == null || hit == _mainPlanHover)
+                return;
+            if (_mainPlanHover != null) p.SetRoomHovered(_mainPlanHover, false);
+            _mainPlanHover = hit;
+            if (hit != null) p.SetRoomHovered(hit, true);
+            MainPlanPlot.Refresh();
+        }
+
+        private void MainPlan_MouseMove(object sender, MouseEventArgs e)
+        {
+            var p = _vm.PlanPlot;
+            if (p == null) return;
+            var hit = p.HitTest(MainPlanToWorld(e.GetPosition(MainPlanPlot)));
+            MainPlan_UpdateHover(hit);
+        }
+
+        private void MainPlan_MouseLeave(object sender, MouseEventArgs e)
+        {
+            var p = _vm.PlanPlot;
+            if (p != null && _mainPlanHover != null)
+            {
+                p.SetRoomHovered(_mainPlanHover, false);
+                _mainPlanHover = null;
+                MainPlanPlot.Refresh();
+            }
+        }
+
+        private void MainPlan_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != MouseButton.Left)
+                return;
+            var p = _vm.PlanPlot;
+            if (p == null) return;
+            var hit = p.HitTest(MainPlanToWorld(e.GetPosition(MainPlanPlot)));
+            if (hit != null)
+            {
+                e.Handled = true;
+                ApplyGridSelection(new[] { hit });
+                OpenRoomDetailFor(hit);
+            }
+            else
+            {
+                p.FitAll();
+                MainPlanPlot.Refresh();
+            }
+        }
+
+        private void MainPlan_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != MouseButton.Right)
+                return;
+            var p = _vm.PlanPlot;
+            if (p == null) return;
+            var hit = p.HitTest(MainPlanToWorld(e.GetPosition(MainPlanPlot)));
+            if (hit == null) return;
+            e.Handled = true;
+            ApplyGridSelection(new[] { hit });
+            ShowRoomsContextMenu(MainPlanPlot);
+        }
+
+        /// <summary>Открыть то же контекстное меню, что у таблицы помещений, в позиции мыши.</summary>
+        public void ShowRoomsContextMenu(System.Windows.UIElement placementTarget)
+        {
+            var cm = RoomsGrid?.ContextMenu;
+            if (cm == null) return;
+            cm.PlacementTarget = placementTarget;
+            cm.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            cm.IsOpen = true;
+        }
+
+        /// <summary>Обратная связь: выделение в таблице → подсветка на ScottPlot-плане.</summary>
+        private void SyncPlanSelection()
+        {
+            if (_vm.UseCanvasPlan) return;
+            var p = _vm.PlanPlot;
+            if (p == null) return;
+            try
+            {
+                p.SetSelectedRooms(_vm.SelectedRoomIds);
+                MainPlanPlot.Refresh();
+            }
+            catch (Exception ex) { AppLogger.Error("SyncPlanSelection failed", ex); }
+        }
+
+        private void ApplyGridSelection(IReadOnlyList<string> ids)
+        {
+            var set = new HashSet<string>(ids);
+            RoomsGrid.SelectedItems.Clear();
+            foreach (var row in _vm.Workspace.Rooms)
+                if (set.Contains(row.RoomId))
+                    RoomsGrid.SelectedItems.Add(row);
+            // SelectionChanged сам вызывает SetSelectedRooms + SyncPlanSelection.
+        }
+
+        /// <summary>Выбор строки в таблице + синхронизация плана.</summary>
+        public void SelectRoomsInGrid(IReadOnlyList<string> ids) => ApplyGridSelection(ids);
+
+        private void HostMainPlan()
+        {
+            try
+            {
+                var plan = _vm.PlanPlot;
+                if (plan == null) return;
+                plan.SetSelectedRooms(_vm.SelectedRoomIds);
+                plan.RenderInto(MainPlanPlot.Plot);
+                MainPlanPlot.Refresh();
+            }
+            catch (Exception ex) { AppLogger.Error("HostMainPlan failed", ex); }
         }
 
         private void ShowToast(string message, Action? onUndo)
@@ -99,6 +292,7 @@ namespace HVACLoadTerminals.App
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             ApplyWindowGeometry();
+            HostMainPlan();
             // Колонки гридов применяются после измерения (ActualWidth доступен)
             Dispatcher.BeginInvoke(new Action(ApplyColumnWidths),
                 System.Windows.Threading.DispatcherPriority.Loaded);
@@ -338,6 +532,9 @@ namespace HVACLoadTerminals.App
         private void RoomsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             _vm.SetSelectedRooms(RoomsGrid.SelectedItems);
+            SyncPlanSelection();
+            var single = RoomsGrid.SelectedItem as RoomRow;
+            _vm.Crm.SelectRoomFromGrid(single);
         }
 
         private void RoomsGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -384,6 +581,45 @@ namespace HVACLoadTerminals.App
                 MessageBox.Show("Выделите помещение в таблице.", "План помещения", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
+            OpenRoomDetailCore(row);
+        }
+
+        private void AddRoom_Click(object sender, RoutedEventArgs e)
+        {
+            string before = _vm.Workspace.CaptureStateJson();
+            _vm.PushUndo("Добавление помещения");
+            int maxNum = _vm.Workspace.Rooms.Count > 0
+                ? _vm.Workspace.Rooms.Max(r => { int.TryParse(r.Number, out int n); return n; })
+                : 0;
+            var newRoom = new RoomRow
+            {
+                RoomId = $"manual_{Guid.NewGuid():N}",
+                Number = (maxNum + 1).ToString(),
+                Name = "Новое помещение",
+                LevelName = _vm.SelectedLevel ?? "",
+                Area = 50.0,
+                Purpose = "Office",
+                IsIncluded = true
+            };
+            _vm.Workspace.Rooms.Add(newRoom);
+            _vm.PopUndoIfNoChange(before);
+            _vm.MarkDirty();
+            _vm.RoomsView.Refresh();
+            ShowToast($"Помещение {newRoom.Number} добавлено", () => _vm.Undo());
+        }
+
+        /// <summary>Открыть план помещения по roomId (выбор уже сделан заранее).</summary>
+        public void OpenRoomDetailFor(string roomId)
+        {
+            var row = roomId == null
+                ? null
+                : _vm.Workspace.Rooms.FirstOrDefault(r => r.RoomId == roomId);
+            if (row != null)
+                OpenRoomDetailCore(row);
+        }
+
+        private void OpenRoomDetailCore(RoomRow row)
+        {
             var snapRoom = _vm.Workspace.FindSnapshotRoom(row.RoomId);
             if (snapRoom == null)
             {
@@ -589,7 +825,18 @@ namespace HVACLoadTerminals.App
         private void LevelPlan_Click(object sender, RoutedEventArgs e)
         {
             // RW8: план уровня — модальное окно
-            var win = new LevelPlanWindow(_vm, _vm.SelectedLevel) { Owner = this };
+            var win = new LevelPlanWindow(_vm, _vm.SelectedLevel, this) { Owner = this };
+            win.ShowDialog();
+        }
+
+        private void LevelPlanFull_Click(object sender, RoutedEventArgs e)
+        {
+            // Полноэкранный план: все помещения текущего уровня + фильтр по уровню сверху.
+            var win = new LevelPlanWindow(_vm, _vm.SelectedLevel, this)
+            {
+                Owner = this,
+                WindowState = WindowState.Maximized
+            };
             win.ShowDialog();
         }
 

@@ -12,7 +12,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
-    <PackageReference Include="OxyPlot.Wpf" Version="2.1.2" />
+    <PackageReference Include="ScottPlot.WPF" Version="5.1.59" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\HVACLoadTerminals.Core.csproj" />
@@ -23,8 +23,7 @@
        NuGet кладёт туда win-x86, поэтому перезаписываем win-x64
        (тот же приём, что в HVACLoadTerminals.Revit.csproj). -->
   <ItemGroup>
-    <AppWebView2Loader Include="$(TargetDir)runtimes\win-x64\native\WebView2Loader.dll"
-                       Condition="Exists('$(TargetDir)runtimes\win-x64\native\WebView2Loader.dll')" />
+    <AppWebView2Loader Include="$(TargetDir)runtimes\win-x64\native\WebView2Loader.dll" Condition="Exists('$(TargetDir)runtimes\win-x64\native\WebView2Loader.dll')" />
   </ItemGroup>
   <Target Name="CopyWebView2Loader" AfterTargets="Build">
     <Copy SourceFiles="@(AppWebView2Loader)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
@@ -40,9 +39,12 @@
     <ProductionFiles Include="$(TargetDir)**\*.*" />
   </ItemGroup>
   <Target Name="DeployToProduction" AfterTargets="Build" Condition="'$(Configuration)'=='Release'">
-    <Message Text="DeployToProduction -> $(ProductionDir)" Importance="high" />
-    <Copy SourceFiles="@(ProductionFiles)"
-          DestinationFiles="@(ProductionFiles->'$(ProductionDir)%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true" />
+    <!-- ItemGroup внутри таргета: glob оценивается ПОСЛЕ сборки, иначе при очищенном bin
+         список пуст, а при stale-файлах (например, OxyPlot) Copy падает MSB3030. -->
+    <ItemGroup>
+      <ProductionFiles Include="$(TargetDir)**\*.*" />
+    </ItemGroup>
+    <Message Text="DeployToProduction -&gt; $(ProductionDir)" Importance="high" />
+    <Copy SourceFiles="@(ProductionFiles)" DestinationFiles="@(ProductionFiles->'$(ProductionDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 </Project>

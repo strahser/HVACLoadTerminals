@@ -119,6 +119,20 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         /// массового применения без пересчёта).</summary>
         public void RefreshPanels() => UpdatePanels();
 
+        /// <summary>Выбор помещения из таблицы (не через дерево):
+        /// обновить панель свойств без дерева.</summary>
+        public void SelectRoomFromGrid(RoomRow? room)
+        {
+            if (room == null)
+            {
+                HasSelectedRoom = false;
+                SelectedRoom.SetRoom(null);
+                return;
+            }
+            HasSelectedRoom = true;
+            SelectedRoom.SetRoom(room);
+        }
+
         /// <summary>Пересобрать дерево из строк последнего расчёта. Узлы
         /// пересоздаются — выбор восстанавливается по ключам.</summary>
         public void RebuildTree()

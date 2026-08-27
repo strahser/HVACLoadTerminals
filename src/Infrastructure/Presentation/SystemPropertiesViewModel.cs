@@ -7,6 +7,8 @@ using System.Windows.Input;
 using HVACLoadTerminals.Core.Interfaces;
 using HVACLoadTerminals.Core.Models;
 using HVACLoadTerminals.Core.Services;
+using HVACLoadTerminals.Infrastructure.Visualization;
+using ScottPlot.WPF;
 
 namespace HVACLoadTerminals.Infrastructure.Presentation
 {
@@ -208,13 +210,13 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             private set { _edgeOffsetText = value; OnPropertyChanged(nameof(EdgeOffsetText)); }
         }
 
-        private OxyPlot.PlotModel? _schemeModel;
+        private WpfPlot? _schemePlotControl;
         /// <summary>M2.2: мини-схема — контур комнаты-примера, пунктиром офсетный
-        /// полигон, точками приборы системы.</summary>
-        public OxyPlot.PlotModel? SchemeModel
+        /// полигон, точками приборы системы (ScottPlot; хост — ContentControl).</summary>
+        public WpfPlot? SchemePlotControl
         {
-            get => _schemeModel;
-            private set { _schemeModel = value; OnPropertyChanged(nameof(SchemeModel)); }
+            get => _schemePlotControl;
+            private set { _schemePlotControl = value; OnPropertyChanged(nameof(SchemePlotControl)); }
         }
 
         // ---- паттерны ----
@@ -384,77 +386,53 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         : $"по умолчанию {effectiveEdgeMm:F0} мм")}"
                     : "задано системой — перекрывает типоразмер";
 
-                var model = new OxyPlot.PlotModel
-                {
-                    Background = OxyPlot.OxyColors.White,
-                    PlotAreaBorderThickness = new OxyPlot.OxyThickness(0),
-                    Padding = new OxyPlot.OxyThickness(4)
-                };
-                model.Axes.Add(new OxyPlot.Axes.LinearAxis
-                {
-                    Position = OxyPlot.Axes.AxisPosition.Bottom, IsAxisVisible = false
-                });
-                model.Axes.Add(new OxyPlot.Axes.LinearAxis
-                {
-                    Position = OxyPlot.Axes.AxisPosition.Left, IsAxisVisible = false
-                });
+                var control = new WpfPlot { Background = System.Windows.Media.Brushes.White };
+                var plan = new ScottPlotPlan(control.Plot);
 
-                if (contour == null)
+                if (contour != null)
                 {
-                    SchemeModel = model;
-                    return;
-                }
+                    // Контур помещения.
+                    plan.AddRoom("sample", contour.Vertices
+                            .Select(v => new Point2D(
+                                LengthUnitConverter.UnitsToMm(v.X),
+                                LengthUnitConverter.UnitsToMm(v.Y))).ToList(),
+                        null, new ScottPlot.Color(255, 255, 255, 190),
+                        new ScottPlot.Color(119, 136, 153), 1.5f);
 
-                // Контур помещения.
-                var contourLine = new OxyPlot.Series.LineSeries
-                {
-                    Color = OxyPlot.OxyColors.LightSlateGray,
-                    StrokeThickness = 1.5
-                };
-                foreach (var v in contour.Vertices)
-                    contourLine.Points.Add(new OxyPlot.DataPoint(
-                        LengthUnitConverter.UnitsToMm(v.X), LengthUnitConverter.UnitsToMm(v.Y)));
-                contourLine.Points.Add(contourLine.Points[0]);
-                model.Series.Add(contourLine);
-
-                // Пунктир: офсетный полигон (buffer(-edge)).
-                var offsetVertices = new PolygonOffsetService()
-                    .OffsetInward(contour, LengthUnitConverter.MmToUnits(effectiveEdgeMm));
-                if (offsetVertices is { Count: >= 3 })
-                {
-                    var offsetLine = new OxyPlot.Series.LineSeries
+                    // Пунктир: офсетный полигон (buffer(-edge)).
+                    var offsetVertices = new PolygonOffsetService()
+                        .OffsetInward(contour, LengthUnitConverter.MmToUnits(effectiveEdgeMm));
+                    if (offsetVertices is { Count: >= 3 })
                     {
-                        Color = OxyPlot.OxyColor.FromRgb(0x2D, 0x6C, 0xDF),
-                        StrokeThickness = 1.5,
-                        LineStyle = OxyPlot.LineStyle.Dash
-                    };
-                    foreach (var v in offsetVertices)
-                        offsetLine.Points.Add(new OxyPlot.DataPoint(
-                            LengthUnitConverter.UnitsToMm(v.X), LengthUnitConverter.UnitsToMm(v.Y)));
-                    offsetLine.Points.Add(offsetLine.Points[0]);
-                    model.Series.Add(offsetLine);
+                        plan.AddDashedPolygon(offsetVertices
+                            .Select(v => new Point2D(
+                                LengthUnitConverter.UnitsToMm(v.X),
+                                LengthUnitConverter.UnitsToMm(v.Y))).ToList(),
+                            new ScottPlot.Color(45, 108, 223), 1.5);
+                    }
+
+                    // Точки приборов системы в этой комнате (последний расчёт).
+                    var xs = new List<double>();
+                    var ys = new List<double>();
+                    foreach (var p in Workspace.LastRawPlacements.Where(x =>
+                                 x.SystemName == SystemName && x.RoomId == snapRoom!.Id))
+                    {
+                        xs.Add(LengthUnitConverter.UnitsToMm(p.Position.X));
+                        ys.Add(LengthUnitConverter.UnitsToMm(p.Position.Y));
+                    }
+                    plan.AddMarkers(xs, ys, new ScottPlot.Color(255, 165, 0), 4);
+                    plan.FitAll();
                 }
 
-                // Точки приборов системы в этой комнате (последний расчёт).
-                var scatter = new OxyPlot.Series.ScatterSeries
+                control.Loaded += (_, _) =>
                 {
-                    MarkerType = OxyPlot.MarkerType.Circle,
-                    MarkerSize = 4,
-                    MarkerFill = OxyPlot.OxyColors.Orange,
-                    MarkerStroke = OxyPlot.OxyColors.Black
+                    try { control.Refresh(); } catch { }
                 };
-                foreach (var p in Workspace.LastRawPlacements.Where(x =>
-                             x.SystemName == SystemName && x.RoomId == snapRoom!.Id))
-                    scatter.Points.Add(new OxyPlot.Series.ScatterPoint(
-                        LengthUnitConverter.UnitsToMm(p.Position.X),
-                        LengthUnitConverter.UnitsToMm(p.Position.Y)));
-                model.Series.Add(scatter);
-
-                SchemeModel = model;
+                SchemePlotControl = control;
             }
             catch (Exception ex)
             {
-                SchemeModel = null;
+                SchemePlotControl = null;
                 _owner.ReportStatus("Мини-схема отступов не построена: " + ex.Message);
             }
         }

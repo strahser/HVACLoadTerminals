@@ -96,6 +96,43 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 enclosureType.Equals("Витраж", StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>Установить помещение напрямую (из таблицы, без дерева).</summary>
+        public void SetRoom(RoomRow? room)
+        {
+            Room = room;
+            if (room == null)
+            {
+                TemperatureText = "—";
+                OpeningsText = "";
+                WindowForecastText = "";
+                return;
+            }
+            var snap = Workspace.FindSnapshotRoom(room.RoomId);
+            TemperatureText = snap is { Temperature: > 0 }
+                ? $"{snap.Temperature:F1} °C" : "—";
+            var openings = Workspace.GetRoomOpenings(room.RoomId);
+            OpeningsText = openings.Count == 0
+                ? "нет проёмов в снимке"
+                : string.Join("\n", openings.Select(o =>
+                {
+                    double wMm = LengthUnitConverter.UnitsToMm(o.Width);
+                    double hMm = LengthUnitConverter.UnitsToMm(o.Height);
+                    string ext = o.IsExternal ? "" : " (внутр.)";
+                    return $"{o.EnclosureType} {o.FamilySymbolName}: {wMm:F0}×{hMm:F0}{ext}";
+                }));
+            double windowsWidthMm = openings
+                .Where(o => o.IsExternal && IsWindowLike(o.EnclosureType))
+                .Sum(o => LengthUnitConverter.UnitsToMm(o.Width));
+            WindowForecastText = windowsWidthMm > 0
+                ? $"Σ ширина окон {windowsWidthMm:F0} мм → длина приборов ≥ " +
+                  $"{windowsWidthMm * Workspace.MinWindowLengthRatio:F0} мм"
+                : "";
+
+            static bool IsWindowLike(string enclosureType) =>
+                enclosureType.Equals("Окно", StringComparison.OrdinalIgnoreCase) ||
+                enclosureType.Equals("Витраж", StringComparison.OrdinalIgnoreCase);
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         private void OnPropertyChanged(string name) =>
