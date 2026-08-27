@@ -116,5 +116,74 @@ namespace HVACLoadTerminals.Core.Tests
                 Assert.True(pl.Position.Y > LengthUnitConverter.MmToUnits(400) && pl.Position.Y < LengthUnitConverter.MmToUnits(7600));
             }
         }
+
+        [Fact]
+        public void Supply_Then_Exhaust_LongSide_Use_Opposite_Walls_With_AvoidPoint()
+        {
+            // G1/K1: вытяжка с AvoidPoint=приток уходит на противоположную длинную стену.
+            var poly = Rect(LengthUnitConverter.MmToUnits(10000), LengthUnitConverter.MmToUnits(6000)); // 10x6m
+            var svc = new CeilingPlacementService();
+            var supplyOpts = new CeilingPlacementOptions { Pattern = WallPattern.LongSide, CountRule = CeilingCountRule.Fixed, FixedCount = 1, WallClearanceMm = 500 };
+            var resSupply = svc.PlaceForRoom("r1", poly, 300, 60, HVACSystemType.Supply, new[] { Dev(HVACSystemType.Supply, 600, 30) }, "П1", supplyOpts);
+            var supplyPos = resSupply.Placements[0].Position;
+            double supplyYMm = LengthUnitConverter.UnitsToMm(supplyPos.Y);
+            Assert.True(Math.Abs(supplyYMm - 500) < 50 || Math.Abs(supplyYMm - 5500) < 50,
+                $"supply на длинной стене, y={supplyYMm:F0}");
+
+            var exhaustOpts = new CeilingPlacementOptions { Pattern = WallPattern.LongSide, CountRule = CeilingCountRule.Fixed, FixedCount = 1, WallClearanceMm = 500, AvoidPoint = supplyPos };
+            var resExhaust = svc.PlaceForRoom("r1", poly, 300, 60, HVACSystemType.Exhaust, new[] { Dev(HVACSystemType.Exhaust, 600, 30) }, "В1", exhaustOpts);
+            double exhaustYMm = LengthUnitConverter.UnitsToMm(resExhaust.Placements[0].Position.Y);
+            Assert.True(Math.Abs(exhaustYMm - supplyYMm) > 4800,
+                $"противоположные длинные стены: supplyY={supplyYMm:F0}, exhaustY={exhaustYMm:F0}");
+        }
+
+        [Fact]
+        public void Supply_Then_Exhaust_ShortSide_Use_Opposite_Short_Walls_With_AvoidPoint()
+        {
+            // G1/K3: две одиночные системы на коротких стенах — максимальный разнос по длине.
+            var poly = Rect(LengthUnitConverter.MmToUnits(10000), LengthUnitConverter.MmToUnits(6000));
+            var svc = new CeilingPlacementService();
+            var supplyOpts = new CeilingPlacementOptions { Pattern = WallPattern.ShortSide, CountRule = CeilingCountRule.Fixed, FixedCount = 1, WallClearanceMm = 500 };
+            var resSupply = svc.PlaceForRoom("r1", poly, 300, 60, HVACSystemType.Supply, new[] { Dev(HVACSystemType.Supply, 600, 30) }, "П1", supplyOpts);
+            var supplyPos = resSupply.Placements[0].Position;
+            double supplyXMm = LengthUnitConverter.UnitsToMm(supplyPos.X);
+            Assert.True(Math.Abs(supplyXMm - 500) < 50 || Math.Abs(supplyXMm - 9500) < 50,
+                $"supply на короткой стене, x={supplyXMm:F0}");
+
+            var exhaustOpts = new CeilingPlacementOptions { Pattern = WallPattern.ShortSide, CountRule = CeilingCountRule.Fixed, FixedCount = 1, WallClearanceMm = 500, AvoidPoint = supplyPos };
+            var resExhaust = svc.PlaceForRoom("r1", poly, 300, 60, HVACSystemType.Exhaust, new[] { Dev(HVACSystemType.Exhaust, 600, 30) }, "В1", exhaustOpts);
+            double exhaustXMm = LengthUnitConverter.UnitsToMm(resExhaust.Placements[0].Position.X);
+            Assert.True(Math.Abs(exhaustXMm - supplyXMm) > 8500,
+                $"противоположные короткие стены: supplyX={supplyXMm:F0}, exhaustX={exhaustXMm:F0}");
+        }
+
+        [Fact]
+        public void Two_On_ShortSide_Placed_At_Opposite_Edges_Of_The_Wall()
+        {
+            // G2/K3: 2 прибора на короткой стене — на противоположных концах ребра (не в середине).
+            var poly = Rect(LengthUnitConverter.MmToUnits(10000), LengthUnitConverter.MmToUnits(6000));
+            var svc = new CeilingPlacementService();
+            var opts = new CeilingPlacementOptions
+            {
+                Pattern = WallPattern.ShortSide,
+                CountRule = CeilingCountRule.Fixed,
+                FixedCount = 2,
+                WallClearanceMm = 500,
+                ShortSideTwoIfLongerThan1500 = true
+            };
+            var res = svc.PlaceForRoom("r1", poly, 800, 60, HVACSystemType.Exhaust, new[] { Dev(HVACSystemType.Exhaust, 400, 20) }, "В1", opts);
+            Assert.Equal(2, res.Placements.Count);
+
+            // Обе на одной короткой стене (x совпадает, 500 или 9500).
+            var xs = res.Placements.Select(p => LengthUnitConverter.UnitsToMm(p.Position.X)).ToList();
+            Assert.True(xs.All(x => Math.Abs(x - xs[0]) < 50), $"одна короткая стена, xs={string.Join(",", xs)}");
+
+            // Разнос ≈ полная длина ребра 5м (между концами стены).
+            var ys = res.Placements.Select(p => LengthUnitConverter.UnitsToMm(p.Position.Y)).OrderBy(y => y).ToList();
+            double spanY = ys[1] - ys[0];
+            Assert.True(spanY >= 4800, $"spanY={spanY:F0} мм");
+            Assert.True(Math.Abs(ys[0] - 500) < 60, $"y0={ys[0]:F0} (начало стены)");
+            Assert.True(Math.Abs(ys[1] - 5500) < 60, $"y1={ys[1]:F0} (конец стены)");
+        }
     }
 }

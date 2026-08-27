@@ -48,7 +48,7 @@ namespace HVACLoadTerminals.Core.Services
     /// </summary>
     public class HeatingPlacementService
     {
-        private const string HeatingSystemName = "Отопление";
+        public const string HeatingSystemName = "Отопление";
 
         public HeatingPlacementResult PlaceForRoom(
             SnapshotRoom room,

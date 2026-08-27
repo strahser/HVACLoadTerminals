@@ -54,7 +54,7 @@ namespace HVACLoadTerminals.Infrastructure.Data
         public CeilingCountRule SupplyRule { get; set; } = CeilingCountRule.Auto;
         public CeilingCountRule ExhaustRule { get; set; } = CeilingCountRule.ByFlow;
         public int FixedSupplyCount { get; set; } = 2;
-        public WallPattern SupplyPattern { get; set; } = WallPattern.LongSide;
+        public WallPattern SupplyPattern { get; set; } = WallPattern.ShortSide;
         public WallPattern ExhaustPattern { get; set; } = WallPattern.ShortSide;
         public SingleRule SingleDeviceRule { get; set; } = SingleRule.Center;
         public double GrilleVelocityMs { get; set; } = 2.0;
@@ -128,7 +128,9 @@ namespace HVACLoadTerminals.Infrastructure.Data
             FixedSupplyCount = (int)Clamp(FixedSupplyCount, 1, 10, 2);
             if (!Enum.IsDefined(typeof(CeilingCountRule), SupplyRule)) SupplyRule = CeilingCountRule.Auto;
             if (!Enum.IsDefined(typeof(CeilingCountRule), ExhaustRule)) ExhaustRule = CeilingCountRule.ByFlow;
-            if (!Enum.IsDefined(typeof(WallPattern), SupplyPattern)) SupplyPattern = WallPattern.LongSide;
+            // Минимальное количество: обе системы на коротких стенах + координация
+            // AvoidPoint → противоположные короткие (максимальный разнос по длине).
+            if (!Enum.IsDefined(typeof(WallPattern), SupplyPattern)) SupplyPattern = WallPattern.ShortSide;
             if (!Enum.IsDefined(typeof(WallPattern), ExhaustPattern)) ExhaustPattern = WallPattern.ShortSide;
             if (!Enum.IsDefined(typeof(SingleRule), SingleDeviceRule)) SingleDeviceRule = SingleRule.Center;
             HeatingWallOffsetMm = Clamp(HeatingWallOffsetMm, 10, 200, 60);

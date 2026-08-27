@@ -130,11 +130,11 @@ namespace HVACLoadTerminals.Core.Tests
         // ------------------------------------------------------------------
 
         [Fact]
-        public void Pattern_Owner_Defaults_Are_LongSide_ShortSide_Center()
+        public void Pattern_Owner_Defaults_Are_ShortSide_ShortSide_Center()
         {
             var presenter = new SnapshotWorkspacePresenter();
 
-            Assert.Equal(WallPattern.LongSide, presenter.SupplyPattern);
+            Assert.Equal(WallPattern.ShortSide, presenter.SupplyPattern);
             Assert.Equal(WallPattern.ShortSide, presenter.ExhaustPattern);
             Assert.Equal(SingleRule.Center, presenter.SingleDeviceRule);
         }
@@ -170,7 +170,7 @@ namespace HVACLoadTerminals.Core.Tests
             var reloaded = new SnapshotWorkspacePresenter();
             reloaded.LoadProject(_projectPath);
 
-            Assert.Equal(WallPattern.LongSide, reloaded.SupplyPattern);
+            Assert.Equal(WallPattern.ShortSide, reloaded.SupplyPattern);
             Assert.Equal(WallPattern.ShortSide, reloaded.ExhaustPattern);
             Assert.Equal(SingleRule.Center, reloaded.SingleDeviceRule);
         }

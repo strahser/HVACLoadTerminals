@@ -95,24 +95,40 @@ namespace HVACLoadTerminals.Core.Services
                 // auto-default П1/В1 from the estimate (backward compatibility).
                 var systems = ResolveSystems(room.Id ?? "", load, systemsByRoom);
                 double roomHeightMm = load.HeightM > 0 ? load.HeightM * 1000 : 0;
+                // G1: координация потолочных систем — вытяжка на стене, противоположной притоку.
+                var ceilingPts = new List<Point2D>();
                 foreach (var system in systems)
                 {
+                    var options = new CeilingPlacementOptions
+                    {
+                        RoomHeightMm = roomHeightMm,
+                        // Авторежим: обе потолочные системы на коротких стенах —
+                        // координация AvoidPoint даёт противоположные (максимальный разнос).
+                        Pattern = WallPattern.ShortSide
+                    };
+                    if (ceilingPts.Count > 0)
+                        options.AvoidPoint = new Point2D(
+                            ceilingPts.Average(p => p.X),
+                            ceilingPts.Average(p => p.Y));
+
                     if (system.Type == HVACSystemType.Supply && system.FlowRate > 0)
                     {
                         var res = _ceilingService.PlaceForRoom(
                             room.Id ?? "", polygon, system.FlowRate, room.Area,
-                            HVACSystemType.Supply, catalog, system.Name,
-                            new CeilingPlacementOptions { RoomHeightMm = roomHeightMm });
+                            HVACSystemType.Supply, catalog, system.Name, options);
                         placements.AddRange(res.Placements);
+                        if (res.Placements.Count > 0)
+                            ceilingPts.AddRange(res.Placements.Select(p => p.Position));
                         AddWarnings(warnings, label, res.Warnings);
                     }
                     else if (system.Type == HVACSystemType.Exhaust && system.FlowRate > 0)
                     {
                         var res = _ceilingService.PlaceForRoom(
                             room.Id ?? "", polygon, system.FlowRate, room.Area,
-                            HVACSystemType.Exhaust, catalog, system.Name,
-                            new CeilingPlacementOptions { RoomHeightMm = roomHeightMm });
+                            HVACSystemType.Exhaust, catalog, system.Name, options);
                         placements.AddRange(res.Placements);
+                        if (res.Placements.Count > 0)
+                            ceilingPts.AddRange(res.Placements.Select(p => p.Position));
                         AddWarnings(warnings, label, res.Warnings);
                     }
                     else

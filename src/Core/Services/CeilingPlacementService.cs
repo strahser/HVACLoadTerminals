@@ -105,6 +105,12 @@ namespace HVACLoadTerminals.Core.Services
 
         /// <summary>IC5.7/RW11: если pattern==ShortSide и длина короткой стороны >1500мм — минимум 2 прибора.</summary>
         public bool ShortSideTwoIfLongerThan1500 { get; set; } = false;
+
+        /// <summary>Координация систем для максимального разноса (K1/G1/G3): точка
+        /// (units), от которой новая система должна быть максимально удалена —
+        /// обычно позиция уже размещённого прибора другой системы (приток → вытяжка).
+        /// Выбор стены паттерна сдвигается на противоположную. null = обычный выбор.</summary>
+        public Point2D? AvoidPoint { get; set; }
     }
 
     /// <summary>Placements plus human-readable warnings for one room.</summary>
@@ -292,7 +298,7 @@ namespace HVACLoadTerminals.Core.Services
             {
                 // одиночный — на линии смещения выбранной стены (угол/центр), не в центре
                 WallPattern pat = options.Pattern == WallPattern.CeilingGrid ? WallPattern.LongSide : options.Pattern;
-                selectedEdge = SelectWallEdge(offsetPolygon, pat, options.ExplicitSide);
+                selectedEdge = SelectWallEdge(offsetPolygon, pat, options.ExplicitSide, options.AvoidPoint);
                 if (selectedEdge == null || selectedEdge.Length <= 1e-9)
                 {
                     points = new List<Point2D> { SingleDevicePoint(offsetPolygon, options.SingleRule) };
@@ -305,7 +311,7 @@ namespace HVACLoadTerminals.Core.Services
             }
             else if (options.Pattern != WallPattern.CeilingGrid)
             {
-                selectedEdge = SelectWallEdge(offsetPolygon, options.Pattern, options.ExplicitSide);
+                selectedEdge = SelectWallEdge(offsetPolygon, options.Pattern, options.ExplicitSide, options.AvoidPoint);
                 if (selectedEdge == null || selectedEdge.Length <= 1e-9)
                 {
                     points = GridPoints(offsetPolygon, count, options);
@@ -533,23 +539,44 @@ namespace HVACLoadTerminals.Core.Services
         /// <summary>
         /// U2.1: wall edge of the offset contour selected by the mass pattern:
         /// longest / shortest side (ties → first) or the explicit bounding-box side.
+        /// G1: when <paramref name="avoidPoint"/> is set, among the side-family
+        /// candidates the edge whose midpoint is FARTHEST from it wins (opposite
+        /// wall) — deterministically (length, then index). Explicit side ignores
+        /// the avoid point (user pinned the wall).
         /// </summary>
         private static EdgeInfo? SelectWallEdge(
-            Polygon2D polygon, WallPattern pattern, CoordinateSystem explicitSide)
+            Polygon2D polygon, WallPattern pattern, CoordinateSystem explicitSide,
+            Point2D? avoidPoint = null)
         {
             var edges = RoomGeometryAnalyzer.GetEdges(polygon);
             if (edges.Count == 0)
                 return null;
-            return pattern switch
+            if (avoidPoint == null || pattern == WallPattern.Explicit)
             {
-                WallPattern.ShortSide => RoomGeometryAnalyzer.SelectPrimaryEdge(
-                    edges, PlacementSide.ShortSide, CoordinateSystem.Auto),
-                WallPattern.Explicit => RoomGeometryAnalyzer.SelectPrimaryEdge(
-                    edges, PlacementSide.Any,
-                    explicitSide == CoordinateSystem.Auto ? CoordinateSystem.Bottom : explicitSide),
-                _ => RoomGeometryAnalyzer.SelectPrimaryEdge(
-                    edges, PlacementSide.LongSide, CoordinateSystem.Auto)
-            };
+                return pattern switch
+                {
+                    WallPattern.ShortSide => RoomGeometryAnalyzer.SelectPrimaryEdge(
+                        edges, PlacementSide.ShortSide, CoordinateSystem.Auto),
+                    WallPattern.Explicit => RoomGeometryAnalyzer.SelectPrimaryEdge(
+                        edges, PlacementSide.Any,
+                        explicitSide == CoordinateSystem.Auto ? CoordinateSystem.Bottom : explicitSide),
+                    _ => RoomGeometryAnalyzer.SelectPrimaryEdge(
+                        edges, PlacementSide.LongSide, CoordinateSystem.Auto)
+                };
+            }
+
+            var side = pattern == WallPattern.ShortSide
+                ? PlacementSide.ShortSide
+                : PlacementSide.LongSide;
+            var candidates = RoomGeometryAnalyzer.SelectEdgesByPreference(edges, side)
+                .Where(e => e.Length > 1e-9)
+                .ToList();
+            if (candidates.Count == 0)
+                return null;
+            return candidates
+                .OrderByDescending(e => DistSq(e.MidPoint, avoidPoint.Value))
+                .ThenBy(e => e.Index)
+                .First();
         }
 
         /// <summary>

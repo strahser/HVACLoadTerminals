@@ -161,10 +161,11 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             }
         }
 
-        // ---- U2.1: mass placement patterns (owner defaults: supply = long side,
-        // exhaust = short side, single device in the centre) ----
+// ---- U2.1: mass placement patterns (owner default: минимум — обе системы на
+// коротких стенах; координация AvoidPoint → противоположные короткие стены,
+// максимальный разнос приток/вытяжка) ----
 
-        public WallPattern SupplyPattern { get; set; } = WallPattern.LongSide;
+        public WallPattern SupplyPattern { get; set; } = WallPattern.ShortSide;
         public WallPattern ExhaustPattern { get; set; } = WallPattern.ShortSide;
         public SingleRule SingleDeviceRule { get; set; } = SingleRule.Center;
         /// <summary>IC5.7/RW11: 2 на короткой если >1500мм.</summary>
@@ -635,6 +636,9 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 double roomHeightMm = snapRoom.UpperLimitOffset > 0
                     ? LengthUnitConverter.UnitsToMm(snapRoom.UpperLimitOffset)
                     : 0; // M2.2: высота помещения для расчёта отметки установки
+                // G1: координация потолочных систем — каждая следующая размещается
+                // на стене, противоположной уже размещённым (приток→вытяжка).
+                var ceilingPts = new List<Point2D>();
                 foreach (var system in row.Systems ?? new List<SystemRow>())
                 {
                     if (!system.IsIncluded || system.FlowM3h <= 0)
@@ -643,6 +647,11 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                     // каталог сужается до закреплённого типоразмера, если задан.
                     var options = SystemCeilingOptions(system);
                     options.RoomHeightMm = roomHeightMm;
+                    options.AvoidPoint = ceilingPts.Count > 0
+                        ? new Point2D(
+                            ceilingPts.Average(p => p.X),
+                            ceilingPts.Average(p => p.Y))
+                        : null;
                     var systemCatalog = CatalogForSystem(catalog, system);
                     if (system.Type == HVACSystemType.Supply)
                     {
@@ -653,6 +662,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         StoreKef(kefByKey, res, system.FlowM3h);
                         AddPatternEdge(patternEdges, res, snapRoom, system.Name);
                         roomWarnings.AddRange(res.Warnings);
+                        if (res.Placements.Count > 0)
+                            ceilingPts.AddRange(res.Placements.Select(p => p.Position));
                     }
                     else if (system.Type == HVACSystemType.Exhaust)
                     {
@@ -677,6 +688,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                                     : $"{size.Grilles.Count} решётки по " +
                                       $"{size.Grilles[0].LengthMm:F0}×{size.Grilles[0].HeightMm:F0}"));
                         }
+                        if (res.Placements.Count > 0)
+                            ceilingPts.AddRange(res.Placements.Select(p => p.Position));
                     }
                     else if (system.Type == HVACSystemType.FanCoil ||
                              system.Type == HVACSystemType.Cooling)
@@ -690,6 +703,8 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                         StoreKef(kefByKey, res, system.FlowM3h);
                         AddPatternEdge(patternEdges, res, snapRoom, system.Name);
                         roomWarnings.AddRange(res.Warnings);
+                        if (res.Placements.Count > 0)
+                            ceilingPts.AddRange(res.Placements.Select(p => p.Position));
                     }
                 }
 
@@ -828,7 +843,7 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
             }
 
             // U2.1: patterns round-trip; legacy files keep the owner defaults.
-            SupplyPattern = dto.SupplyPattern ?? WallPattern.LongSide;
+            SupplyPattern = dto.SupplyPattern ?? WallPattern.ShortSide;
             ExhaustPattern = dto.ExhaustPattern ?? WallPattern.ShortSide;
             SingleDeviceRule = dto.SingleRule ?? SingleRule.Center;
 
@@ -1409,6 +1424,31 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public List<PlacementResult> BuildPlacementResults()
         {
             return BuildPlacementResults(null);
+        }
+
+        /// <summary>Аудит 2026-08-27: метрики эффективности авто-расстановки по
+        /// комнатам последнего расчёта (разнос приток/вытяжка, отступ от стен,
+        /// k_ef, равномерность, score). Пустой список — снимок/расчёт отсутствует.</summary>
+        public IReadOnlyList<RoomQualityMetrics> EvaluatePlacementQuality(
+            double requestedOffsetMm = 500)
+        {
+            var result = new List<RoomQualityMetrics>();
+            if (_snapshot == null || LastRawPlacements.Count == 0)
+                return result;
+
+            var byRoom = LastRawPlacements.GroupBy(p => p.RoomId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+            foreach (var room in _snapshot.Rooms)
+            {
+                if (room?.Id == null || !byRoom.TryGetValue(room.Id, out var placements))
+                    continue;
+                var polygon = room.ToPolygon();
+                if (polygon == null)
+                    continue;
+                result.Add(PlacementQualityMetrics.EvaluateRoom(
+                    room.Id, polygon, placements, requestedOffsetMm));
+            }
+            return result;
         }
 
         /// <summary>M3.2: сцена, ограниченная уровнем (null/пусто — все уровни).</summary>
