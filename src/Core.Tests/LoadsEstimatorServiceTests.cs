@@ -1,6 +1,8 @@
+using System.IO;
 using System.Linq;
 using HVACLoadTerminals.Core.Models.Snapshot;
 using HVACLoadTerminals.Core.Services;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace HVACLoadTerminals.Core.Tests
@@ -118,6 +120,68 @@ namespace HVACLoadTerminals.Core.Tests
             Assert.Equal(2, results.Count);
             Assert.Equal("b", results.Last().RoomId);
             Assert.Equal(RoomPurpose.Corridor, results.Last().Purpose);
+        }
+
+        [Fact(DisplayName = "HeatGainImportOverridesAuto: при наличии *.heatgain.v1.json CoolingLoad из JSON, не S·100")]
+        public void HeatGainImportOverridesAuto()
+        {
+            var snapshot = new RoomSnapshot();
+            snapshot.Metadata.DocumentTitle = "TestDoc";
+            snapshot.Metadata.DocumentPath = Path.Combine(Path.GetTempPath(), "TestDoc.json");
+            // Ensure directory exists
+            Directory.CreateDirectory(Path.GetTempPath());
+            var room = Room("r1", "Кабинет", 20);
+            snapshot.Rooms.Add(room);
+            string tmpJson = Path.Combine(Path.GetTempPath(), "TestDoc.heatgain.v1.json");
+            if (File.Exists(tmpJson)) File.Delete(tmpJson);
+
+            // Fallback S·100 = 2000 Вт (sidecar ещё не создан)
+            var svcFallback = new LoadsEstimatorService();
+            var fallback = svcFallback.EstimateAll(snapshot);
+            Assert.Equal(2000, fallback[0].CoolingLoadW, 5);
+
+            // Создаём sidecar с CoolingLoad 1234
+            var dto = new HeatGainSnapshotDto
+            {
+                SchemaVersion = "heatgain.v1",
+                DataVersion = "2026-08-29.1",
+                Method = "SP",
+                City = "Москва",
+                Hour = 15,
+                PeakHour = 14,
+                Rooms = new System.Collections.Generic.List<HeatGainRoomDto>
+                {
+                    new HeatGainRoomDto { RoomId = "r1", RoomNumber = "101", CoolingLoadW = 1234, SensibleW = 800, LatentW = 434, BySource = new System.Collections.Generic.Dictionary<string,double>{{"people",800},{"lighting",434}} }
+                }
+            };
+            try
+            {
+                File.WriteAllText(tmpJson, JsonConvert.SerializeObject(dto));
+                // With flag true — should import
+                var svc = new LoadsEstimatorService(new LoadEstimationConfig { UseHeatGainImport = true });
+                var imported = svc.EstimateAll(snapshot, tmpJson);
+                Assert.Equal(1234, imported[0].CoolingLoadW, 5);
+
+                // Fallback при ошибке → S·100: повреждённый JSON
+                File.WriteAllText(tmpJson, "{ invalid }");
+                var broken = svc.EstimateAll(snapshot, tmpJson);
+                Assert.Equal(2000, broken[0].CoolingLoadW, 5);
+
+                // Фича-флаг false → не импортирует, даже если файл валидный
+                File.WriteAllText(tmpJson, JsonConvert.SerializeObject(dto));
+                var svcNoImport = new LoadsEstimatorService(new LoadEstimationConfig { UseHeatGainImport = false });
+                var noImport = svcNoImport.EstimateAll(snapshot, tmpJson);
+                Assert.Equal(2000, noImport[0].CoolingLoadW, 5);
+
+                // Без пути sidecar, fallback S·100 (удаляем файл чтобы не нашелся по DocumentPath)
+                File.Delete(tmpJson);
+                var noPath = new LoadsEstimatorService().EstimateAll(snapshot);
+                Assert.Equal(2000, noPath[0].CoolingLoadW, 5);
+            }
+            finally
+            {
+                if (File.Exists(tmpJson)) File.Delete(tmpJson);
+            }
         }
     }
 }
