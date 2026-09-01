@@ -25,6 +25,9 @@ namespace HVACLoadTerminals.App
             SystemCombo.ItemsSource = Enum.GetValues(typeof(HVACSystemType)).Cast<HVACSystemType>().ToList();
             SystemCombo.SelectedItem = device?.SystemType ?? defaultType;
 
+            ShapeCombo.ItemsSource = Enum.GetValues(typeof(DevicePlanShape)).Cast<DevicePlanShape>().ToList();
+            ShapeCombo.SelectedItem = device?.PlanShape ?? DevicePlanShape.Rectangular;
+
             if (_isNew)
             {
                 Title = "Новый типоразмер — быстрый каталог";
@@ -39,6 +42,8 @@ namespace HVACLoadTerminals.App
                 CeilingOffsetBox.Text = "200";
                 WidthBox.Text = "600";
                 HeightBox.Text = "600";
+                DiameterBox.Text = "0";
+                ShapeCombo.SelectedItem = DevicePlanShape.Rectangular;
                 CoolBox.Text = "0";
                 HeatBox.Text = "0";
                 ParamBox.Text = "ADSK_Расход воздуха";
@@ -60,6 +65,8 @@ namespace HVACLoadTerminals.App
                 CeilingOffsetBox.Text = device.CeilingOffsetMm.ToString("F0");
                 WidthBox.Text = device.WidthMm.ToString("F0");
                 HeightBox.Text = device.HeightMm.ToString("F0");
+                DiameterBox.Text = device.DiameterMm.ToString("F0");
+                ShapeCombo.SelectedItem = device.PlanShape;
                 CoolBox.Text = device.CoolingCapacityW.ToString("F0");
                 HeatBox.Text = device.HeatingCapacityW.ToString("F0");
                 ParamBox.Text = device.FlowParameterName;
@@ -85,6 +92,8 @@ namespace HVACLoadTerminals.App
             TryParseDouble(CeilingOffsetBox.Text, out double ceilOff);
             TryParseDouble(WidthBox.Text, out double w);
             TryParseDouble(HeightBox.Text, out double h);
+            TryParseDouble(DiameterBox.Text, out double dia);
+            var shape = (DevicePlanShape)(ShapeCombo.SelectedItem ?? DevicePlanShape.Rectangular);
             TryParseDouble(CoolBox.Text, out double cool);
             TryParseDouble(HeatBox.Text, out double heat);
             int.TryParse(DirectiveNBox.Text, out int dirN);
@@ -99,7 +108,8 @@ namespace HVACLoadTerminals.App
                 id, family, type, maker, flow, param, systemType,
                 coolingCapacityW: cool, widthMm: w, heightMm: h,
                 heatingCapacityW: heat, serviceAreaM2: service, ceilingOffsetMm: ceilOff,
-                wallOffsetMm: wallOff, directiveTerminals: dirN, directiveLengthMm: dirL);
+                wallOffsetMm: wallOff, directiveTerminals: dirN, directiveLengthMm: dirL,
+                planShape: shape, diameterMm: dia);
 
             try
             {

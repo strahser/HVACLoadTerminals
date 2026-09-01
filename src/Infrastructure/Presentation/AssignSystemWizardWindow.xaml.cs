@@ -442,8 +442,15 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                             plan.AddLine(e.Start.X * mm, e.Start.Y * mm,
                                 e.End.X * mm, e.End.Y * mm, Colors.Red, 3);
                         }
-                        plan.AddMarkers(res.Placements.Select(p => p.Position.X * mm).ToList(),
-                            res.Placements.Select(p => p.Position.Y * mm).ToList(), Colors.Red, 5);
+                        foreach (var pl in res.Placements)
+                        {
+                            var (w, h) = pl.Device.GetPlanSizeFallback();
+                            var fill = new ScottPlot.Color(220, 20, 60, 170);
+                            if (pl.Device.PlanShape == DevicePlanShape.Circular)
+                                plan.AddDeviceCircle(pl.Position.X * mm, pl.Position.Y * mm, w, fill, Colors.Red, 1.4f);
+                            else
+                                plan.AddDeviceRectangle(pl.Position.X * mm, pl.Position.Y * mm, w, h, pl.Rotation * 180.0 / Math.PI, fill, Colors.Red, 1.4f);
+                        }
                         var effDev = device ?? best;
                         PreviewInfoText.Text =
                             $"{roomRow.Number}. {roomRow.Name} · {TxtName.Text}: {res.Placements.Count} шт" +

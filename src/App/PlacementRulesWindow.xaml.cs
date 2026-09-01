@@ -73,7 +73,7 @@ namespace HVACLoadTerminals.App
                 double w = LengthUnitConverter.MmToUnits(10000);
                 double h = LengthUnitConverter.MmToUnits(6000);
                 var poly = new Polygon2D(new[] { new Point2D(0, 0), new Point2D(w, 0), new Point2D(w, h), new Point2D(0, h) });
-                var device = new TerminalDevice("dev-preview", "Preview", "Type", "Man", 500, "Flow", HVACSystemType.Supply, serviceAreaM2: 25);
+                var device = new TerminalDevice("dev-preview", "Preview", "Type", "Man", 500, "Flow", HVACSystemType.Supply, serviceAreaM2: 25, widthMm: 600, heightMm: 600, planShape: DevicePlanShape.Rectangular);
                 var svc = new CeilingPlacementService();
                 var opts = new CeilingPlacementOptions
                 {
@@ -106,8 +106,16 @@ namespace HVACLoadTerminals.App
                     plan.AddLine(e.Start.X * mmPerFoot, e.Start.Y * mmPerFoot,
                         e.End.X * mmPerFoot, e.End.Y * mmPerFoot, Colors.Red, 3);
                 }
-                plan.AddMarkers(res.Placements.Select(p => p.Position.X * mmPerFoot).ToList(),
-                    res.Placements.Select(p => p.Position.Y * mmPerFoot).ToList(), Colors.Red, 5);
+                // Масштаб: прямоугольник/круг в габаритах
+                foreach (var pl in res.Placements)
+                {
+                    double cx = pl.Position.X * mmPerFoot, cy = pl.Position.Y * mmPerFoot;
+                    var (devW, devH) = pl.Device.GetPlanSizeFallback();
+                    if (pl.Device.PlanShape == DevicePlanShape.Circular)
+                        plan.AddDeviceCircle(cx, cy, devW, new ScottPlot.Color(220, 20, 60, 180), Colors.Red, 1.4f);
+                    else
+                        plan.AddDeviceRectangle(cx, cy, devW, devH, pl.Rotation * 180.0 / Math.PI, new ScottPlot.Color(220, 20, 60, 180), Colors.Red, 1.4f);
+                }
                 // Info
                 StatusText.Text = $"Доля {ratio:F2} · v={velocity:F1} м/с · {res.Warnings.Count} варнингов";
                 plan.FitAll();

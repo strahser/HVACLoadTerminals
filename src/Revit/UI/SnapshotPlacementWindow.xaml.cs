@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using Autodesk.Revit.UI;
 using HVACLoadTerminals.Core.Services;
+using HVACLoadTerminals.Infrastructure.Data;
 using HVACLoadTerminals.Infrastructure.Presentation;
 using HVACLoadTerminals.Infrastructure.Visualization;
 using HVACLoadTerminals.Revit.Logging;
@@ -259,6 +260,19 @@ namespace HVACLoadTerminals.Revit.UI
             {
                 StatusText.Text = "Ошибка экспорта HTML: " + ex.Message;
             }
+        }
+
+        private void Settings_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string catalogPath = (_presenter.CatalogRepository as JsonCatalogRepository)?.FilePath ?? JsonCatalogRepository.ResolveDefaultPath();
+                string uiPath = JsonUiSettingsStore.ResolveDefaultPath();
+                MessageBox.Show($"Каталог приборов:\n{catalogPath}\n\nНастройки UI:\n{uiPath}\n\nДля полной настройки откройте автономный стенд:\nproduction\\HVACLoadTerminals.App\\HVACLoadTerminals.App.exe",
+                    "Настройки — HVAC Terminals", MessageBoxButton.OK, MessageBoxImage.Information);
+                try { System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{catalogPath}\""); } catch { }
+            }
+            catch (Exception ex) { StatusText.Text = "Настройки: " + ex.Message; }
         }
 
         private void Place_Click(object sender, RoutedEventArgs e)

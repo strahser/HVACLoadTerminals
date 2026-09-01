@@ -128,7 +128,7 @@ namespace HVACLoadTerminals.App
                     roomCount++;
                 }
 
-                // Приборы уровня.
+                // Приборы уровня — в масштабе габаритов
                 var rows = _main.Placements.Where(p => p.LevelName == SelectedLevel).ToList();
                 if (SelectedColorMode == "По системам")
                 {
@@ -137,13 +137,15 @@ namespace HVACLoadTerminals.App
                         Colors.Red, Colors.Green, Colors.Blue, Colors.Purple,
                         Colors.HotPink, Colors.Teal, Colors.Brown, Colors.Olive, Colors.SteelBlue
                     };
+                    var bySystem = new Dictionary<string, Color>();
                     int idx = 0;
+                    foreach (var name in rows.Select(p => p.SystemName).Distinct())
+                        bySystem[name] = name == "Отопление" ? Colors.Orange : palette[idx++ % palette.Length];
                     foreach (var g in rows.GroupBy(p => p.SystemName))
-                    {
-                        var color = g.Key == "Отопление" ? Colors.Orange : palette[idx++ % palette.Length];
-                        plan.AddMarkers(g.Select(p => p.X).ToList(), g.Select(p => p.Y).ToList(), color, 5);
-                        legend.Add(new LegendItem { Name = g.Key, Brush = ToBrush(color) });
-                    }
+                        legend.Add(new LegendItem { Name = g.Key, Brush = ToBrush(bySystem[g.Key]) });
+                    plan.AddDeviceFootprints(rows,
+                        r => bySystem.TryGetValue(r.SystemName, out var c) ? new Color(c.R, c.G, c.B, 170) : new Color(Colors.Gray.R, Colors.Gray.G, Colors.Gray.B, 170),
+                        r => bySystem.TryGetValue(r.SystemName, out var c) ? c : Colors.Gray);
                 }
                 else
                 {
@@ -156,15 +158,19 @@ namespace HVACLoadTerminals.App
                     legend.Add(new LegendItem { Name = "Перегруз (>0.9)", Brush = ToBrush(new Color(217, 48, 37)) });
                     legend.Add(new LegendItem { Name = "Норма (0.6–0.9)", Brush = ToBrush(new Color(30, 142, 62)) });
                     legend.Add(new LegendItem { Name = "Недогруз (<0.6)", Brush = ToBrush(new Color(230, 126, 34)) });
-                    foreach (var g in rows.GroupBy(p =>
-                                 p.SystemName == "Отопление" ? "" : p.KefStatus))
-                    {
-                        bool heat = g.All(p => p.SystemName == "Отопление");
-                        var color = g.Key.Length == 0 && heat
-                            ? Colors.Orange
-                            : byStatus.TryGetValue(g.Key, out var c) ? c : Colors.Blue;
-                        plan.AddMarkers(g.Select(p => p.X).ToList(), g.Select(p => p.Y).ToList(), color, 5);
-                    }
+                    plan.AddDeviceFootprints(rows,
+                        r =>
+                        {
+                            if (r.SystemName == "Отопление") return new Color(Colors.Orange.R, Colors.Orange.G, Colors.Orange.B, 170);
+                            if (byStatus.TryGetValue(r.KefStatus, out var c)) return new Color(c.R, c.G, c.B, 170);
+                            return new Color(Colors.Blue.R, Colors.Blue.G, Colors.Blue.B, 170);
+                        },
+                        r =>
+                        {
+                            if (r.SystemName == "Отопление") return Colors.Orange;
+                            if (byStatus.TryGetValue(r.KefStatus, out var c)) return c;
+                            return Colors.Blue;
+                        });
                 }
 
                 plan.FitAll();

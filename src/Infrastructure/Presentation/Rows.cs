@@ -219,6 +219,28 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
         public double Y { get; set; }
         public double RotationDeg { get; set; }
 
+        // ---- scaled display: габариты в плане ----
+        public DevicePlanShape PlanShape { get; set; } = DevicePlanShape.Rectangular;
+        public double WidthMm { get; set; }
+        public double HeightMm { get; set; }
+        public double DiameterMm { get; set; }
+
+        /// <summary>Эффективная ширина для отрисовки (мм).</summary>
+        public double EffectiveWidthMm => PlanShape == DevicePlanShape.Circular
+            ? (DiameterMm > 0 ? DiameterMm : WidthMm > 0 ? WidthMm : 400)
+            : WidthMm;
+
+        /// <summary>Эффективная высота для отрисовки (мм).</summary>
+        public double EffectiveHeightMm => PlanShape == DevicePlanShape.Circular
+            ? EffectiveWidthMm
+            : HeightMm;
+
+        /// <summary>Строка размеров для таблиц: «600×300» или «Ø200».</summary>
+        public string SizeText => PlanShape == DevicePlanShape.Circular
+            ? $"Ø{EffectiveWidthMm:F0}"
+            : $"{WidthMm:F0}×{HeightMm:F0}";
+        public string ShapeText => PlanShape == DevicePlanShape.Circular ? "Круг" : "Прямоуг.";
+
         /// <summary>Load per device / device capacity (0 when not applicable).</summary>
         public double KEf { get; set; }
 

@@ -197,22 +197,25 @@ namespace HVACLoadTerminals.App
                 foreach (var sys in _room.Systems ?? new List<SystemRow>())
                 {
                     if (!sys.IsIncluded) continue;
-                    // Координация: избегаем позиций уже размещённых систем.
                     Point2D? avoid = null;
-                    if (placedPositions.Count > 0)
-                    {
-                        avoid = placedPositions.Last();
-                    }
-                    var pl = BuildPreviewPlacementsForSystem(sys, useWallCombo: false, avoid);
-                    if (pl == null || pl.Count == 0) continue;
-                    placedPositions.AddRange(pl);
+                    if (placedPositions.Count > 0) avoid = placedPositions.Last();
+                    var placements = BuildPreviewPlacementsForSystemFull(sys, useWallCombo: false, avoid);
+                    if (placements == null || placements.Count == 0) continue;
+                    placedPositions.AddRange(placements.Select(p => p.Position));
                     var col = palette[idx++ % palette.Length];
-                    plan.AddMarkers(pl.Select(p => p.X * mmPerFoot).ToList(),
-                        pl.Select(p => p.Y * mmPerFoot).ToList(), col, 5);
-                    for (int i = 0; i < pl.Count; i++)
-                        plan.AddText(sys.Name, pl[i].X * mmPerFoot, pl[i].Y * mmPerFoot - 120,
+                    var fill = new ScottPlot.Color(col.R, col.G, col.B, 170);
+                    foreach (var pl in placements)
+                    {
+                        var (w, h) = pl.Device.GetPlanSizeFallback();
+                        if (pl.Device.PlanShape == DevicePlanShape.Circular)
+                            plan.AddDeviceCircle(pl.Position.X * mmPerFoot, pl.Position.Y * mmPerFoot, w, fill, col, 1.4f);
+                        else
+                            plan.AddDeviceRectangle(pl.Position.X * mmPerFoot, pl.Position.Y * mmPerFoot, w, h, pl.Rotation * 180.0 / Math.PI, fill, col, 1.4f);
+                    }
+                    for (int i = 0; i < placements.Count; i++)
+                        plan.AddText(sys.Name, placements[i].Position.X * mmPerFoot, placements[i].Position.Y * mmPerFoot - 120,
                             fg: col, size: 8, bold: true);
-                    total += pl.Count;
+                    total += placements.Count;
                 }
                 PreviewInfoText.Text = total > 0 ? $"Превью всех систем: {total} приборов" : "Нет приборов для превью (проверьте расходы/каталог)";
             }
@@ -221,15 +224,22 @@ namespace HVACLoadTerminals.App
                 var target = _room.Systems.FirstOrDefault(s => s.Name == filterName) ?? _selectedSystem;
                 if (target != null)
                 {
-                    var preview = BuildPreviewPlacementsForSystem(target, useWallCombo: true);
-                    if (preview != null && preview.Count > 0)
+                    var placements = BuildPreviewPlacementsForSystemFull(target, useWallCombo: true);
+                    if (placements != null && placements.Count > 0)
                     {
-                        plan.AddMarkers(preview.Select(p => p.X * mmPerFoot).ToList(),
-                            preview.Select(p => p.Y * mmPerFoot).ToList(), Colors.Red, 5);
-                        for (int i = 0; i < preview.Count; i++)
-                            plan.AddText(target.Name, preview[i].X * mmPerFoot, preview[i].Y * mmPerFoot - 120,
+                        var fill = new ScottPlot.Color(220, 20, 60, 170);
+                        foreach (var pl in placements)
+                        {
+                            var (w, h) = pl.Device.GetPlanSizeFallback();
+                            if (pl.Device.PlanShape == DevicePlanShape.Circular)
+                                plan.AddDeviceCircle(pl.Position.X * mmPerFoot, pl.Position.Y * mmPerFoot, w, fill, Colors.Red, 1.4f);
+                            else
+                                plan.AddDeviceRectangle(pl.Position.X * mmPerFoot, pl.Position.Y * mmPerFoot, w, h, pl.Rotation * 180.0 / Math.PI, fill, Colors.Red, 1.4f);
+                        }
+                        for (int i = 0; i < placements.Count; i++)
+                            plan.AddText(target.Name, placements[i].Position.X * mmPerFoot, placements[i].Position.Y * mmPerFoot - 120,
                                 fg: Colors.Red, size: 8, bold: true);
-                        PreviewInfoText.Text = $"Превью: {target.Name} — {preview.Count} прибора(ов) вдоль стены {(target.WallIndex.HasValue ? (target.WallIndex.Value + 1).ToString() : "авто")}.";
+                        PreviewInfoText.Text = $"Превью: {target.Name} — {placements.Count} прибора(ов) вдоль стены {(target.WallIndex.HasValue ? (target.WallIndex.Value + 1).ToString() : "авто")}.";
                     }
                     else
                     {
@@ -275,6 +285,12 @@ namespace HVACLoadTerminals.App
 
         private List<Point2D>? BuildPreviewPlacementsForSystem(SystemRow sys, bool useWallCombo, Point2D? avoidPoint = null)
         {
+            var pls = BuildPreviewPlacementsForSystemFull(sys, useWallCombo, avoidPoint);
+            return pls?.Select(p => p.Position).ToList();
+        }
+
+        private List<DevicePlacement>? BuildPreviewPlacementsForSystemFull(SystemRow sys, bool useWallCombo, Point2D? avoidPoint = null)
+        {
             if (sys == null || _polygon == null) return null;
 
             // Отопление: отдельный движок по нагрузке (FlowM3h для отопления = 0)
@@ -290,7 +306,7 @@ namespace HVACLoadTerminals.App
                     _presenter.GetRoomOpenings(_room.RoomId), Array.Empty<SnapshotWall>(),
                     _room.HeatingW, heatCat, new HeatingPlacementOptions());
                 if (heatRes.Placements.Count == 0) return null;
-                return heatRes.Placements.Select(p => p.Position).ToList();
+                return heatRes.Placements.ToList();
             }
 
             if (sys.FlowM3h <= 0) return null;
@@ -317,7 +333,7 @@ namespace HVACLoadTerminals.App
             double area = _room.Area > 0 ? _room.Area : _polygon.Area * LengthUnitConverter.MmPerFoot / 1_000_000.0;
             var res = _ceilingService.PlaceForRoom(_room.RoomId, _polygon, sys.FlowM3h, area, sys.Type, sysCatalog, sys.Name, opts);
             if (res.Placements.Count == 0) return null;
-            return res.Placements.Select(p => p.Position).ToList();
+            return res.Placements.ToList();
         }
 
         private void FilterCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)

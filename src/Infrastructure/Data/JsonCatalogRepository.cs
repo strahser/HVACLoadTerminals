@@ -105,7 +105,8 @@ namespace HVACLoadTerminals.Infrastructure.Data
                     ceilingOffsetMm: d.CeilingOffsetMm, wallOffsetMm: d.WallOffsetMm,
                     directiveTerminals: d.DirectiveTerminals, directiveLengthMm: d.DirectiveLengthMm,
                     orientationOption1: d.OrientationOption1, orientationOption2: d.OrientationOption2,
-                    singleOrientation: d.SingleOrientation));
+                    singleOrientation: d.SingleOrientation,
+                    planShape: d.PlanShape, diameterMm: d.DiameterMm));
             }
             if (changed)
                 SaveAll(rebuilt);
@@ -222,10 +223,10 @@ namespace HVACLoadTerminals.Infrastructure.Data
                         $"{label} {d.Id}: для системы {d.SystemType} расход должен быть > 0");
 
                 if (d.CoolingCapacityW < 0 || d.HeatingCapacityW < 0 ||
-                    d.ServiceAreaM2 < 0 || d.WidthMm < 0 || d.HeightMm < 0 ||
+                    d.ServiceAreaM2 < 0 || d.WidthMm < 0 || d.HeightMm < 0 || d.DiameterMm < 0 ||
                     d.CeilingOffsetMm < 0 || d.WallOffsetMm < 0 ||
                     d.DirectiveLengthMm < 0 || d.DirectiveTerminals < 0)
-                    errors.Add($"{label} {d.Id}: мощности, площадь, габариты, отступы и директивы должны быть ≥ 0");
+                    errors.Add($"{label} {d.Id}: мощности, площадь, габариты (включая Ø), отступы и директивы должны быть ≥ 0");
             }
 
             return errors;

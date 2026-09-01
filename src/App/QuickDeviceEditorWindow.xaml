@@ -94,6 +94,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0" Text="ID:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
@@ -123,25 +124,30 @@
                 <TextBlock Grid.Row="8" Text="Отступ потолка, мм:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
                 <TextBox Grid.Row="8" Grid.Column="1" x:Name="CeilingOffsetBox" Margin="0,4" Padding="4,2"/>
 
-                <TextBlock Grid.Row="9" Text="Габариты Д×Ш, мм:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
-                <StackPanel Grid.Row="9" Grid.Column="1" Orientation="Horizontal" Margin="0,4">
-                    <TextBox x:Name="WidthBox" Width="80" Padding="4,2"/>
+                <TextBlock Grid.Row="9" Text="Форма в плане:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
+                <ComboBox Grid.Row="9" Grid.Column="1" x:Name="ShapeCombo" Margin="0,4" Padding="4,2"/>
+
+                <TextBlock Grid.Row="10" Text="Габариты Д×Ш, мм:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
+                <StackPanel Grid.Row="10" Grid.Column="1" Orientation="Horizontal" Margin="0,4">
+                    <TextBox x:Name="WidthBox" Width="80" Padding="4,2" ToolTip="Для прямоугольника — ширина × высота, для круга — диаметр (в Width)"/>
                     <TextBlock Text="×" VerticalAlignment="Center" Margin="6,0"/>
                     <TextBox x:Name="HeightBox" Width="80" Padding="4,2"/>
+                    <TextBlock Text="Ø" VerticalAlignment="Center" Margin="10,0,4,0" Foreground="{StaticResource TextMuted}"/>
+                    <TextBox x:Name="DiameterBox" Width="70" Padding="4,2" ToolTip="Диаметр для круглого — приоритет над Width"/>
                 </StackPanel>
 
-                <TextBlock Grid.Row="10" Text="Q хол/отопл, Вт:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
-                <StackPanel Grid.Row="10" Grid.Column="1" Orientation="Horizontal" Margin="0,4">
+                <TextBlock Grid.Row="11" Text="Q хол/отопл, Вт:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
+                <StackPanel Grid.Row="11" Grid.Column="1" Orientation="Horizontal" Margin="0,4">
                     <TextBox x:Name="CoolBox" Width="80" Padding="4,2" ToolTip="0 = не применимо"/>
                     <TextBlock Text="/" VerticalAlignment="Center" Margin="6,0"/>
                     <TextBox x:Name="HeatBox" Width="80" Padding="4,2"/>
                 </StackPanel>
 
-                <TextBlock Grid.Row="11" Text="Параметр расхода:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
-                <TextBox Grid.Row="11" Grid.Column="1" x:Name="ParamBox" Margin="0,4" Padding="4,2" Text="ADSK_Расход воздуха"/>
+                <TextBlock Grid.Row="12" Text="Параметр расхода:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
+                <TextBox Grid.Row="12" Grid.Column="1" x:Name="ParamBox" Margin="0,4" Padding="4,2" Text="ADSK_Расход воздуха"/>
 
-                <TextBlock Grid.Row="12" Text="Директивы:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
-                <StackPanel Grid.Row="12" Grid.Column="1" Orientation="Horizontal" Margin="0,4">
+                <TextBlock Grid.Row="13" Text="Директивы:" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11"/>
+                <StackPanel Grid.Row="13" Grid.Column="1" Orientation="Horizontal" Margin="0,4">
                     <TextBox x:Name="DirectiveNBox" Width="60" Padding="4,2" ToolTip="directive_terminals"/>
                     <TextBlock Text="шт" VerticalAlignment="Center" Margin="4,0,8,0" Foreground="{StaticResource TextMuted}" FontSize="11"/>
                     <TextBox x:Name="DirectiveLBox" Width="70" Padding="4,2" ToolTip="directive_length мм"/>

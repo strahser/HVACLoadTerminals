@@ -69,6 +69,7 @@
                     ToolTip="Самодостаточный HTML со схемой и таблицей (WebView2/браузер)"/>
             <Button Content="✔ Записать в модель (ExternalEvent)"
                     Click="Place_Click" Background="#E8F5E9" FontWeight="Bold"/>
+            <Button Content="⚙ Настройки" Click="Settings_Click" ToolTip="Каталог приборов, правила, уровни"/>
         </WrapPanel>
 
         <!-- M1.1b: CRM-каркас как в App — дерево | таблицы | свойства -->
@@ -149,13 +150,15 @@
                         <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="120"/>
                         <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
                         <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
-                        <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
+                        <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="120"/>
+                        <DataGridTextColumn Header="Форма" Binding="{Binding ShapeText}" Width="70"/>
+                        <DataGridTextColumn Header="Габарит" Binding="{Binding SizeText}" Width="80"/>
                         <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
-                        <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding CalculatedFlow, StringFormat=F1}" Width="90"/>
+                        <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding CalculatedFlow, StringFormat=F1}" Width="85"/>
                         <DataGridTextColumn Header="Высота, мм" Binding="{Binding MountHeightMm}" Width="70"/>
-                        <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="80"/>
-                        <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="80"/>
-                        <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>
+                        <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="70"/>
+                        <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="70"/>
+                        <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="60"/>
                         <!-- U3.1/M0.1: k_ef цветом по порогам, «—» когда неприменим -->
                         <DataGridTextColumn Header="k_ef" Binding="{Binding KEfText}" Width="55">
                             <DataGridTextColumn.ElementStyle>

@@ -16,39 +16,39 @@ namespace HVACLoadTerminals.Core.Services
         {
             // --- Приточные диффузоры (service area drives the grid) ---
             new TerminalDevice("SUP-D100", "Диффузор", "Ø100 круглый", "Вентс", 100, "Air Flow",
-                HVACSystemType.Supply, serviceAreaM2: 4, wallOffsetMm: 500),
+                HVACSystemType.Supply, serviceAreaM2: 4, wallOffsetMm: 500, planShape: DevicePlanShape.Circular, diameterMm: 100),
             new TerminalDevice("SUP-D200", "Диффузор", "Ø200 круглый", "Вентс", 250, "Air Flow",
-                HVACSystemType.Supply, serviceAreaM2: 10, wallOffsetMm: 500),
+                HVACSystemType.Supply, serviceAreaM2: 10, wallOffsetMm: 500, planShape: DevicePlanShape.Circular, diameterMm: 200),
             new TerminalDevice("SUP-D600", "Диффузор", "600x600 кассетный", "TROX", 340, "Air Flow",
-                HVACSystemType.Supply, serviceAreaM2: 20, wallOffsetMm: 500),
+                HVACSystemType.Supply, serviceAreaM2: 20, wallOffsetMm: 500, widthMm: 600, heightMm: 600, planShape: DevicePlanShape.Rectangular),
             new TerminalDevice("SUP-SL", "Диффузор", "Щелевой 1200", "TROX", 700, "Air Flow",
-                HVACSystemType.Supply, serviceAreaM2: 30, wallOffsetMm: 600),
+                HVACSystemType.Supply, serviceAreaM2: 30, wallOffsetMm: 600, widthMm: 1200, heightMm: 150, planShape: DevicePlanShape.Rectangular),
             new TerminalDevice("SUP-900", "Диффузор", "900x900", "Systemair", 1500, "Air Flow",
-                HVACSystemType.Supply, serviceAreaM2: 50, wallOffsetMm: 600),
+                HVACSystemType.Supply, serviceAreaM2: 50, wallOffsetMm: 600, widthMm: 900, heightMm: 900, planShape: DevicePlanShape.Rectangular),
 
-            // --- Вытяжные решётки ---
+            // --- Вытяжные решётки — прямоугольник в плане ---
             new TerminalDevice("EXH-G400", "Решётка", "400x200", "Вентс", 250, "Air Flow",
-                HVACSystemType.Exhaust, widthMm: 400, heightMm: 200, wallOffsetMm: 500),
+                HVACSystemType.Exhaust, widthMm: 400, heightMm: 200, wallOffsetMm: 500, planShape: DevicePlanShape.Rectangular),
             new TerminalDevice("EXH-G600", "Решётка", "600x300", "Вентс", 450, "Air Flow",
-                HVACSystemType.Exhaust, widthMm: 600, heightMm: 300, wallOffsetMm: 500),
+                HVACSystemType.Exhaust, widthMm: 600, heightMm: 300, wallOffsetMm: 500, planShape: DevicePlanShape.Rectangular),
             new TerminalDevice("EXH-G1000", "Решётка", "1000x200", "Systemair", 800, "Air Flow",
-                HVACSystemType.Exhaust, widthMm: 1000, heightMm: 200, wallOffsetMm: 500),
+                HVACSystemType.Exhaust, widthMm: 1000, heightMm: 200, wallOffsetMm: 500, planShape: DevicePlanShape.Rectangular),
 
-            // --- Отопительные приборы ---
+            // --- Отопительные приборы — прямоугольник в плане (длина × глубина) ---
             new TerminalDevice("HT-R050", "Радиатор", "РС-500 500мм", "КЗТО", 0, "",
-                HVACSystemType.Heating, widthMm: 500, heatingCapacityW: 500, wallOffsetMm: 100),
+                HVACSystemType.Heating, widthMm: 500, heightMm: 100, heatingCapacityW: 500, wallOffsetMm: 100, planShape: DevicePlanShape.Rectangular),
             new TerminalDevice("HT-R100", "Радиатор", "РС-500 1000мм", "КЗТО", 0, "",
-                HVACSystemType.Heating, widthMm: 1000, heatingCapacityW: 1000, wallOffsetMm: 100),
+                HVACSystemType.Heating, widthMm: 1000, heightMm: 100, heatingCapacityW: 1000, wallOffsetMm: 100, planShape: DevicePlanShape.Rectangular),
             new TerminalDevice("HT-R150", "Радиатор", "РС-500 1500мм", "Рифар", 0, "",
-                HVACSystemType.Heating, widthMm: 1500, heatingCapacityW: 1500, wallOffsetMm: 100),
+                HVACSystemType.Heating, widthMm: 1500, heightMm: 100, heatingCapacityW: 1500, wallOffsetMm: 100, planShape: DevicePlanShape.Rectangular),
             new TerminalDevice("HT-KVK", "Конвектор", "КСК-10 1000мм", "КЗТО", 0, "",
-                HVACSystemType.Heating, widthMm: 1000, heatingCapacityW: 1200, wallOffsetMm: 100),
+                HVACSystemType.Heating, widthMm: 1000, heightMm: 120, heatingCapacityW: 1200, wallOffsetMm: 100, planShape: DevicePlanShape.Rectangular),
 
             // --- Фанкойлы ---
             new TerminalDevice("FC-CAS", "Фанкойл", "Кассетный 600x600", "Daichi", 800, "Air Flow",
-                HVACSystemType.FanCoil, coolingCapacityW: 2200, serviceAreaM2: 15),
+                HVACSystemType.FanCoil, coolingCapacityW: 2200, serviceAreaM2: 15, widthMm: 600, heightMm: 600, planShape: DevicePlanShape.Rectangular),
             new TerminalDevice("FC-DUC", "Фанкойл", "Канальный 1200", "Daichi", 1600, "Air Flow",
-                HVACSystemType.FanCoil, coolingCapacityW: 4500)
+                HVACSystemType.FanCoil, coolingCapacityW: 4500, widthMm: 1200, heightMm: 400, planShape: DevicePlanShape.Rectangular)
         };
 
         /// <summary>RW1: производитель по умолчанию для семейства/типа —

@@ -210,8 +210,11 @@
                 <MenuItem Header="⬇ Excel (level_values + Приборы)" Command="{Binding ExportExcelCommand}"/>
             </MenuItem>
             <MenuItem Header="_Сервис">
+                <MenuItem Header="⚙ Настройки…" Click="Settings_Click" FontWeight="SemiBold" ToolTip="Единое окно настроек: оборудование · расчёт и геометрия · нагрузки · прочие"/>
+                <Separator/>
                 <MenuItem Header="🗂 Каталог приборов…" Command="{Binding EditCatalogCommand}"/>
                 <MenuItem Header="⚙ Правила размещения…" Click="PlacementRules_Click" ToolTip="Глобальные правила: доля от окна, паттерны, скорость решёток — слайдеры + превью + профили"/>
+                <MenuItem Header="📊 Нагрузки систем…" Click="SystemLoads_Click" ToolTip="Сводка необходимых мощностей: приток, вытяжка, отопление, кондиционирование"/>
                 <MenuItem Header="📚 Справочник систем проекта…" Click="GlobalSystems_Click" ToolTip="Глобальный реестр всех систем П1/В1/К/ОТ — переименование, смена марки, удаление из всех комнат"/>
                 <MenuItem Header="↻ Вернуть авторасчёт нагрузок" Command="{Binding RecalcLoadsCommand}"/>
                 <MenuItem Header="Живой пересчёт" IsCheckable="True"
@@ -376,6 +379,20 @@
                                             <TextBlock Text="Системы" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
+                                    <Button Padding="8,1" Click="Settings_Click"
+                                            ToolTip="Настройки: оборудование · расчёт и геометрия · нагрузки · прочие">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="⚙" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                            <TextBlock Text="Настройки" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Padding="8,1" Click="SystemLoads_Click"
+                                            ToolTip="Сводка нагрузок по системам">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="📊" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                            <TextBlock Text="Нагрузки" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                 </WrapPanel>
 
                                 <!-- UX (п.4 промпта): кнопки управляют ЧЕКБОКСОМ «Включено»;
@@ -531,13 +548,15 @@
                                         <DataGridTextColumn Header="Помещение" Binding="{Binding RoomName}" Width="120"/>
                                         <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="85"/>
                                         <DataGridTextColumn Header="Прибор" Binding="{Binding Family}" Width="90"/>
-                                        <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="130"/>
+                                        <DataGridTextColumn Header="Типоразмер" Binding="{Binding TypeName}" Width="120"/>
+                                        <DataGridTextColumn Header="Форма" Binding="{Binding ShapeText}" Width="70"/>
+                                        <DataGridTextColumn Header="Габарит" Binding="{Binding SizeText}" Width="80"/>
                                         <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="80"/>
-                                        <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding CalculatedFlow, StringFormat=F1}" Width="90"/>
+                                        <DataGridTextColumn Header="Расход, м³/ч" Binding="{Binding CalculatedFlow, StringFormat=F1}" Width="85"/>
                                         <DataGridTextColumn Header="Высота, мм" Binding="{Binding MountHeightMm}" Width="70"/>
-                                        <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="80"/>
-                                        <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="80"/>
-                                        <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="65"/>
+                                        <DataGridTextColumn Header="X, мм" Binding="{Binding X}" Width="70"/>
+                                        <DataGridTextColumn Header="Y, мм" Binding="{Binding Y}" Width="70"/>
+                                        <DataGridTextColumn Header="Поворот°" Binding="{Binding RotationDeg}" Width="60"/>
                                         <DataGridTextColumn Header="k_ef" Binding="{Binding KEfText}" Width="55">
                                             <DataGridTextColumn.ElementStyle>
                                                 <Style TargetType="TextBlock">

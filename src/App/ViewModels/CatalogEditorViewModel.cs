@@ -34,6 +34,8 @@ namespace HVACLoadTerminals.App.ViewModels
         private string _orientationOption1 = "";
         private string _orientationOption2 = "";
         private string _singleOrientation = "";
+        private DevicePlanShape _planShape = DevicePlanShape.Rectangular;
+        private double _diameterMm;
 
         public string Id
         {
@@ -107,6 +109,20 @@ namespace HVACLoadTerminals.App.ViewModels
             set { _heightMm = value; OnPropertyChanged(nameof(HeightMm)); }
         }
 
+        public DevicePlanShape PlanShape
+        {
+            get => _planShape;
+            set { _planShape = value; OnPropertyChanged(nameof(PlanShape)); OnPropertyChanged(nameof(ShapeText)); }
+        }
+
+        public string ShapeText => PlanShape == DevicePlanShape.Circular ? "Круг" : "Прямоуг.";
+
+        public double DiameterMm
+        {
+            get => _diameterMm;
+            set { _diameterMm = value; OnPropertyChanged(nameof(DiameterMm)); }
+        }
+
         /// <summary>P1: заглубление от потолка (аналог ceiling_offset).</summary>
         public double CeilingOffsetMm
         {
@@ -177,7 +193,9 @@ namespace HVACLoadTerminals.App.ViewModels
             DirectiveLengthMm = d.DirectiveLengthMm,
             OrientationOption1 = d.OrientationOption1,
             OrientationOption2 = d.OrientationOption2,
-            SingleOrientation = d.SingleOrientation
+            SingleOrientation = d.SingleOrientation,
+            PlanShape = d.PlanShape,
+            DiameterMm = d.DiameterMm
         };
 
         public TerminalDevice ToDevice() => new(
@@ -199,7 +217,9 @@ namespace HVACLoadTerminals.App.ViewModels
             directiveLengthMm: DirectiveLengthMm,
             orientationOption1: OrientationOption1.Trim(),
             orientationOption2: OrientationOption2.Trim(),
-            singleOrientation: SingleOrientation.Trim());
+            singleOrientation: SingleOrientation.Trim(),
+            planShape: PlanShape,
+            diameterMm: DiameterMm);
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) =>

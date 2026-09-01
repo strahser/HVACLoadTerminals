@@ -1442,7 +1442,12 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
 
                     // P2/P3: правило количества и высота установки.
                     CalculationOption = p.CalculationOption,
-                    MountHeightMm = Math.Round(p.MountHeightMm, 0)
+                    MountHeightMm = Math.Round(p.MountHeightMm, 0),
+
+                    PlanShape = p.Device.PlanShape,
+                    WidthMm = p.Device.WidthMm,
+                    HeightMm = p.Device.HeightMm,
+                    DiameterMm = p.Device.DiameterMm
                 });
             }
             return result;

@@ -411,16 +411,20 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                             new ScottPlot.Color(45, 108, 223), 1.5);
                     }
 
-                    // Точки приборов системы в этой комнате (последний расчёт).
-                    var xs = new List<double>();
-                    var ys = new List<double>();
+                    // Приборы системы — в масштабе габаритов
                     foreach (var p in Workspace.LastRawPlacements.Where(x =>
                                  x.SystemName == SystemName && x.RoomId == snapRoom!.Id))
                     {
-                        xs.Add(LengthUnitConverter.UnitsToMm(p.Position.X));
-                        ys.Add(LengthUnitConverter.UnitsToMm(p.Position.Y));
+                        double cx = LengthUnitConverter.UnitsToMm(p.Position.X);
+                        double cy = LengthUnitConverter.UnitsToMm(p.Position.Y);
+                        var (w, h) = p.Device.GetPlanSizeFallback();
+                        var fill = new ScottPlot.Color(255, 165, 0, 170);
+                        var stroke = new ScottPlot.Color(255, 165, 0);
+                        if (p.Device.PlanShape == DevicePlanShape.Circular)
+                            plan.AddDeviceCircle(cx, cy, w, fill, stroke, 1.4f);
+                        else
+                            plan.AddDeviceRectangle(cx, cy, w, h, p.Rotation * 180.0 / Math.PI, fill, stroke, 1.4f);
                     }
-                    plan.AddMarkers(xs, ys, new ScottPlot.Color(255, 165, 0), 4);
                     plan.FitAll();
                 }
 
@@ -500,7 +504,10 @@ namespace HVACLoadTerminals.Infrastructure.Presentation
                 ? "Типоразмер подбирается автоматически: минимум приборов → максимальный расход."
                 : $"Паспорт: Q={FmtNum(device.MaxFlowRate)} м³/ч · " +
                   $"S обсл.{FmtNum(device.ServiceAreaM2)} м² · " +
-                  $"{FmtNum(device.WidthMm)}×{FmtNum(device.HeightMm)} мм";
+                  (device.PlanShape == DevicePlanShape.Circular
+                      ? $"Ø{FmtNum(device.EffectiveWidthMm)} мм"
+                      : $"{FmtNum(device.WidthMm)}×{FmtNum(device.HeightMm)} мм") +
+                  $" · {(device.PlanShape == DevicePlanShape.Circular ? "Круг" : "Прямоуг.")}";
 
             static string FmtNum(double v) => v > 0 ? v.ToString("F0") : "—";
         }

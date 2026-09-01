@@ -15,6 +15,10 @@
             <x:Static Member="models:HVACSystemType.FanCoil"/>
             <x:Static Member="models:HVACSystemType.Cooling"/>
         </x:Array>
+        <x:Array x:Key="PlanShapes" Type="{x:Type models:DevicePlanShape}">
+            <x:Static Member="models:DevicePlanShape.Rectangular"/>
+            <x:Static Member="models:DevicePlanShape.Circular"/>
+        </x:Array>
 
         <SolidColorBrush x:Key="PrimaryBrush" Color="#2D6CDF"/>
         <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#1B4FA8"/>
@@ -183,8 +187,12 @@
                 <DataGridTextColumn Header="Q хол., Вт" Binding="{Binding CoolingCapacityW, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
                 <DataGridTextColumn Header="Q отопл., Вт" Binding="{Binding HeatingCapacityW, UpdateSourceTrigger=PropertyChanged}" Width="75"/>
                 <DataGridTextColumn Header="S обслуж., м²" Binding="{Binding ServiceAreaM2, UpdateSourceTrigger=PropertyChanged}" Width="78"/>
+                <DataGridTextColumn Header="Форма" Binding="{Binding ShapeText}" Width="75" IsReadOnly="True"/>
+                <DataGridComboBoxColumn Header="Тип формы" SelectedValueBinding="{Binding PlanShape, UpdateSourceTrigger=PropertyChanged}"
+                                        ItemsSource="{StaticResource PlanShapes}" Width="95"/>
                 <DataGridTextColumn Header="Длина, мм" Binding="{Binding WidthMm, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
                 <DataGridTextColumn Header="Высота, мм" Binding="{Binding HeightMm, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
+                <DataGridTextColumn Header="Ø, мм" Binding="{Binding DiameterMm, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
                 <!-- P1: поля прототипа — отступы, директивы, ориентации
                      (ceiling_offset / wall_offset / directive_terminals / directive_length) -->
                 <DataGridTextColumn Header="Отступ потолка, мм" Binding="{Binding CeilingOffsetMm, UpdateSourceTrigger=PropertyChanged}" Width="80"/>

@@ -1,5 +1,14 @@
 namespace HVACLoadTerminals.Core.Models
 {
+    /// <summary>Форма прибора в плане — для масштабированного отображения.</summary>
+    public enum DevicePlanShape
+    {
+        /// <summary>Прямоугольник (вытяжная решётка, радиатор, фанкойл кассетный и т.д.).</summary>
+        Rectangular = 0,
+        /// <summary>Круг (круглый диффузор Ø).</summary>
+        Circular = 1
+    }
+
     public class TerminalDevice
     {
         public string Id { get; }
@@ -19,7 +28,13 @@ namespace HVACLoadTerminals.Core.Models
         /// <summary>Served floor area per unit, m2. 0 = unknown (flow-based sizing).</summary>
         public double ServiceAreaM2 { get; }
 
-        /// <summary>Device footprint width, mm. 0 = unknown.</summary>
+        /// <summary>Форма отображения в плане (прямоугольник / круг).</summary>
+        public DevicePlanShape PlanShape { get; }
+
+        /// <summary>Диаметр для круглого прибора, мм. Если 0 — берётся WidthMm.</summary>
+        public double DiameterMm { get; }
+
+        /// <summary>Device footprint width, mm. 0 = unknown. Для круга — диаметр, если DiameterMm==0.</summary>
         public double WidthMm { get; }
 
         /// <summary>Device footprint height (depth from the wall), mm. 0 = unknown.</summary>
@@ -77,7 +92,9 @@ namespace HVACLoadTerminals.Core.Models
             double directiveLengthMm = 0,
             string orientationOption1 = "",
             string orientationOption2 = "",
-            string singleOrientation = "")
+            string singleOrientation = "",
+            DevicePlanShape planShape = DevicePlanShape.Rectangular,
+            double diameterMm = 0)
         {
             Id = id;
             FamilyName = familyName;
@@ -98,6 +115,54 @@ namespace HVACLoadTerminals.Core.Models
             OrientationOption1 = orientationOption1 ?? "";
             OrientationOption2 = orientationOption2 ?? "";
             SingleOrientation = singleOrientation ?? "";
+            PlanShape = planShape;
+            DiameterMm = diameterMm;
+        }
+
+        /// <summary>Эффективная ширина в плане, мм (для прямоугольника — WidthMm, для круга — диаметр).</summary>
+        public double EffectiveWidthMm
+        {
+            get
+            {
+                if (PlanShape == DevicePlanShape.Circular)
+                {
+                    if (DiameterMm > 0) return DiameterMm;
+                    if (WidthMm > 0) return WidthMm;
+                    if (HeightMm > 0) return HeightMm;
+                    return 0;
+                }
+                return WidthMm;
+            }
+        }
+
+        /// <summary>Эффективная высота в плане, мм (для прямоугольника — HeightMm, для круга — = ширине).</summary>
+        public double EffectiveHeightMm
+        {
+            get
+            {
+                if (PlanShape == DevicePlanShape.Circular)
+                    return EffectiveWidthMm;
+                return HeightMm;
+            }
+        }
+
+        /// <summary>Размер для отрисовки в масштабе: если габариты не заданы — фолбэк 400×400 (или Ø400).</summary>
+        public (double wMm, double hMm) GetPlanSizeFallback()
+        {
+            double w = EffectiveWidthMm;
+            double h = EffectiveHeightMm;
+            if (PlanShape == DevicePlanShape.Circular)
+            {
+                if (w <= 0) w = 400;
+                h = w;
+                return (w, h);
+            }
+            if (w <= 0) w = 600;
+            if (h <= 0) h = 400;
+            // Для отопительных — длина по Width, высота-малая (например 100 мм глубина)
+            // но в плане важна длина, глубину можно условно 150 мм
+            if (SystemType == HVACSystemType.Heating && h <= 0) h = 150;
+            return (w, h);
         }
 
         public override string ToString() => $"{FamilyName} - {TypeName} ({MaxFlowRate} m3/h)";

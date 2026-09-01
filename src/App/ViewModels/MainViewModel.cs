@@ -1630,10 +1630,9 @@ namespace HVACLoadTerminals.App.ViewModels
             var rows = Placements
                 .Where(p => p.LevelName == SelectedLevel).ToList();
 
+            // Масштабированная отрисовка: габариты из каталога вместо точек
             if (SelectedColorMode == "По системам")
             {
-                // P4: цвет = система (аналог SetColor прототипа): канонические цвета
-                // классов + палитра для именованных П1/П2/В1…
                 var palette = new[]
                 {
                     Colors.Red, Colors.Green, Colors.Blue,
@@ -1648,32 +1647,31 @@ namespace HVACLoadTerminals.App.ViewModels
                         ? Colors.Orange
                         : palette[idx++ % palette.Length];
                 }
-
-                foreach (var group in rows.GroupBy(p => p.SystemName))
-                    plan.AddMarkers(group.Select(p => p.X).ToList(),
-                        group.Select(p => p.Y).ToList(), bySystem[group.Key], 6);
+                plan.AddDeviceFootprints(rows,
+                    r => bySystem.TryGetValue(r.SystemName, out var c) ? new SColor(c.R, c.G, c.B, 180) : new SColor(Colors.Gray.R, Colors.Gray.G, Colors.Gray.B, 180),
+                    r => bySystem.TryGetValue(r.SystemName, out var c) ? c : Colors.Gray);
             }
             else
             {
-                // U3.1: k_ef цветом на плане по порогам <0.6 / 0.6–0.9 / >0.9.
-                // Отопление (k_ef неприменимо) остаётся оранжевым; приборы без k_ef — серые.
                 var colorByKefStatus = new Dictionary<string, SColor>
                 {
-                    ["low"] = new SColor(230, 126, 34),   // недогруз <0.6
-                    ["ok"] = new SColor(30, 142, 62),     // норма 0.6–0.9
-                    ["high"] = new SColor(217, 48, 37)    // перегруз >0.9
+                    ["low"] = new SColor(230, 126, 34),
+                    ["ok"] = new SColor(30, 142, 62),
+                    ["high"] = new SColor(217, 48, 37)
                 };
-                foreach (var group in rows.GroupBy(p =>
-                             p.SystemName == "Отопление" ? "" : p.KefStatus))
-                {
-                    string status = group.Key;
-                    bool isHeatingGroup = group.All(p => p.SystemName == "Отопление");
-                    var sc = status.Length == 0 && isHeatingGroup
-                        ? Colors.Orange
-                        : colorByKefStatus.TryGetValue(status, out var kc) ? kc : Colors.Blue;
-                    plan.AddMarkers(group.Select(p => p.X).ToList(),
-                        group.Select(p => p.Y).ToList(), sc, 6);
-                }
+                plan.AddDeviceFootprints(rows,
+                    r =>
+                    {
+                        if (r.SystemName == "Отопление") return new SColor(Colors.Orange.R, Colors.Orange.G, Colors.Orange.B, 180);
+                        if (colorByKefStatus.TryGetValue(r.KefStatus, out var kc)) return new SColor(kc.R, kc.G, kc.B, 180);
+                        return new SColor(Colors.Blue.R, Colors.Blue.G, Colors.Blue.B, 180);
+                    },
+                    r =>
+                    {
+                        if (r.SystemName == "Отопление") return Colors.Orange;
+                        if (colorByKefStatus.TryGetValue(r.KefStatus, out var kc)) return kc;
+                        return Colors.Blue;
+                    });
             }
 
             // P4: подписи комнат — № · площадь · Σрасход систем комнаты.

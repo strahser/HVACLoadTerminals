@@ -816,6 +816,20 @@ namespace HVACLoadTerminals.App
             _vm.RoomsView.Refresh();
         }
 
+        private void Settings_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new AppSettingsWindow(_vm) { Owner = this };
+            win.ShowDialog();
+            _vm.Crm.RebuildTree();
+            _vm.RoomsView.Refresh();
+        }
+
+        private void SystemLoads_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new SystemLoadsWindow(_vm) { Owner = this };
+            win.ShowDialog();
+        }
+
         private void Levels_Click(object sender, RoutedEventArgs e)
         {
             var win = new LevelsWindow(_vm) { Owner = this };

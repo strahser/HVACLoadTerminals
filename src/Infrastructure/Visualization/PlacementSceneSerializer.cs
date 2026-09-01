@@ -66,6 +66,15 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
 
         /// <summary>P3/M0.2: высота установки над уровнем, мм.</summary>
         public double MountHeightMm { get; set; }
+
+        /// <summary>Форма в плане: Rectangular / Circular (строка для JSON).</summary>
+        public string PlanShape { get; set; } = "Rectangular";
+
+        public double WidthMm { get; set; }
+
+        public double HeightMm { get; set; }
+
+        public double DiameterMm { get; set; }
     }
 
     /// <summary>2D point in scene coordinates (feet, Revit internal units).</summary>
@@ -158,7 +167,11 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
                                 Flow = p.Device.MaxFlowRate,
                                 CalculatedFlowM3h = p.CalculatedFlowM3h,
                                 CalculationOption = p.CalculationOption,
-                                MountHeightMm = p.MountHeightMm
+                                MountHeightMm = p.MountHeightMm,
+                                PlanShape = p.Device.PlanShape.ToString(),
+                                WidthMm = p.Device.WidthMm,
+                                HeightMm = p.Device.HeightMm,
+                                DiameterMm = p.Device.DiameterMm
                             })
                             .ToList()
                     });

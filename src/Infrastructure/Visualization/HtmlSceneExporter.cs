@@ -258,6 +258,8 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
             calc: pl.CalculatedFlowM3h || 0,
             option: pl.CalculationOption || '',
             mountMm: pl.MountHeightMm || 0,
+            shape: pl.PlanShape || 'Rectangular',
+            wMm: pl.WidthMm || 0, hMm: pl.HeightMm || 0, dMm: pl.DiameterMm || 0,
             color: s.Color, roomId: r.RoomId,
             system: s.SystemName || ''
           });
@@ -360,36 +362,64 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
       if (selectedRoom != null && p.roomId !== selectedRoom) return;
       var rot = (p.rot || 0) * Math.PI / 180;
       var cos = Math.cos(rot), sin = Math.sin(rot);
-      var hw = 1.0, hh = 0.5;
-      var corners = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]];
-      ctx.beginPath();
-      for (var i = 0; i < 4; i++) {
-        var wx = p.x + corners[i][0] * cos - corners[i][1] * sin;
-        var wy = p.y + corners[i][0] * sin + corners[i][1] * cos;
-        var s = toScreen(wx, wy);
-        if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+      // размеры в футах: мм → футы
+      var FT = 1/304.8;
+      var isCircle = (p.shape === 'Circular' || p.shape === 1);
+      var wFt, hFt, rFt;
+      if (isCircle) {
+        var dia = p.dMm || p.wMm || 400;
+        rFt = (dia * FT) / 2;
+        // круг
+        var c0 = toScreen(p.x, p.y);
+        var rPx = rFt * view.scale;
+        ctx.beginPath();
+        ctx.arc(c0.x, c0.y, Math.max(3, rPx), 0, Math.PI*2);
+        ctx.fillStyle = p.color || '#e6194b';
+        ctx.globalAlpha = 0.85;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // подпись
+        ctx.font = '10px Consolas, monospace';
+        ctx.fillStyle = '#e6edf3';
+        ctx.fillText(p.family + ' ' + p.type + ' (' + fmtFlow(p.flow) + ')', c0.x + 6, c0.y - 6);
+        return;
+      } else {
+        var wMm = p.wMm || 600, hMm = p.hMm || 400;
+        wFt = wMm * FT; hFt = hMm * FT;
+        var hw = wFt/2, hh = hFt/2;
+        var corners = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]];
+        ctx.beginPath();
+        for (var i = 0; i < 4; i++) {
+          var wx = p.x + corners[i][0] * cos - corners[i][1] * sin;
+          var wy = p.y + corners[i][0] * sin + corners[i][1] * cos;
+          var s = toScreen(wx, wy);
+          if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = p.color || '#e6194b';
+        ctx.globalAlpha = 0.85;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        var c = toScreen(p.x, p.y);
+        var e = toScreen(p.x + Math.min(wFt,hFt)*0.35 * cos, p.y + Math.min(wFt,hFt)*0.35 * sin);
+        ctx.beginPath();
+        ctx.moveTo(c.x, c.y);
+        ctx.lineTo(e.x, e.y);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.font = '10px Consolas, monospace';
+        ctx.fillStyle = '#e6edf3';
+        ctx.fillText(p.family + ' ' + p.type + ' (' + fmtFlow(p.flow) + ')', c.x + 6, c.y - 6);
       }
-      ctx.closePath();
-      ctx.fillStyle = p.color || '#e6194b';
-      ctx.globalAlpha = 0.85;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      var c = toScreen(p.x, p.y);
-      var e = toScreen(p.x + 0.8 * cos, p.y + 0.8 * sin);
-      ctx.beginPath();
-      ctx.moveTo(c.x, c.y);
-      ctx.lineTo(e.x, e.y);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.font = '10px Consolas, monospace';
-      ctx.fillStyle = '#e6edf3';
-      ctx.fillText(p.family + ' ' + p.type + ' (' + fmtFlow(p.flow) + ')', c.x + 6, c.y - 6);
     });
   }
 
@@ -432,8 +462,12 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
       tooltip.style.display = 'block';
       tooltip.style.left = (mx + 14) + 'px';
       tooltip.style.top = (my + 14) + 'px';
+      var sz = '';
+      if (best.shape === 'Circular' || best.shape === 1) sz = 'Ø' + (best.dMm || best.wMm || 0) + ' мм';
+      else if (best.wMm || best.hMm) sz = (best.wMm||0) + '×' + (best.hMm||0) + ' мм';
       tooltip.innerHTML = '<b>' + esc(best.family) + ' ' + esc(best.type) + '</b><br>' +
         'Расход: ' + fmtFlow(best.flow) + ' м&sup3;/ч<br>' +
+        (sz ? 'Габарит: ' + sz + '<br>' : '') +
         (best.calc > 0 ? 'Расход расч.: ' + fmtFlow(best.calc) + ' м&sup3;/ч<br>' : '') +
         (best.option ? 'Расчёт: ' + esc(best.option) + '<br>' : '') +
         (best.mountMm > 0 ? 'Высота: ' + best.mountMm + ' мм<br>' : '') +
@@ -630,9 +664,22 @@ h2 { font-size: 15px; margin: 4px 0 10px; color: #58a6ff; }
     });
 
     placementsFlat.forEach(function (p) {
-      var geo = new THREE.BoxGeometry(2, 0.3, 1);
+      var FT3 = 1/304.8;
+      var isCirc = (p.shape === 'Circular' || p.shape === 1);
+      var geo;
+      if (isCirc) {
+        var d = p.dMm || p.wMm || 400;
+        var r = (d * FT3)/2;
+        geo = new THREE.CylinderGeometry(r, r, 0.2, 32);
+      } else {
+        var w = (p.wMm || 600) * FT3;
+        var h = (p.hMm || 400) * FT3;
+        if (w <= 0) w = 2; if (h <= 0) h = 1;
+        geo = new THREE.BoxGeometry(w, h, 0.2);
+      }
       var mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(p.color || '#e6194b') });
       var mesh = new THREE.Mesh(geo, mat);
+      if (isCirc) { mesh.rotation.x = Math.PI/2; }
       // P3/M0.2: приборы на своей высоте (отметка уровня + установка), не на полу.
       mesh.position.set(p.x, p.y, p.z || 0);
       mesh.rotation.z = (p.rot || 0) * Math.PI / 180;

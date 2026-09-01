@@ -213,31 +213,76 @@ namespace HVACLoadTerminals.App.Controls
         private void RebuildPlacements()
         {
             if (_vm == null) return;
-            // remove old placement paths
-            var toRemove = WorldCanvas.Children.OfType<Path>().ToList();
-            foreach (var p in toRemove) WorldCanvas.Children.Remove(p);
+            // remove old placement visuals (Path for приборы + Line стрелки)
+            var toRemovePath = WorldCanvas.Children.OfType<Path>().ToList();
+            foreach (var p in toRemovePath) WorldCanvas.Children.Remove(p);
+            var toRemoveLine = WorldCanvas.Children.OfType<Line>().ToList();
+            foreach (var l in toRemoveLine) WorldCanvas.Children.Remove(l);
             _placementsByRoom.Clear();
 
             var placements = GetPlacementsToRender().ToList();
             if (placements.Count == 0) return;
 
             var colorMap = BuildPlacementColorMap(placements, _vm.SelectedColorMode);
-            const double radius = 260; // mm ~ grille half-size
             foreach (var pl in placements)
             {
                 Brush fill = BrushForPlacement(pl, colorMap, _vm.SelectedColorMode);
-                var geom = new EllipseGeometry(new Point(pl.X, pl.Y), radius, radius);
+                Geometry geom;
+                if (pl.PlanShape == DevicePlanShape.Circular)
+                {
+                    double dia = pl.DiameterMm > 0 ? pl.DiameterMm : pl.WidthMm > 0 ? pl.WidthMm : pl.EffectiveWidthMm;
+                    if (dia <= 0) dia = 400;
+                    double r = dia / 2;
+                    geom = new EllipseGeometry(new Point(pl.X, pl.Y), r, r);
+                }
+                else
+                {
+                    double w = pl.WidthMm > 0 ? pl.WidthMm : pl.EffectiveWidthMm;
+                    double h = pl.HeightMm > 0 ? pl.HeightMm : pl.EffectiveHeightMm;
+                    if (w <= 0) w = 600; if (h <= 0) h = 400;
+                    double rad = pl.RotationDeg * Math.PI / 180.0;
+                    double cos = Math.Cos(rad), sin = Math.Sin(rad);
+                    double hw = w / 2, hh = h / 2;
+                    var pts = new PointCollection
+                    {
+                        new Point(pl.X + (-hw)*cos - (-hh)*sin, pl.Y + (-hw)*sin + (-hh)*cos),
+                        new Point(pl.X + (hw)*cos - (-hh)*sin, pl.Y + (hw)*sin + (-hh)*cos),
+                        new Point(pl.X + (hw)*cos - (hh)*sin, pl.Y + (hw)*sin + (hh)*cos),
+                        new Point(pl.X + (-hw)*cos - (hh)*sin, pl.Y + (-hw)*sin + (hh)*cos)
+                    };
+                    var polyGeom = new PathGeometry();
+                    var fig = new PathFigure { StartPoint = pts[0], IsClosed = true };
+                    fig.Segments.Add(new PolyLineSegment(pts.Skip(1).ToList(), true));
+                    polyGeom.Figures.Add(fig);
+                    geom = polyGeom;
+                }
                 var path = new Path
                 {
                     Data = geom,
                     Fill = fill,
                     Stroke = Brushes.White,
-                    StrokeThickness = 0.6,
+                    StrokeThickness = 0.8,
                     Tag = pl.RoomId,
-                    ToolTip = $"{pl.RoomName} · {pl.SystemName} · {pl.TypeName} · {pl.CalculatedFlow:F0} м³/ч · k_ef {pl.KEfText}",
+                    ToolTip = $"{pl.RoomName} · {pl.SystemName} · {pl.TypeName} · {pl.SizeText} · {pl.CalculatedFlow:F0} м³/ч · k_ef {pl.KEfText}",
                     IsHitTestVisible = false,
-                    Opacity = 0.95
+                    Opacity = 0.92
                 };
+                // Мини-стрелка направления для прямоугольных с поворотом
+                if (pl.PlanShape == DevicePlanShape.Rectangular && Math.Abs(pl.RotationDeg) > 0.5)
+                {
+                    double len = Math.Min(pl.EffectiveWidthMm, pl.EffectiveHeightMm) * 0.35;
+                    if (len < 10) len = 80;
+                    double rad = pl.RotationDeg * Math.PI / 180.0;
+                    double x2 = pl.X + Math.Cos(rad) * len;
+                    double y2 = pl.Y + Math.Sin(rad) * len;
+                    var arrow = new Line
+                    {
+                        X1 = pl.X, Y1 = pl.Y, X2 = x2, Y2 = y2,
+                        Stroke = Brushes.White, StrokeThickness = 1.2,
+                        IsHitTestVisible = false, Opacity = 0.95
+                    };
+                    WorldCanvas.Children.Add(arrow);
+                }
                 WorldCanvas.Children.Add(path);
                 if (!_placementsByRoom.TryGetValue(pl.RoomId, out var lst))
                 {

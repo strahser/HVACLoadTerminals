@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HVACLoadTerminals.Core.Models;
+using HVACLoadTerminals.Infrastructure.Presentation;
 using ScottPlot;
 using ScottPlot.Plottables;
 
@@ -152,6 +153,94 @@ namespace HVACLoadTerminals.Infrastructure.Visualization
         public Marker AddMarker(double x, double y, Color color, double size = 5)
         {
             return Plot.Add.Marker(x, y, MarkerShape.FilledCircle, (float)size, color);
+        }
+
+        /// <summary>Масштабированное отображение прибора: прямоугольник или круг в фактических габаритах (мм).</summary>
+        public void AddDeviceFootprint(double cx, double cy, DevicePlanShape shape,
+            double wMm, double hMm, double diameterMm,
+            double rotationDeg, Color fill, Color stroke, float lineWidth = 1.2f)
+        {
+            double w = wMm, h = hMm, d = diameterMm;
+            if (shape == DevicePlanShape.Circular)
+            {
+                double dia = d > 0 ? d : w > 0 ? w : h;
+                if (dia <= 0) dia = 400;
+                AddDeviceCircle(cx, cy, dia, fill, stroke, lineWidth);
+                return;
+            }
+            if (w <= 0) w = 600;
+            if (h <= 0) h = 400;
+            AddDeviceRectangle(cx, cy, w, h, rotationDeg, fill, stroke, lineWidth);
+        }
+
+        public Polygon AddDeviceRectangle(double cx, double cy, double wMm, double hMm,
+            double rotationDeg, Color fill, Color stroke, float lineWidth = 1.2f)
+        {
+            double rad = rotationDeg * Math.PI / 180.0;
+            double cos = Math.Cos(rad), sin = Math.Sin(rad);
+            double hw = wMm / 2.0, hh = hMm / 2.0;
+            var pts = new (double dx, double dy)[]
+            {
+                (-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)
+            };
+            var xs = new double[4];
+            var ys = new double[4];
+            for (int i = 0; i < 4; i++)
+            {
+                double dx = pts[i].dx, dy = pts[i].dy;
+                xs[i] = cx + dx * cos - dy * sin;
+                ys[i] = cy + dx * sin + dy * cos;
+            }
+            var poly = Plot.Add.Polygon(xs, ys);
+            poly.FillColor = fill;
+            poly.LineColor = stroke;
+            poly.LineWidth = lineWidth;
+            return poly;
+        }
+
+        public Polygon AddDeviceCircle(double cx, double cy, double diameterMm,
+            Color fill, Color stroke, float lineWidth = 1.2f)
+        {
+            double r = diameterMm / 2.0;
+            int n = 32;
+            var xs = new double[n];
+            var ys = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                double ang = 2 * Math.PI * i / n;
+                xs[i] = cx + r * Math.Cos(ang);
+                ys[i] = cy + r * Math.Sin(ang);
+            }
+            var poly = Plot.Add.Polygon(xs, ys);
+            poly.FillColor = fill;
+            poly.LineColor = stroke;
+            poly.LineWidth = lineWidth;
+            return poly;
+        }
+
+        /// <summary>Групповая отрисовка приборов из строк таблицы (масштаб + цвет по системе/k_ef).</summary>
+        public void AddDeviceFootprints(IEnumerable<PlacementRow> rows,
+            Func<PlacementRow, Color> fillSelector, Func<PlacementRow, Color> strokeSelector,
+            float lineWidth = 1.4f)
+        {
+            foreach (var r in rows)
+            {
+                var fill = fillSelector(r);
+                var stroke = strokeSelector != null ? strokeSelector(r) : new Color(fill.R, fill.G, fill.B, 255);
+                // Для прямоугольника — RotationDeg, для круга — 0
+                double rot = r.PlanShape == DevicePlanShape.Circular ? 0 : r.RotationDeg;
+                AddDeviceFootprint(r.X, r.Y, r.PlanShape, r.WidthMm, r.HeightMm, r.DiameterMm, rot, fill, stroke, lineWidth);
+                // Направление (маленькая стрелка) для прямоугольных — по RotationDeg
+                if (r.PlanShape == DevicePlanShape.Rectangular && r.RotationDeg != 0)
+                {
+                    double len = Math.Min(r.EffectiveWidthMm, r.EffectiveHeightMm) * 0.4;
+                    if (len <= 0) len = 150;
+                    double rad = r.RotationDeg * Math.PI / 180.0;
+                    double x2 = r.X + Math.Cos(rad) * len;
+                    double y2 = r.Y + Math.Sin(rad) * len;
+                    AddLine(r.X, r.Y, x2, y2, stroke, 1.2);
+                }
+            }
         }
 
         public Text AddText(string text, double x, double y, Color? fg = null, Color? bg = null,

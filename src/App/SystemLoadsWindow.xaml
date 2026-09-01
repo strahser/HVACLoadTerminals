@@ -1,0 +1,165 @@
+<Window x:Class="HVACLoadTerminals.App.SystemLoadsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Нагрузки систем — сводка мощностей"
+        Height="620" Width="980"
+        WindowStartupLocation="CenterOwner"
+        Background="#F4F6F9">
+    <Window.Resources>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#2D6CDF"/>
+        <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#1B4FA8"/>
+        <SolidColorBrush x:Key="PanelBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#D5DBE3"/>
+        <SolidColorBrush x:Key="TextDark" Color="#212B36"/>
+        <SolidColorBrush x:Key="TextMuted" Color="#637381"/>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Background" Value="{StaticResource PanelBg}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#EDF2FC"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="Button" x:Key="PrimaryButton" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PrimaryDarkBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource PrimaryDarkBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="AlternatingRowBackground" Value="#F7F9FC"/>
+            <Setter Property="RowHeight" Value="26"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#EEF1F5"/>
+        </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{StaticResource PrimaryDarkBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="BorderThickness" Value="0,0,1,0"/>
+            <Setter Property="BorderBrush" Value="#163A78"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#1F2A44" Padding="14,8">
+            <StackPanel>
+                <TextBlock Text="Необходимые мощности систем" FontSize="14" FontWeight="Bold" Foreground="White"/>
+                <TextBlock Text="Сводка тепловых и воздушных нагрузок по всем включённым помещениям — приток, вытяжка, отопление, кондиционирование" FontSize="11" Foreground="#AEBBD4" TextWrapping="Wrap" Margin="0,2,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Итоговые карточки -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8">
+            <WrapPanel x:Name="TotalsPanel" Orientation="Horizontal">
+                <!-- заполняется в code-behind -->
+            </WrapPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,6">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="↻ Пересчитать нагрузки" Click="Recalc_Click" ToolTip="Вернуть нагрузки к авторасчёту по площади и назначению"/>
+                    <Button Content="⬇ Excel" Click="ExportExcel_Click" ToolTip="Выгрузить сводку нагрузок"/>
+                    <Button Content="Закрыть" Click="Close_Click"/>
+                </StackPanel>
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap"/>
+            </DockPanel>
+        </Border>
+
+        <TabControl Margin="8" Background="Transparent" BorderThickness="0">
+            <TabItem Header="По системам">
+                <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="6">
+                    <DataGrid x:Name="SystemsGrid" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Система" Binding="{Binding SystemName}" Width="110"/>
+                            <DataGridTextColumn Header="Тип" Binding="{Binding TypeText}" Width="110"/>
+                            <DataGridTextColumn Header="Комнат" Binding="{Binding RoomCount}" Width="70"/>
+                            <DataGridTextColumn Header="Σ расход, м³/ч" Binding="{Binding TotalFlow, StringFormat=F0}" Width="110"/>
+                            <DataGridTextColumn Header="Ср. на помещ." Binding="{Binding AvgFlow, StringFormat=F0}" Width="110"/>
+                            <DataGridTextColumn Header="Мин / Макс" Binding="{Binding MinMaxText}" Width="110"/>
+                            <DataGridTextColumn Header="Площадь обсл., м²" Binding="{Binding TotalArea, StringFormat=F1}" Width="120"/>
+                            <DataGridTextColumn Header="Примечание" Binding="{Binding Note}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+            <TabItem Header="По уровням">
+                <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="6">
+                    <DataGrid x:Name="LevelsGrid" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="150"/>
+                            <DataGridTextColumn Header="Комнат" Binding="{Binding RoomCount}" Width="70"/>
+                            <DataGridTextColumn Header="S, м²" Binding="{Binding TotalArea, StringFormat=F1}" Width="80"/>
+                            <DataGridTextColumn Header="Q отопл., кВт" Binding="{Binding TotalHeatingKw, StringFormat=F1}" Width="100"/>
+                            <DataGridTextColumn Header="Приток, м³/ч" Binding="{Binding TotalSupply, StringFormat=F0}" Width="100"/>
+                            <DataGridTextColumn Header="Вытяжка, м³/ч" Binding="{Binding TotalExhaust, StringFormat=F0}" Width="110"/>
+                            <DataGridTextColumn Header="Кондиц., м³/ч" Binding="{Binding TotalCooling, StringFormat=F0}" Width="110"/>
+                            <DataGridTextColumn Header="Без систем" Binding="{Binding WithoutSystems}" Width="90"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+            <TabItem Header="По помещениям">
+                <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="6">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBox x:Name="RoomSearchBox" Width="200" Padding="5,3" VerticalContentAlignment="Center" ToolTip="Поиск по номеру/имени" TextChanged="RoomSearch_TextChanged"/>
+                            <TextBlock Text="Фильтр:" VerticalAlignment="Center" Margin="10,0,4,0" Foreground="{StaticResource TextMuted}"/>
+                            <ComboBox x:Name="LevelFilterCombo" Width="160" SelectionChanged="LevelFilter_Changed"/>
+                            <TextBlock x:Name="RoomCountText" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{StaticResource TextMuted}" FontSize="11"/>
+                        </DockPanel>
+                        <DataGrid x:Name="RoomsGrid" IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="50"/>
+                                <DataGridTextColumn Header="Помещение" Binding="{Binding Name}" Width="160"/>
+                                <DataGridTextColumn Header="Уровень" Binding="{Binding LevelName}" Width="110"/>
+                                <DataGridTextColumn Header="S, м²" Binding="{Binding Area, StringFormat=F1}" Width="70"/>
+                                <DataGridTextColumn Header="Q, Вт" Binding="{Binding HeatingW, StringFormat=F0}" Width="80"/>
+                                <DataGridTextColumn Header="Приток, м³/ч" Binding="{Binding Supply, StringFormat=F0}" Width="95"/>
+                                <DataGridTextColumn Header="Вытяжка, м³/ч" Binding="{Binding Exhaust, StringFormat=F0}" Width="105"/>
+                                <DataGridTextColumn Header="Назначение" Binding="{Binding Purpose}" Width="100"/>
+                                <DataGridTextColumn Header="Системы" Binding="{Binding SystemsSummary}" Width="130"/>
+                                <DataGridTextColumn Header="Вкл." Binding="{Binding IsIncludedText}" Width="50"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>
